@@ -268,6 +268,10 @@ async def jackpot_bet(message: types.Message):
     jackpot_states[user_id] = False
 
 # ===================== GAME: Máy Bay (Crash Game) =====================
+# Biến trạng thái cho game máy bay
+crash_states = {}   # Cho trạng thái nhập cược
+crash_games = {}    # Lưu trữ game đang chạy theo user
+
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
@@ -278,23 +282,73 @@ async def start_crash(message: types.Message):
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
-async def play_crash(message: types.Message):
+async def initiate_crash_game(message: types.Message):
     user_id = str(message.from_user.id)
-    amount = int(message.text)
-    crash_states[user_id] = False  # Reset trạng thái sau khi nhận cược
+    bet = int(message.text)
+    if user_balance.get(user_id, 0) < bet:
+        await message.answer("❌ Số dư không đủ!")
+        crash_states[user_id] = False
+        return
+    # Trừ tiền cược
+    user_balance[user_id] -= bet
+    save_data(data)
+    # Xác định điểm crash ngẫu nhiên
     crash_point = round(random.uniform(1.1, 10.0), 2)
-    await message.answer(f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00")
-    
-    for i in range(10):
+    # Lưu thông tin game
+    crash_games[user_id] = {
+        "bet": bet,
+        "current_multiplier": 1.0,
+        "withdraw": False,
+        "running": True,
+        "crash_point": crash_point
+    }
+    # Gửi thông báo kèm nút "Rút tiền" cho phép người chơi rút tiền
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Rút tiền")]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    await message.answer(
+        f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền' để rút tiền ngay!",
+        reply_markup=keyboard
+    )
+    # Vòng lặp mô phỏng tăng dần hệ số nhân
+    while crash_games[user_id]["running"]:
         await asyncio.sleep(1)
-        current_multiplier = round(1.1 + i * 0.3, 2)
-        if current_multiplier >= crash_point:
-            await message.answer(f"💥 Máy bay rơi tại x{crash_point}! Bạn thua {amount} VNĐ!")
-            return
-        await message.answer(f"📈 Hệ số nhân: x{current_multiplier}")
-    
-    await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {amount * crash_point} VNĐ!")
+        new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.3, 2)
+        crash_games[user_id]["current_multiplier"] = new_multiplier
+        # Nếu hệ số nhân vượt quá điểm crash => thua hết cược
+        if new_multiplier >= crash_games[user_id]["crash_point"]:
+            await message.answer(
+                f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Bạn thua {bet} VNĐ!",
+                reply_markup=main_menu
+            )
+            crash_games[user_id]["running"] = False
+            break
+        # Nếu người chơi đã ấn "Rút tiền"
+        if crash_games[user_id]["withdraw"]:
+            win_amount = round(bet * new_multiplier)
+            user_balance[user_id] += win_amount
+            save_data(data)
+            await message.answer(
+                f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
+                reply_markup=main_menu
+            )
+            crash_games[user_id]["running"] = False
+            break
+        # Cập nhật hệ số nhân cho người chơi
+        await message.answer(f"📈 Hệ số nhân: x{new_multiplier}")
+    # Reset trạng thái game
+    crash_states[user_id] = False
+    if user_id in crash_games:
+        del crash_games[user_id]
 
+@router.message(F.text == "Rút tiền")
+async def withdraw_crash(message: types.Message):
+    user_id = str(message.from_user.id)
+    if user_id in crash_games and crash_games[user_id]["running"]:
+        crash_games[user_id]["withdraw"] = True
+        await message.answer("Đang xử lý rút tiền...", reply_markup=ReplyKeyboardRemove())
 # ===================== GAME: Rồng Hổ =====================
 @router.message(F.text == "🐉🐅 Rồng Hổ")
 async def start_rongho(message: types.Message):
