@@ -433,6 +433,7 @@ async def daovang_set_bet(message: types.Message):
         return
     # Trừ tiền cược từ số dư
     user_balance[user_id] -= bet
+    data["balances"] = user_balance  # cập nhật số dư trong data
     save_data(data)
     # Khởi tạo game với 3 BOM được đặt ngẫu nhiên trên 24 ô
     bomb_count = 3
@@ -472,7 +473,7 @@ async def daovang_choose_cell(message: types.Message):
     current_multiplier = state["multiplier"]
     next_multiplier = current_multiplier + 0.3
     win_amount = int(state["bet"] * current_multiplier)
-    # Hiển thị các ô đã chọn để người chơi biết
+    # Hiển thị các ô đã chọn cho người chơi biết
     chosen_cells = sorted(list(state["chosen"]))
     chosen_str = ", ".join(str(x) for x in chosen_cells)
     keyboard = ReplyKeyboardMarkup(
@@ -497,7 +498,7 @@ async def daovang_withdraw(message: types.Message):
         return
     state = daovang_states[user_id]
     win_amount = int(state["bet"] * state["multiplier"])
-    # Cập nhật số dư: đảm bảo số dư được cộng đúng và cập nhật vào data
+    # Cộng tiền thắng vào số dư
     user_balance[user_id] = user_balance.get(user_id, 0) + win_amount
     data["balances"] = user_balance
     save_data(data)
