@@ -381,6 +381,7 @@ async def bet_rongho(message: types.Message):
 @router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
     user_id = str(message.from_user.id)
+    logging.debug(f"[XOC DIA] start_xocdia triggered for user {user_id}")
     xocdia_states[user_id] = "awaiting_choice"
     # Tạo bàn phím chỉ có 2 nút: Chẵn và Lẽ
     keyboard = ReplyKeyboardMarkup(
