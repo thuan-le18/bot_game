@@ -352,12 +352,17 @@ async def withdraw_crash(message: types.Message):
          crash_games[user_id]["withdraw_event"].set()
          await message.answer("Đang xử lý rút tiền máy bay...", reply_markup=ReplyKeyboardRemove())
 
+import logging
+
+# Cấu hình logging để debug
+logging.basicConfig(level=logging.INFO)
+
 def check_rongho_choice(msg: types.Message) -> bool:
     user_id = str(msg.from_user.id)
     state = rongho_states.get(user_id, {})
+    logging.info(f"[check_rongho_choice] user_id={user_id}, state={state}, msg.text={msg.text}")
     if not state.get("awaiting_choice"):
         return False
-    # Loại bỏ khoảng trắng đầu/cuối và chuyển về chữ thường
     text = msg.text.strip().lower()
     return text in ["rồng", "hòa", "hổ"]
 
@@ -365,6 +370,7 @@ def check_rongho_choice(msg: types.Message) -> bool:
 @router.message(F.text == "🐉🐅 Rồng Hòa Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
+    logging.info(f"[start_rongho] Called for user {user_id}")
     # Khởi tạo trạng thái game cho người chơi
     rongho_states[user_id] = {"awaiting_choice": True}
     keyboard = ReplyKeyboardMarkup(
@@ -379,9 +385,10 @@ async def start_rongho(message: types.Message):
 @router.message(lambda msg: check_rongho_choice(msg))
 async def choose_rongho(message: types.Message):
     user_id = str(message.from_user.id)
-    # Sử dụng strip() để loại bỏ khoảng trắng, sau đó chuyển về dạng capitalized
+    logging.info(f"[choose_rongho] Called for user {user_id} with text: {message.text}")
+    # Chuyển đổi đầu vào: loại bỏ khoảng trắng và chuyển chữ cái đầu thành in hoa
     choice = message.text.strip().capitalize()
-    # Cập nhật trạng thái: xóa trạng thái 'awaiting_choice' và chuyển sang 'awaiting_bet'
+    # Cập nhật trạng thái: chuyển từ awaiting_choice sang awaiting_bet
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
     await message.answer("Nhập số tiền cược của bạn:", reply_markup=ReplyKeyboardRemove())
 
@@ -391,6 +398,7 @@ async def bet_rongho_amount(message: types.Message):
     user_id = str(message.from_user.id)
     bet_amount = int(message.text.strip())
     state = rongho_states.get(user_id)
+    logging.info(f"[bet_rongho_amount] Called for user {user_id} with bet_amount={bet_amount} and state={state}")
     if state is None:
         await message.answer("Lỗi: không tìm thấy trạng thái game!")
         return
@@ -400,17 +408,17 @@ async def bet_rongho_amount(message: types.Message):
         rongho_states.pop(user_id, None)
         return
 
-    # Trừ tiền cược
+    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
 
     # Chọn kết quả ngẫu nhiên từ 3 khả năng: Rồng, Hòa và Hổ
     result = random.choice(["Rồng", "Hòa", "Hổ"])
     chosen = state.get("choice")
+    logging.info(f"[bet_rongho_amount] Game result: {result}, chosen: {chosen}")
     
-    # Xử lý kết quả
+    # Xử lý kết quả:
     if result == "Hòa":
-        # Nếu kết quả hòa, người chơi thắng nếu đã chọn "Hòa"
         if chosen.lower() == "hòa":
             win_amount = int(bet_amount * 7)
             user_balance[user_id] += win_amount
@@ -419,7 +427,6 @@ async def bet_rongho_amount(message: types.Message):
         else:
             await message.answer(f"😢 Kết quả: Hòa! Bạn thua {bet_amount} VNĐ!")
     else:
-        # Nếu kết quả là Rồng hoặc Hổ
         if chosen.lower() == result.lower():
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
@@ -427,6 +434,7 @@ async def bet_rongho_amount(message: types.Message):
             await message.answer(f"🎉 {result} thắng! Bạn thắng {win_amount} VNĐ!")
         else:
             await message.answer(f"😢 Kết quả: {result}! Bạn thua {bet_amount} VNĐ!")
+    
     # Xóa trạng thái game sau khi xử lý
     rongho_states.pop(user_id, None)
 
