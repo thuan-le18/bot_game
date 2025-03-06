@@ -376,91 +376,33 @@ async def bet_rongho(message: types.Message):
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
     rongho_states[user_id] = False  # Reset trạng thái
 
-# ===================== GAME: Xóc Đĩa 6 cửa (giống VN888) =====================
-# Xác định 6 lựa chọn hợp lệ
-valid_xocdia_bets = [
-    "chẵn",
-    "lẻ",
-    "4 trắng",
-    "4 đỏ",
-    "3 trắng 1 đỏ",
-    "1 trắng 3 đỏ"
-]
-
-# Bảng trả thưởng (payout) cho mỗi cửa
-payouts = {
-    "chẵn": 1.96,
-    "lẻ": 1.96,
-    "4 trắng": 15.0,
-    "4 đỏ": 15.0,
-    "3 trắng 1 đỏ": 2.5,
-    "1 trắng 3 đỏ": 2.5
-}
-
-def get_xoc_dia_category(num_red):
-    """
-    Trả về set các 'cửa' mà kết quả num_red (số đồng đỏ) thuộc về.
-    num_red có thể là 0,1,2,3,4 tương ứng với 4 đồng xu.
-    """
-    cats = set()
-    # Chẵn nếu 0, 2 hoặc 4 đỏ
-    # Lẻ nếu 1 hoặc 3 đỏ
-    if num_red in [0, 2, 4]:
-        cats.add("chẵn")
-    else:
-        cats.add("lẻ")
-    if num_red == 0:
-        cats.add("4 trắng")
-    if num_red == 4:
-        cats.add("4 đỏ")
-    if num_red == 1:
-        cats.add("3 trắng 1 đỏ")
-    if num_red == 3:
-        cats.add("1 trắng 3 đỏ")
-    return cats
-
+# ------------------- GAME: Xóc Đĩa (Đơn: Chẵn/Lẽ) -------------------
+# Sử dụng biến trạng thái riêng cho game này
 @router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
     user_id = str(message.from_user.id)
-    logging.debug(f"[XOC DIA] start_xocdia triggered for user {user_id}")
-    xocdia_states[user_id] = "awaiting_bet_choice"
-    # ... (phần còn lại)
-
-    # Tạo bàn phím 6 nút
+    xocdia_states[user_id] = "awaiting_choice"
+    # Tạo bàn phím chỉ có 2 nút: Chẵn và Lẽ
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton("Chẵn"), KeyboardButton("Lẻ")],
-            [KeyboardButton("4 trắng"), KeyboardButton("4 đỏ")],
-            [KeyboardButton("3 trắng 1 đỏ"), KeyboardButton("1 trắng 3 đỏ")]
-        ],
+        keyboard=[[KeyboardButton("Chẵn"), KeyboardButton("Lẽ")]],
         resize_keyboard=True
     )
-    await message.answer("Chọn một trong 6 cửa cược:", reply_markup=keyboard)
+    await message.answer("Chọn Chẵn hoặc Lẽ:", reply_markup=keyboard)
 
-@router.message(lambda msg: xocdia_states.get(str(msg.from_user.id)) == "awaiting_bet_choice"
-                          and msg.text.lower() in valid_xocdia_bets)
-async def xocdia_choose_side(message: types.Message):
-    """
-    Người chơi chọn xong cửa (1 trong 6). Bước kế tiếp: yêu cầu nhập tiền cược.
-    """
+@router.message(lambda msg: xocdia_states.get(str(msg.from_user.id)) == "awaiting_choice" 
+                          and msg.text.lower() in ["chẵn", "lẽ"])
+async def choose_xocdia_side(message: types.Message):
     user_id = str(message.from_user.id)
-    chosen_bet = message.text.lower()
-
-    # Lưu lại lựa chọn vào state, chuyển sang bước chờ nhập số tiền
-    xocdia_states[user_id] = {"bet": chosen_bet, "state": "awaiting_amount"}
-
-    await message.answer(
-        f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    chosen_side = message.text.lower()
+    # Lưu lựa chọn và chuyển sang bước nhập tiền cược
+    xocdia_states[user_id] = {"choice": chosen_side, "state": "awaiting_bet"}
+    await message.answer(f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:",
+                         reply_markup=ReplyKeyboardRemove())
 
 @router.message(lambda msg: isinstance(xocdia_states.get(str(msg.from_user.id)), dict)
-                          and xocdia_states[str(msg.from_user.id)].get("state") == "awaiting_amount"
+                          and xocdia_states[str(msg.from_user.id)].get("state") == "awaiting_bet"
                           and msg.text.isdigit())
-async def xocdia_bet_amount(message: types.Message):
-    """
-    Người chơi nhập số tiền cược. Kiểm tra số dư, trừ tiền, quay kết quả.
-    """
+async def xocdia_bet(message: types.Message):
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
 
@@ -472,36 +414,26 @@ async def xocdia_bet_amount(message: types.Message):
 
     # Trừ tiền cược
     user_balance[user_id] -= bet_amount
-    save_data(data)  # Hoặc save_balance(user_id, new_balance) nếu dùng MySQL
+    save_data(data)
 
-    # Quay kết quả: 4 đồng xu, mỗi đồng xu là 0 (trắng) hoặc 1 (đỏ)
+    # Quay kết quả: Tung 4 đồng xu, mỗi đồng xu là 0 (trắng) hoặc 1 (đỏ)
+    # Nếu số đồng đỏ là 0, 2, hoặc 4 -> kết quả "chẵn", còn lại -> "lẽ"
     num_red = sum(random.choice([0, 1]) for _ in range(4))
-
-    # Xác định các cửa trúng
-    outcome_cats = get_xoc_dia_category(num_red)
-    chosen_bet = xocdia_states[user_id]["bet"]
-
-    # Tính mô tả kết quả
+    result = "chẵn" if num_red in [0, 2, 4] else "lẽ"
     outcome_desc = f"{4 - num_red} trắng - {num_red} đỏ"
 
-    if chosen_bet in outcome_cats:
-        # Thắng
-        multiplier = payouts[chosen_bet]
+    if xocdia_states[user_id]["choice"] == result:
+        multiplier = 1.98
         win_amount = int(bet_amount * multiplier)
         user_balance[user_id] += win_amount
         save_data(data)
-        await message.answer(
-            f"Kết quả: {outcome_desc}\n🎉 Bạn thắng {win_amount} VNĐ!",
-            reply_markup=main_menu
-        )
+        await message.answer(f"Kết quả: {outcome_desc}\n🎉 Bạn thắng {win_amount} VNĐ!",
+                             reply_markup=main_menu)
     else:
-        # Thua
-        await message.answer(
-            f"Kết quả: {outcome_desc}\n😢 Bạn thua {bet_amount} VNĐ!",
-            reply_markup=main_menu
-        )
+        await message.answer(f"Kết quả: {outcome_desc}\n😢 Bạn thua {bet_amount} VNĐ!",
+                             reply_markup=main_menu)
 
-    # Reset trạng thái
+    # Reset state
     xocdia_states[user_id] = None
 
 # Hàm tính multiplier động dựa trên số ô an toàn (safe_count) và số bom (bomb_count)
