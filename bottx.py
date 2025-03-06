@@ -267,10 +267,10 @@ async def jackpot_bet(message: types.Message):
         await message.answer("😢 Rất tiếc, bạn không trúng Jackpot. Mất hết tiền cược.", reply_markup=main_menu)
     jackpot_states[user_id] = False
 
-# ===================== GAME: Máy Bay (Crash Game) =====================
+# --- GAME: Máy Bay (Crash Game) ---
 # Biến trạng thái cho game máy bay
-crash_states = {}   # Cho trạng thái nhập cược
-crash_games = {}    # Lưu trữ game đang chạy theo user
+crash_states = {}   # Đánh dấu trạng thái nhập cược
+crash_games = {}    # Lưu trữ thông tin game theo user
 
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
@@ -294,7 +294,6 @@ async def initiate_crash_game(message: types.Message):
     save_data(data)
     # Xác định điểm crash ngẫu nhiên
     crash_point = round(random.uniform(1.1, 10.0), 2)
-    # Lưu thông tin game
     crash_games[user_id] = {
         "bet": bet,
         "current_multiplier": 1.0,
@@ -302,22 +301,22 @@ async def initiate_crash_game(message: types.Message):
         "running": True,
         "crash_point": crash_point
     }
-    # Gửi thông báo kèm nút "Rút tiền" cho phép người chơi rút tiền
+    # Gửi thông báo với nút "Rút tiền máy bay"
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Rút tiền")]],
+        keyboard=[[KeyboardButton(text="Rút tiền máy bay")]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
     await message.answer(
-        f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền' để rút tiền ngay!",
+        f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền máy bay' để rút tiền ngay!",
         reply_markup=keyboard
     )
-    # Vòng lặp mô phỏng tăng dần hệ số nhân
+    # Vòng lặp tăng dần hệ số nhân
     while crash_games[user_id]["running"]:
         await asyncio.sleep(1)
         new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.3, 2)
         crash_games[user_id]["current_multiplier"] = new_multiplier
-        # Nếu hệ số nhân vượt quá điểm crash => thua hết cược
+        # Nếu vượt điểm crash => thua hết tiền cược
         if new_multiplier >= crash_games[user_id]["crash_point"]:
             await message.answer(
                 f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Bạn thua {bet} VNĐ!",
@@ -325,7 +324,7 @@ async def initiate_crash_game(message: types.Message):
             )
             crash_games[user_id]["running"] = False
             break
-        # Nếu người chơi đã ấn "Rút tiền"
+        # Nếu người chơi đã nhấn "Rút tiền máy bay"
         if crash_games[user_id]["withdraw"]:
             win_amount = round(bet * new_multiplier)
             user_balance[user_id] += win_amount
@@ -336,19 +335,18 @@ async def initiate_crash_game(message: types.Message):
             )
             crash_games[user_id]["running"] = False
             break
-        # Cập nhật hệ số nhân cho người chơi
         await message.answer(f"📈 Hệ số nhân: x{new_multiplier}")
-    # Reset trạng thái game
     crash_states[user_id] = False
     if user_id in crash_games:
         del crash_games[user_id]
 
-@router.message(F.text == "Rút tiền")
+@router.message(F.text == "Rút tiền máy bay")
 async def withdraw_crash(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id in crash_games and crash_games[user_id]["running"]:
         crash_games[user_id]["withdraw"] = True
-        await message.answer("Đang xử lý rút tiền...", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Đang xử lý rút tiền máy bay...", reply_markup=ReplyKeyboardRemove())
+
 # ===================== GAME: Rồng Hổ =====================
 @router.message(F.text == "🐉🐅 Rồng Hổ")
 async def start_rongho(message: types.Message):
@@ -405,77 +403,100 @@ async def bet_xocdia(message: types.Message):
     else:
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
     xocdia_states[user_id] = False  # Reset trạng thái
-# ===================== GAME: Đào Vàng (phạm vi 1-7) =====================
+# ===================== GAME: Đào Vàng (Mines Gold style) =====================
+# Sử dụng biến daovang_states riêng cho game này
 daovang_states = {}
-MIN_BET = 1000
-BOMB_COUNT = 1  # Số BOM được đặt, phù hợp với phạm vi 1-7
+MIN_BET = 1000  # Cược tối thiểu là 1000 VNĐ
 
+# Step 1: Khi người dùng bấm "⛏️ Đào Vàng", yêu cầu nhập tiền cược
 @router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
     user_id = str(message.from_user.id)
     await message.answer(
-        f"Nhập số tiền cược (tối thiểu {MIN_BET} đồng):",
+        f"Nhập số tiền cược (tối thiểu {MIN_BET} VNĐ):",
         reply_markup=ReplyKeyboardRemove()
     )
     daovang_states[user_id] = {"awaiting_bet": True}
 
+# Step 2: Người dùng nhập tiền cược, sau đó bot yêu cầu nhập số bom muốn chơi
 @router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True and msg.text.isdigit())
 async def daovang_set_bet(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
     if bet < MIN_BET:
-        await message.answer(f"❌ Số tiền cược phải tối thiểu {MIN_BET} đồng. Vui lòng nhập lại:")
+        await message.answer(f"❌ Số tiền cược phải tối thiểu {MIN_BET} VNĐ. Vui lòng nhập lại:")
         return
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
         daovang_states.pop(user_id, None)
         return
-    # Trừ tiền cược và lưu dữ liệu
+    # Trừ tiền cược và lưu lại dữ liệu
     user_balance[user_id] -= bet
     data["balances"] = user_balance
     save_data(data)
-    # Tạo BOM trên phạm vi 1 đến 7
-    bomb_positions = random.sample(range(1, 8), BOMB_COUNT)
+    # Cập nhật state: chuyển sang bước nhập số bom
     daovang_states[user_id] = {
         "bet": bet,
+        "awaiting_bomb_count": True
+    }
+    await message.answer("Nhập số bom bạn muốn (từ 1 đến 24, mặc định là 3 nếu không hợp lệ):", reply_markup=ReplyKeyboardRemove())
+
+# Step 3: Nhận số bom, khởi tạo game
+@router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("awaiting_bomb_count") == True)
+async def daovang_set_bomb_count(message: types.Message):
+    user_id = str(message.from_user.id)
+    text = message.text.strip()
+    bomb_count = 3  # mặc định là 3
+    if text.isdigit():
+        chosen = int(text)
+        if 1 <= chosen <= 24:
+            bomb_count = chosen
+        else:
+            await message.answer("Số bom không hợp lệ. Sử dụng mặc định: 3 bom.")
+    else:
+        await message.answer("Không nhận dạng được số bom. Sử dụng mặc định: 3 bom.")
+    # Khởi tạo game: grid từ 1 đến 25
+    bomb_positions = random.sample(range(1, 26), bomb_count)  # chọn bomb_count số từ 1 đến 25
+    daovang_states[user_id] = {
+        "bet": daovang_states[user_id]["bet"],
         "multiplier": 1.0,
+        "bomb_count": bomb_count,
         "bomb_positions": bomb_positions,
         "chosen": set(),
-        "awaiting_bet": False,
         "active": True
     }
     await message.answer(
-        "Game Đào Vàng bắt đầu!\nChọn một ô từ 1 đến 7:",
+        f"Game Đào Vàng bắt đầu với {bomb_count} bom!\nChọn một ô từ 1 đến 25:",
         reply_markup=ReplyKeyboardRemove()
     )
 
+# Step 4: Người dùng chọn ô an toàn (nếu ô chứa bom thì game kết thúc)
 @router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("active") == True and msg.text.isdigit())
 async def daovang_choose_cell(message: types.Message):
     user_id = str(message.from_user.id)
     cell = int(message.text)
-    # Kiểm tra phạm vi ô 1-7
-    if cell < 1 or cell > 7:
-        await message.answer("❌ Vui lòng chọn một ô từ 1 đến 7!")
+    if cell < 1 or cell > 25:
+        await message.answer("❌ Vui lòng chọn một ô từ 1 đến 25!")
         return
     state = daovang_states[user_id]
     if cell in state["chosen"]:
         await message.answer(f"❌ Ô {cell} đã được chọn rồi, hãy chọn ô khác!")
         return
-    # Nếu ô chứa BOM -> game kết thúc
+    # Nếu người chơi chọn ô có bom -> game thua
     if cell in state["bomb_positions"]:
         await message.answer("💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", reply_markup=main_menu)
         daovang_states.pop(user_id, None)
         return
-    # Nếu an toàn: thêm ô đã chọn và tăng hệ số thưởng
+    # Nếu an toàn, cập nhật state
     state["chosen"].add(cell)
-    state["multiplier"] += 0.3
+    state["multiplier"] += 1.0  # Tăng multiplier mỗi ô an toàn
     current_multiplier = state["multiplier"]
-    next_multiplier = current_multiplier + 0.3
     win_amount = int(state["bet"] * current_multiplier)
     chosen_cells = sorted(list(state["chosen"]))
     chosen_str = ", ".join(str(x) for x in chosen_cells)
+    next_multiplier = current_multiplier + 1.0
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Rút tiền"), KeyboardButton(text="Chơi tiếp")]],
+        keyboard=[[KeyboardButton(text="Rút tiền đào vàng"), KeyboardButton(text="Chơi tiếp")]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
@@ -484,11 +505,12 @@ async def daovang_choose_cell(message: types.Message):
         f"Tiền thắng hiện tại: {win_amount} VNĐ.\n"
         f"Các ô đã chọn: {chosen_str}\n"
         f"Nếu chơi tiếp, hệ số sẽ tăng lên x{next_multiplier:.2f}.\n"
-        "Bạn muốn 'Rút tiền' hay 'Chơi tiếp'?",
+        "Bạn muốn 'Rút tiền đào vàng' hay 'Chơi tiếp'?",
         reply_markup=keyboard
     )
 
-@router.message(F.text == "Rút tiền")
+# Step 5: Handler cho “Rút tiền đào vàng”
+@router.message(F.text == "Rút tiền đào vàng")
 async def daovang_withdraw(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
@@ -502,13 +524,14 @@ async def daovang_withdraw(message: types.Message):
     await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
     daovang_states.pop(user_id, None)
 
+# Step 6: Handler cho “Chơi tiếp”
 @router.message(F.text == "Chơi tiếp")
 async def daovang_continue(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
         await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
         return
-    await message.answer("Hãy chọn một ô từ 1 đến 7 (các ô đã chọn sẽ không được chọn lại):", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Hãy chọn một ô từ 1 đến 25 (các ô đã chọn sẽ không được chọn lại):", reply_markup=ReplyKeyboardRemove())
 
 # ===================== GAME: Mini Poker =====================
 @router.message(F.text == "🃏 Mini Poker")
