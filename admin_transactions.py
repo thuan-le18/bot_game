@@ -1,5 +1,5 @@
 from aiogram import Router, types
-from aiogram.filters.text import Text
+from aiogram.filters import Text
 from database import deposit_history, withdrawal_history
 
 ADMIN_ID = 1985817060  # Thay bằng ID admin  Cách dùng: Admin nhắn lệnh:🔍 Lịch sử user 123456789
