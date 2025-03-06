@@ -12,18 +12,6 @@ from aiogram.types import (
     BotCommand,
     BotCommandScopeChat
 )
-from aiogram.filters import Command
-from admin_game_control import router as admin_game_router
-from admin_random_games import router as admin_random_router
-from admin_transactions import router as admin_transactions_router
-from admin_bets import router as admin_bets_router  # Xem danh sách cược & chỉnh kết quả
-from user_transactions import router as user_transactions_router
-# Đăng ký router cho admin
-dp.include_router(user_transactions_router)  # Lịch sử nạp/rút của người dùng
-from admin_game_control import router as admin_game_router  # Đổi tên file & import lại 
-dp.include_router(admin_random_router)
-dp.include_router(admin_transactions_router)
-dp.include_router(admin_bets_router)  # Xem cược & chỉnh kết quả
 # ===================== Cấu hình bot =====================
 TOKEN = "7586352892:AAFl26m48KYdNqiCR03wNlLmaPkXaccImfw"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
