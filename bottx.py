@@ -227,7 +227,7 @@ async def jackpot_bet(message: types.Message):
     jackpot_states[user_id] = False
 
 # ===================== GAME: Máy Bay (Crash Game) =====================
-@router.message(F.text == "✈️ Máy Bay"))
+@router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
     await message.answer("💰 Nhập số tiền cược, bot sẽ khởi động máy bay!")
 
