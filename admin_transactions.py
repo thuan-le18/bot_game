@@ -6,7 +6,7 @@ ADMIN_ID = 1985817060  # Thay bằng ID admin
 
 router = Router()
 
-@router.message(F.text.startswith"🔍 Lịch sử user"))
+@router.message(F.text.startswith"🔍 Lịch sử user")
 async def check_user_transactions(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return  # Không cho user thường dùng
