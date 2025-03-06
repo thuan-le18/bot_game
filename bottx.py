@@ -293,12 +293,14 @@ async def initiate_crash_game(message: types.Message):
     user_balance[user_id] -= bet
     save_data(data)
     crash_point = round(random.uniform(1.1, 10.0), 2)
+    # Sử dụng asyncio.Event để xử lý rút tiền ngay khi người chơi bấm nút
+    withdraw_event = asyncio.Event()
     crash_games[user_id] = {
         "bet": bet,
         "current_multiplier": 1.0,
-        "withdraw": False,
         "running": True,
-        "crash_point": crash_point
+        "crash_point": crash_point,
+        "withdraw_event": withdraw_event
     }
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Rút tiền máy bay")]],
@@ -310,22 +312,29 @@ async def initiate_crash_game(message: types.Message):
         reply_markup=keyboard
     )
     while crash_games[user_id]["running"]:
-        await asyncio.sleep(1)
+        # Chờ 1 giây hoặc chờ sự kiện rút tiền
+        done, _ = await asyncio.wait(
+            [asyncio.sleep(1), crash_games[user_id]["withdraw_event"].wait()],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        if crash_games[user_id]["withdraw_event"].is_set():
+            # Nếu sự kiện rút tiền được kích hoạt, xử lý ngay lập tức
+            win_amount = round(bet * crash_games[user_id]["current_multiplier"])
+            user_balance[user_id] += win_amount
+            save_data(data)
+            await message.answer(
+                f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
+                reply_markup=main_menu
+            )
+            crash_games[user_id]["running"] = False
+            break
+
+        # Cập nhật hệ số nhân
         new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.3, 2)
         crash_games[user_id]["current_multiplier"] = new_multiplier
         if new_multiplier >= crash_games[user_id]["crash_point"]:
             await message.answer(
                 f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Bạn thua {bet} VNĐ!",
-                reply_markup=main_menu
-            )
-            crash_games[user_id]["running"] = False
-            break
-        if crash_games[user_id]["withdraw"]:
-            win_amount = round(bet * new_multiplier)
-            user_balance[user_id] += win_amount
-            save_data(data)
-            await message.answer(
-                f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
                 reply_markup=main_menu
             )
             crash_games[user_id]["running"] = False
@@ -339,7 +348,7 @@ async def initiate_crash_game(message: types.Message):
 async def withdraw_crash(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id in crash_games and crash_games[user_id]["running"]:
-        crash_games[user_id]["withdraw"] = True
+        crash_games[user_id]["withdraw_event"].set()
         await message.answer("Đang xử lý rút tiền máy bay...", reply_markup=ReplyKeyboardRemove())
 
 # ===================== GAME: Rồng Hòa Hổ (Cập nhật sử dụng nút) =====================
