@@ -396,7 +396,7 @@ async def choose_xocdia_side(message: types.Message):
     user_id = str(message.from_user.id)
     logging.debug(f"[XOC DIA] choose_xocdia_side received text: {message.text.lower()} for user {user_id}")
     # Lưu lựa chọn và chuyển sang bước nhập tiền cược
-    xocdia_states[user_id] = {"choice": chosen_side, "state": "awaiting_bet"}
+    xocdia_states[user_id] = {"choice": message.text.lower(), "state": "awaiting_bet"}
     await message.answer(f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:",
                          reply_markup=ReplyKeyboardRemove())
 
