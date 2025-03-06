@@ -419,14 +419,14 @@ def get_xoc_dia_category(num_red):
         cats.add("1 trắng 3 đỏ")
     return cats
 
+logging.basicConfig(level=logging.DEBUG)  # đảm bảo cấp độ debug được bật
+
 @router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
-    """
-    Bắt đầu game Xóc Đĩa 6 cửa:
-    - Cho người chơi chọn 1 trong 6 cửa (Chẵn, Lẻ, 4 trắng, 4 đỏ, 3 trắng 1 đỏ, 1 trắng 3 đỏ).
-    """
     user_id = str(message.from_user.id)
+    logging.debug(f"[XOC DIA] start_xocdia triggered for user {user_id}")
     xocdia_states[user_id] = "awaiting_bet_choice"
+    # ... (phần còn lại)
 
     # Tạo bàn phím 6 nút
     keyboard = ReplyKeyboardMarkup(
