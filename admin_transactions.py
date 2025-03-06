@@ -6,7 +6,7 @@ ADMIN_ID = 1985817060  # Thay bằng ID admin  Cách dùng: Admin nhắn lệnh:
 
 router = Router()
 
-@router.message(Text(startswith="🔍 Lịch sử user"))
+@router.message(F.text.startswith("🔍 Lịch sử user")
 async def check_user_transactions(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return  # Không cho user thường dùng
@@ -23,4 +23,4 @@ async def check_user_transactions(message: types.Message):
             withdraw_text = "\n📤 Rút tiền:\n" + "\n".join(user_withdrawals) if user_withdrawals else "Không có giao dịch rút."
             await message.answer(f"📜 Lịch sử user {user_id}:\n{deposit_text}\n{withdraw_text}")
     except Exception:
-        await message.answer(⚠️ Sai cú pháp! Dùng: 🔍 Lịch sử user [ID]")
+        await message.answer("⚠️ Sai cú pháp! Dùng: 🔍 Lịch sử user [ID]")
