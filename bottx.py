@@ -434,14 +434,14 @@ async def daovang_set_bet(message: types.Message):
     # Trừ tiền cược từ số dư
     user_balance[user_id] -= bet
     save_data(data)
-    # Thiết lập trạng thái game: chọn 3 BOM ngẫu nhiên trên 1-24
+    # Khởi tạo game với 3 BOM được đặt ngẫu nhiên trên 24 ô
     bomb_count = 3
     bomb_positions = random.sample(range(1, 25), bomb_count)
     daovang_states[user_id] = {
         "bet": bet,
         "multiplier": 1.0,
         "bomb_positions": bomb_positions,
-        "chosen": set(),
+        "chosen": set(),   # Lưu các ô đã chọn (sẽ không cho chọn lại)
         "awaiting_bet": False,
         "active": True
     }
@@ -459,9 +459,9 @@ async def daovang_choose_cell(message: types.Message):
         return
     state = daovang_states[user_id]
     if cell in state["chosen"]:
-        await message.answer("❌ Ô này đã được chọn rồi, hãy chọn ô khác!")
+        await message.answer(f"❌ Ô {cell} đã được chọn rồi, hãy chọn ô khác!")
         return
-    # Nếu ô được chọn chứa BOM: game kết thúc, thua hết tiền cược
+    # Nếu ô được chọn chứa BOM: game kết thúc, người chơi thua hết tiền cược
     if cell in state["bomb_positions"]:
         await message.answer("💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", reply_markup=main_menu)
         daovang_states.pop(user_id, None)
@@ -472,7 +472,9 @@ async def daovang_choose_cell(message: types.Message):
     current_multiplier = state["multiplier"]
     next_multiplier = current_multiplier + 0.3
     win_amount = int(state["bet"] * current_multiplier)
-    # Hiển thị nút "Rút tiền" và "Chơi tiếp"
+    # Hiển thị các ô đã chọn để người chơi biết
+    chosen_cells = sorted(list(state["chosen"]))
+    chosen_str = ", ".join(str(x) for x in chosen_cells)
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Rút tiền"), KeyboardButton(text="Chơi tiếp")]],
         resize_keyboard=True,
@@ -481,7 +483,8 @@ async def daovang_choose_cell(message: types.Message):
     await message.answer(
         f"Chọn ô {cell} thành công!\nHệ số thưởng hiện tại: x{current_multiplier:.2f}\n"
         f"Tiền thắng hiện tại: {win_amount} VNĐ.\n"
-        f"Nếu chơi tiếp, hệ số có thể tăng lên x{next_multiplier:.2f}.\n"
+        f"Các ô đã chọn: {chosen_str}\n"
+        f"Nếu chơi tiếp, hệ số sẽ tăng lên x{next_multiplier:.2f}.\n"
         "Bạn muốn 'Rút tiền' hay 'Chơi tiếp'?",
         reply_markup=keyboard
     )
@@ -494,6 +497,7 @@ async def daovang_withdraw(message: types.Message):
         return
     state = daovang_states[user_id]
     win_amount = int(state["bet"] * state["multiplier"])
+    # Cộng tiền thắng vào số dư
     user_balance[user_id] += win_amount
     save_data(data)
     await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
@@ -505,7 +509,8 @@ async def daovang_continue(message: types.Message):
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
         await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
         return
-    await message.answer("Hãy chọn một ô từ 1 đến 24:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Hãy chọn một ô từ 1 đến 24 (các ô đã chọn sẽ không được chọn lại):", reply_markup=ReplyKeyboardRemove())
+
 # ===================== GAME: Mini Poker =====================
 @router.message(F.text == "🃏 Mini Poker")
 async def start_poker(message: types.Message):
