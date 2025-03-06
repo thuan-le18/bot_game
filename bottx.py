@@ -497,8 +497,9 @@ async def daovang_withdraw(message: types.Message):
         return
     state = daovang_states[user_id]
     win_amount = int(state["bet"] * state["multiplier"])
-    # Cộng tiền thắng vào số dư
-    user_balance[user_id] += win_amount
+    # Cập nhật số dư: đảm bảo số dư được cộng đúng và cập nhật vào data
+    user_balance[user_id] = user_balance.get(user_id, 0) + win_amount
+    data["balances"] = user_balance
     save_data(data)
     await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
     daovang_states.pop(user_id, None)
