@@ -368,10 +368,11 @@ async def start_rongho(message: types.Message):
     await message.answer("Chọn cược của bạn:", reply_markup=keyboard)
 
 @router.message(lambda msg: rongho_states.get(str(msg.from_user.id), {}).get("awaiting_choice") == True 
-                          and msg.text in ["Rồng", "Hòa", "Hổ"])
+                          and msg.text.lower() in ["rồng", "hòa", "hổ"])
 async def choose_rongho(message: types.Message):
     user_id = str(message.from_user.id)
-    choice = message.text  # "Rồng", "Hòa" hoặc "Hổ"
+    # Chuyển đổi đầu vào thành chữ in hoa chữ cái đầu để thống nhất (ví dụ: "rồng" -> "Rồng")
+    choice = message.text.capitalize()
     # Cập nhật trạng thái với lựa chọn và yêu cầu nhập số tiền cược
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
     await message.answer("Nhập số tiền cược của bạn:", reply_markup=ReplyKeyboardRemove())
@@ -401,15 +402,11 @@ async def bet_rongho_amount(message: types.Message):
     
     # Xử lý kết quả
     if result == "Hòa":
-        if chosen.lower() == "hòa":
-            win_amount = int(bet_amount * 7)
-            user_balance[user_id] += win_amount
-            save_data(data)
-            await message.answer(f"🎉 Kết quả: Hòa! Bạn thắng {win_amount} VNĐ!")
-        else:
-            await message.answer(f"😢 Kết quả: Hòa! Bạn thua {bet_amount} VNĐ!")
+        win_amount = int(bet_amount * 7)
+        user_balance[user_id] += win_amount
+        save_data(data)
+        await message.answer(f"🎉 Kết quả: Hòa! Bạn thắng {win_amount} VNĐ!")
     else:
-        # Nếu kết quả là Rồng hoặc Hổ
         if chosen.lower() == result.lower():
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
