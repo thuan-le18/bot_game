@@ -271,7 +271,7 @@ async def bet_rongho(message: types.Message):
 
 
 # ===================== GAME: Xóc Đĩa =====================
-@router.message(Text("⚪🔴 Xóc Đĩa"))
+@router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
     await message.answer("🔹 Chọn cược: Chẵn (⚪⚪🔴🔴) hoặc Lẻ (⚪🔴🔴🔴)\n💰 Nhập số tiền cược!")
 
@@ -290,7 +290,7 @@ async def bet_xocdia(message: types.Message):
     else:
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
 # ===================== GAME: Đào Vàng =====================
-@router.message(Text("⛏️ Đào Vàng"))
+@router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
     await message.answer("🔹 Chọn ô từ 1-5 để đào!\n⛏️ Nếu trúng vàng, bạn có thể đào tiếp hoặc rút tiền.")
 
@@ -303,7 +303,7 @@ async def dig_gold(message: types.Message):
         await message.answer("💣 Bạn gặp BOM! Mất hết tiền.")
 
 # ===================== GAME: Mini Poker =====================
-@router.message(Text("🃏 Mini Poker"))
+@router.message(F.text == "🃏 Mini Poker")
 async def start_poker(message: types.Message):
     await message.answer("💰 Nhập số tiền cược, bot sẽ quay ra một tay bài Poker!")
 
