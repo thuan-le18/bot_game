@@ -11,5 +11,4 @@ game_results = {
 }
 
 user_balance = {}
-deposits = {}
 withdrawals = {}
