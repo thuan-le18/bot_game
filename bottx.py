@@ -419,8 +419,6 @@ def get_xoc_dia_category(num_red):
         cats.add("1 trắng 3 đỏ")
     return cats
 
-logging.basicConfig(level=logging.DEBUG)  # đảm bảo cấp độ debug được bật
-
 @router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
     user_id = str(message.from_user.id)
