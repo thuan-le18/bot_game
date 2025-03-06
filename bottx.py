@@ -403,12 +403,28 @@ async def bet_xocdia(message: types.Message):
     else:
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
     xocdia_states[user_id] = False  # Reset trạng thái
-# ===================== GAME: Đào Vàng (Mines Gold style) =====================
+# Hàm tính multiplier động dựa trên số ô an toàn (safe_count) và số bom (bomb_count)
+def calculate_multiplier(safe_count, bomb_count):
+    """
+    Với bomb_count = 3, safe_count = 1 sẽ cho multiplier = 1 + 0.09 * 1^1.45 = 1.09.
+    Các tham số:
+      - k = 0.09 (điều chỉnh multiplier cho bomb_count = 3)
+      - p = 1.45 (điều chỉnh tăng trưởng theo safe_count)
+      - alpha = 0.114 (điều chỉnh giảm multiplier khi số bom tăng)
+    Nếu số bom tăng, factor giảm để multiplier cho mỗi ô an toàn sẽ thấp hơn.
+    """
+    k = 0.09
+    p = 1.45
+    alpha = 0.114
+    factor = k / (1 + alpha * max(bomb_count - 3, 0))
+    return 1 + factor * (safe_count ** p)
+
+# ------------------- GAME: Đào Vàng (Mines Gold style) -------------------
 # Sử dụng biến daovang_states riêng cho game này
 daovang_states = {}
-MIN_BET = 1000  # Cược tối thiểu là 1000 VNĐ
+MIN_BET = 1000  # Cược tối thiểu
 
-# Step 1: Khi người dùng bấm "⛏️ Đào Vàng", yêu cầu nhập tiền cược
+# Bước 1: Khi người dùng bấm "⛏️ Đào Vàng", yêu cầu nhập tiền cược
 @router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
     user_id = str(message.from_user.id)
@@ -418,7 +434,7 @@ async def start_daovang(message: types.Message):
     )
     daovang_states[user_id] = {"awaiting_bet": True}
 
-# Step 2: Người dùng nhập tiền cược, sau đó bot yêu cầu nhập số bom muốn chơi
+# Bước 2: Người dùng nhập tiền cược, sau đó yêu cầu nhập số bom muốn chơi
 @router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True and msg.text.isdigit())
 async def daovang_set_bet(message: types.Message):
     user_id = str(message.from_user.id)
@@ -430,23 +446,26 @@ async def daovang_set_bet(message: types.Message):
         await message.answer("❌ Số dư không đủ!")
         daovang_states.pop(user_id, None)
         return
-    # Trừ tiền cược và lưu lại dữ liệu
+    # Trừ tiền cược và cập nhật số dư
     user_balance[user_id] -= bet
     data["balances"] = user_balance
     save_data(data)
-    # Cập nhật state: chuyển sang bước nhập số bom
+    # Chuyển sang bước nhập số bom
     daovang_states[user_id] = {
         "bet": bet,
         "awaiting_bomb_count": True
     }
-    await message.answer("Nhập số bom bạn muốn (từ 1 đến 24, mặc định là 3 nếu không hợp lệ):", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "Nhập số bom bạn muốn (từ 1 đến 24, mặc định là 3 nếu không hợp lệ):",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-# Step 3: Nhận số bom, khởi tạo game
+# Bước 3: Nhận số bom và khởi tạo game với grid từ 1 đến 25
 @router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("awaiting_bomb_count") == True)
 async def daovang_set_bomb_count(message: types.Message):
     user_id = str(message.from_user.id)
     text = message.text.strip()
-    bomb_count = 3  # mặc định là 3
+    bomb_count = 3  # giá trị mặc định
     if text.isdigit():
         chosen = int(text)
         if 1 <= chosen <= 24:
@@ -455,22 +474,22 @@ async def daovang_set_bomb_count(message: types.Message):
             await message.answer("Số bom không hợp lệ. Sử dụng mặc định: 3 bom.")
     else:
         await message.answer("Không nhận dạng được số bom. Sử dụng mặc định: 3 bom.")
-    # Khởi tạo game: grid từ 1 đến 25
-    bomb_positions = random.sample(range(1, 26), bomb_count)  # chọn bomb_count số từ 1 đến 25
+    # Khởi tạo game: grid gồm 25 ô
+    bomb_positions = random.sample(range(1, 26), bomb_count)
     daovang_states[user_id] = {
         "bet": daovang_states[user_id]["bet"],
-        "multiplier": 1.0,
         "bomb_count": bomb_count,
         "bomb_positions": bomb_positions,
-        "chosen": set(),
-        "active": True
+        "chosen": set(),   # Các ô đã chọn an toàn
+        "active": True,
+        "multiplier": 1.0  # Ban đầu multiplier là 1.0
     }
     await message.answer(
         f"Game Đào Vàng bắt đầu với {bomb_count} bom!\nChọn một ô từ 1 đến 25:",
         reply_markup=ReplyKeyboardRemove()
     )
 
-# Step 4: Người dùng chọn ô an toàn (nếu ô chứa bom thì game kết thúc)
+# Bước 4: Người dùng chọn ô; nếu an toàn, cập nhật số ô an toàn và multiplier
 @router.message(lambda msg: daovang_states.get(str(msg.from_user.id), {}).get("active") == True and msg.text.isdigit())
 async def daovang_choose_cell(message: types.Message):
     user_id = str(message.from_user.id)
@@ -482,19 +501,23 @@ async def daovang_choose_cell(message: types.Message):
     if cell in state["chosen"]:
         await message.answer(f"❌ Ô {cell} đã được chọn rồi, hãy chọn ô khác!")
         return
-    # Nếu người chơi chọn ô có bom -> game thua
+    # Nếu chọn ô chứa bom -> game kết thúc (thua cược)
     if cell in state["bomb_positions"]:
         await message.answer("💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", reply_markup=main_menu)
         daovang_states.pop(user_id, None)
         return
-    # Nếu an toàn, cập nhật state
+    # Nếu an toàn, thêm ô vào danh sách đã chọn
     state["chosen"].add(cell)
-    state["multiplier"] += 1.0  # Tăng multiplier mỗi ô an toàn
-    current_multiplier = state["multiplier"]
+    safe_count = len(state["chosen"])
+    bomb_count = state["bomb_count"]
+    # Tính multiplier động dựa trên số ô an toàn và số bom
+    current_multiplier = calculate_multiplier(safe_count, bomb_count)
+    state["multiplier"] = current_multiplier
     win_amount = int(state["bet"] * current_multiplier)
     chosen_cells = sorted(list(state["chosen"]))
     chosen_str = ", ".join(str(x) for x in chosen_cells)
-    next_multiplier = current_multiplier + 1.0
+    # Dự đoán multiplier nếu chọn thêm 1 ô nữa
+    next_multiplier = calculate_multiplier(safe_count + 1, bomb_count)
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Rút tiền đào vàng"), KeyboardButton(text="Chơi tiếp")]],
         resize_keyboard=True,
@@ -509,7 +532,7 @@ async def daovang_choose_cell(message: types.Message):
         reply_markup=keyboard
     )
 
-# Step 5: Handler cho “Rút tiền đào vàng”
+# Bước 5: Handler cho “Rút tiền đào vàng”
 @router.message(F.text == "Rút tiền đào vàng")
 async def daovang_withdraw(message: types.Message):
     user_id = str(message.from_user.id)
@@ -524,15 +547,17 @@ async def daovang_withdraw(message: types.Message):
     await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
     daovang_states.pop(user_id, None)
 
-# Step 6: Handler cho “Chơi tiếp”
+# Bước 6: Handler cho “Chơi tiếp”
 @router.message(F.text == "Chơi tiếp")
 async def daovang_continue(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
         await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
         return
-    await message.answer("Hãy chọn một ô từ 1 đến 25 (các ô đã chọn sẽ không được chọn lại):", reply_markup=ReplyKeyboardRemove())
-
+    await message.answer(
+        "Hãy chọn một ô từ 1 đến 25 (các ô đã chọn sẽ không được chọn lại):",
+        reply_markup=ReplyKeyboardRemove()
+    )
 # ===================== GAME: Mini Poker =====================
 @router.message(F.text == "🃏 Mini Poker")
 async def start_poker(message: types.Message):
