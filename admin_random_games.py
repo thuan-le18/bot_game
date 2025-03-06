@@ -6,8 +6,11 @@ ADMIN_ID = 1985817060  # Thay bằng ID admin của bạn
 
 router = Router()
 
-@router.message(F.text.startswith("/chinhrandom"), CommandObject())
+from aiogram.filters.command import Command
+
+@router.message(Command("chinhrandom"))
 async def modify_random_game_result(message: types.Message, command: CommandObject):
+    ...
     if message.from_user.id != ADMIN_ID:
         return  # Chỉ cho admin
 
