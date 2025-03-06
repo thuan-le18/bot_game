@@ -183,28 +183,68 @@ async def bet_history(message: types.Message):
     ])
     await message.answer(f"📜 Lịch sử cược của bạn:\n{text}", reply_markup=main_menu)
 
+# ===================== Khai báo trạng thái cho từng game =====================
+taixiu_states = {}    # Trạng thái game Tài Xỉu: có thể là "awaiting_choice" hoặc dict {"choice": ..., "state": "awaiting_bet"}
+jackpot_states = {}   # Trạng thái game Jackpot: True khi đang chờ cược
+crash_states = {}     # Trạng thái game Máy Bay (Crash): True khi đang chờ cược
+rongho_states = {}    # Trạng thái game Rồng Hổ: True khi đang chờ cược
+xocdia_states = {}    # Trạng thái game Xóc Đĩa: True khi đang chờ cược
+gold_states = {}      # Trạng thái game Đào Vàng: True khi đang chờ nhập ô
+poker_states = {}     # Trạng thái game Mini Poker: True khi đang chờ cược
+
 # ===================== GAME: Tài Xỉu =====================
 @router.message(F.text == "🎲 Tài Xỉu")
+async def start_taixiu(message: types.Message):
+    user_id = str(message.from_user.id)
+    taixiu_states[user_id] = "awaiting_choice"
+    await message.answer(
+        "Vui lòng chọn Tài hoặc Xỉu:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="Tài"), KeyboardButton(text="Xỉu")]],
+            resize_keyboard=True
+        )
+    )
+
+@router.message(lambda msg: taixiu_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["Tài", "Xỉu"])
+async def choose_taixiu(message: types.Message):
+    user_id = str(message.from_user.id)
+    # Lưu lựa chọn và chuyển sang trạng thái chờ nhập cược
+    taixiu_states[user_id] = {"choice": message.text, "state": "awaiting_bet"}
+    await message.answer(f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:", reply_markup=ReplyKeyboardRemove())
+
+@router.message(lambda msg: isinstance(taixiu_states.get(str(msg.from_user.id)), dict)
+                          and taixiu_states[str(msg.from_user.id)].get("state") == "awaiting_bet"
+                          and msg.text.isdigit())
 async def play_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
-    deposit_states[user_id] = None
-    await message.answer("Vui lòng chọn Tài hoặc Xỉu:", reply_markup=ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Tài"), KeyboardButton(text="Xỉu")]],
-        resize_keyboard=True
-    ))
-
-@router.message(F.text.in_(["Tài", "Xỉu"]))
-async def choose_bet(message: types.Message):
-    user_id = str(message.from_user.id)
-    current_bets[user_id] = {"choice": message.text}
-    await message.answer(f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:", reply_markup=ReplyKeyboardRemove())
+    bet_amount = int(message.text)
+    if user_balance.get(user_id, 0) < bet_amount:
+        await message.answer("❌ Số dư không đủ!")
+        taixiu_states[user_id] = None
+        return
+    user_balance[user_id] -= bet_amount
+    save_data(data)
+    # Giả lập kết quả game
+    result = random.choice(["Tài", "Xỉu"])
+    user_choice = taixiu_states[user_id]["choice"]
+    if user_choice == result:
+        win_amount = bet_amount * 2  # Ví dụ: nhân đôi số tiền cược khi thắng
+        user_balance[user_id] += win_amount
+        save_data(data)
+        await message.answer(f"🎉 Kết quả: {result}. Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
+    else:
+        await message.answer(f"💥 Kết quả: {result}. Bạn thua {bet_amount} VNĐ!", reply_markup=main_menu)
+    taixiu_states[user_id] = None
 
 # ===================== GAME: Jackpot =====================
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
     user_id = str(message.from_user.id)
     jackpot_states[user_id] = True
-    await message.answer("💰 Nhập số tiền bạn muốn cược:", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "💰 Nhập số tiền bạn muốn cược:",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 @router.message(lambda msg: jackpot_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
 async def jackpot_bet(message: types.Message):
@@ -230,11 +270,18 @@ async def jackpot_bet(message: types.Message):
 # ===================== GAME: Máy Bay (Crash Game) =====================
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
-    await message.answer("💰 Nhập số tiền cược, bot sẽ khởi động máy bay!")
+    user_id = str(message.from_user.id)
+    crash_states[user_id] = True
+    await message.answer(
+        "💰 Nhập số tiền cược, bot sẽ khởi động máy bay!",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-@router.message(lambda msg: msg.text.isdigit())
+@router.message(lambda msg: crash_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
 async def play_crash(message: types.Message):
+    user_id = str(message.from_user.id)
     amount = int(message.text)
+    crash_states[user_id] = False  # Reset trạng thái sau khi nhận cược
     crash_point = round(random.uniform(1.1, 10.0), 2)
     await message.answer(f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00")
     
@@ -245,16 +292,23 @@ async def play_crash(message: types.Message):
             await message.answer(f"💥 Máy bay rơi tại x{crash_point}! Bạn thua {amount} VNĐ!")
             return
         await message.answer(f"📈 Hệ số nhân: x{current_multiplier}")
-
+    
     await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {amount * crash_point} VNĐ!")
 
 # ===================== GAME: Rồng Hổ =====================
 @router.message(F.text == "🐉🐅 Rồng Hổ")
 async def start_rongho(message: types.Message):
-    await message.answer("🔹 Chọn cược: Rồng, Hổ hoặc Hòa\n💰 Nhập số tiền cược!")
+    user_id = str(message.from_user.id)
+    rongho_states[user_id] = True
+    await message.answer(
+        "🔹 Chọn cược: Rồng, Hổ hoặc Hòa\n💰 Nhập cược theo cú pháp: Rồng/Hổ/Hòa [số tiền]",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-@router.message(lambda msg: msg.text.lower().startswith(("rồng", "hổ", "hòa")))
+@router.message(lambda msg: rongho_states.get(str(msg.from_user.id)) == True 
+                          and msg.text.lower().startswith(("rồng", "hổ", "hòa")))
 async def bet_rongho(message: types.Message):
+    user_id = str(message.from_user.id)
     bet = message.text.split()
     if len(bet) != 2 or not bet[1].isdigit():
         await message.answer("⚠️ Sai cú pháp! Nhập: Rồng/Hổ/Hòa [số tiền]")
@@ -262,22 +316,28 @@ async def bet_rongho(message: types.Message):
 
     choice, amount = bet[0].lower(), int(bet[1])
     result = random.choice(["rồng", "hổ", "hòa"])
-
     payout = amount * (7 if result == "hòa" else 1.96)
 
     if choice == result:
         await message.answer(f"🎉 Kết quả: {result.upper()}! Bạn thắng {payout} VNĐ!")
     else:
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
-
+    rongho_states[user_id] = False  # Reset trạng thái
 
 # ===================== GAME: Xóc Đĩa =====================
 @router.message(F.text == "⚪🔴 Xóc Đĩa")
 async def start_xocdia(message: types.Message):
-    await message.answer("🔹 Chọn cược: Chẵn (⚪⚪🔴🔴) hoặc Lẻ (⚪🔴🔴🔴)\n💰 Nhập số tiền cược!")
+    user_id = str(message.from_user.id)
+    xocdia_states[user_id] = True
+    await message.answer(
+        "🔹 Chọn cược: Chẵn (⚪⚪🔴🔴) hoặc Lẻ (⚪🔴🔴🔴)\n💰 Nhập cược theo cú pháp: Chẵn/Lẻ [số tiền]",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-@router.message(lambda msg: msg.text.lower().startswith(("chẵn", "lẻ")))
+@router.message(lambda msg: xocdia_states.get(str(msg.from_user.id)) == True 
+                          and msg.text.lower().startswith(("chẵn", "lẻ")))
 async def bet_xocdia(message: types.Message):
+    user_id = str(message.from_user.id)
     bet = message.text.split()
     if len(bet) != 2 or not bet[1].isdigit():
         await message.answer("⚠️ Sai cú pháp! Nhập: Chẵn/Lẻ [số tiền]")
@@ -287,34 +347,51 @@ async def bet_xocdia(message: types.Message):
     result = random.choice(["chẵn", "lẻ"])
 
     if choice == result:
-        await message.answer(f"🎉 Kết quả: {result.upper()}! Bạn thắng {amount*1.96} VNĐ!")
+        await message.answer(f"🎉 Kết quả: {result.upper()}! Bạn thắng {amount * 1.96} VNĐ!")
     else:
         await message.answer(f"😢 Kết quả: {result.upper()}! Bạn thua {amount} VNĐ!")
+    xocdia_states[user_id] = False  # Reset trạng thái
+
 # ===================== GAME: Đào Vàng =====================
 @router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
-    await message.answer("🔹 Chọn ô từ 1-5 để đào!\n⛏️ Nếu trúng vàng, bạn có thể đào tiếp hoặc rút tiền.")
+    user_id = str(message.from_user.id)
+    gold_states[user_id] = True
+    await message.answer(
+        "🔹 Chọn ô từ 1-5 để đào!\n⛏️ Nếu trúng vàng, bạn có thể đào tiếp hoặc nhập 'rút' để lấy tiền.",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-@router.message(lambda msg: msg.text.isdigit() and 1 <= int(msg.text) <= 5)
+@router.message(lambda msg: gold_states.get(str(msg.from_user.id)) == True 
+                          and msg.text.isdigit() and 1 <= int(msg.text) <= 5)
 async def dig_gold(message: types.Message):
+    user_id = str(message.from_user.id)
     chance = random.randint(1, 100)
     if chance <= 70:
-        await message.answer(f"✨ Bạn tìm thấy VÀNG! Tiếp tục đào hoặc nhập 'rút' để lấy tiền.")
+        # Giữ trạng thái cho phép đào tiếp
+        await message.answer("✨ Bạn tìm thấy VÀNG! Tiếp tục đào hoặc nhập 'rút' để lấy tiền.")
     else:
+        gold_states[user_id] = False  # Reset nếu gặp bom
         await message.answer("💣 Bạn gặp BOM! Mất hết tiền.")
 
 # ===================== GAME: Mini Poker =====================
 @router.message(F.text == "🃏 Mini Poker")
 async def start_poker(message: types.Message):
-    await message.answer("💰 Nhập số tiền cược, bot sẽ quay ra một tay bài Poker!")
+    user_id = str(message.from_user.id)
+    poker_states[user_id] = True
+    await message.answer(
+        "💰 Nhập số tiền cược, bot sẽ quay ra một tay bài Poker!",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
-@router.message(lambda msg: msg.text.isdigit())
+@router.message(lambda msg: poker_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
 async def play_poker(message: types.Message):
+    user_id = str(message.from_user.id)
+    amount = int(message.text)  # Nếu cần dùng số tiền cược cho tính toán
+    poker_states[user_id] = False  # Reset trạng thái sau khi cược
     hands = ["Đôi", "Sám", "Sảnh", "Thùng", "Cù Lũ", "Tứ Quý", "Thùng Phá Sảnh"]
     hand = random.choice(hands)
     await message.answer(f"🃏 Tay bài của bạn: {hand}!")
-
-
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
