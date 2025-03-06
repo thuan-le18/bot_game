@@ -493,11 +493,13 @@ async def daovang_choose_cell(message: types.Message):
 @router.message(F.text == "Rút tiền")
 async def daovang_withdraw(message: types.Message):
     user_id = str(message.from_user.id)
+    logging.info(f"Withdraw handler triggered for user: {user_id}")
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
         await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
         return
     state = daovang_states[user_id]
     win_amount = int(state["bet"] * state["multiplier"])
+    logging.info(f"User {user_id} winning amount: {win_amount}")
     # Cộng tiền thắng vào số dư
     user_balance[user_id] = user_balance.get(user_id, 0) + win_amount
     data["balances"] = user_balance
