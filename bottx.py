@@ -23,6 +23,7 @@ DATA_FILE = "user_data.json"
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
+dp.include_router(router)
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
