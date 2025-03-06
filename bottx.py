@@ -27,7 +27,6 @@ router = Router()
 # ===================== Import các router từ module khác =====================
 from admin_game_control import router as admin_game_router
 from admin_random_games import router as admin_random_router
-from admin_transactions import router as admin_transactions_router
 from admin_bets import router as admin_bets_router  # Xem danh sách cược & chỉnh kết quả
 from user_transactions import router as user_transactions_router
 
@@ -37,7 +36,6 @@ dp.include_router(router)  # Router chính của bottx.py (nếu có)
 dp.include_router(user_transactions_router)  # Lịch sử nạp/rút của người dùng
 dp.include_router(admin_game_router)           # Admin game control
 dp.include_router(admin_random_router)         # Admin random games
-dp.include_router(admin_transactions_router)   # Admin transactions
 dp.include_router(admin_bets_router)           # Admin bets
 
 # ... phần code xử lý khác (như handlers, main function, etc.)
