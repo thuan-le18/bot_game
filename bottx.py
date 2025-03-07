@@ -933,7 +933,6 @@ async def process_withdraw_request(message: types.Message):
         reply_markup=main_menu
     )
 
-Lệnh Admin Xử lý Rút tiền
 @router.message(Command("ruttien"))
 async def admin_process_withdraw(message: types.Message):
     # Chỉ admin mới có quyền dùng lệnh này
