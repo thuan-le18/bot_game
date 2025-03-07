@@ -1,3 +1,18 @@
+import logging
+import asyncio
+import random
+import json
+from datetime import datetime, timedelta
+
+from aiogram import Bot, Dispatcher, types, Router, F
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardRemove,
+    BotCommand,
+    BotCommandScopeChat
+)
+from aiogram.filters import Command
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
