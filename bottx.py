@@ -15,7 +15,7 @@ from aiogram.types import (
 from aiogram.filters import Command
 
 # ===================== Cấu hình bot =====================
-TOKEN = "7501584050:AAF2v9l7Oo2_DP3qTarueUJjX1lD14cVC00"
+TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
 DATA_FILE = "user_data.json"
 
@@ -163,9 +163,44 @@ async def vip_info(message: types.Message):
 @router.message(F.text == "🎁 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    referral_link = f"https://t.me/your_bot?start={user_id}"
-    await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
+    referral_link = f"https://t.me/Bottx_Online_bot?start={user_id}"
 
+    # Kiểm tra số lượt mời hôm nay
+    today = datetime.now().strftime("%Y-%m-%d")
+    invite_count = sum(1 for uid in referrals.get(user_id, []) if referrals[user_id][uid] == today)
+
+    # Hiển thị số hoa hồng nhận được
+    total_commission = sum(referral_earnings.get(user_id, {}).values())
+
+    await message.answer(
+        f"🎁 *Link mời của bạn:* {referral_link}\n"
+        f"📢 *Lượt mời hôm nay:* {invite_count}\n"
+        f"💰 *Hoa hồng đã nhận:* {total_commission:,} VNĐ\n\n"
+        f"💡 Bạn nhận *5%* từ số tiền cược đầu tiên của mỗi người được mời!",
+        reply_markup=main_menu,
+        parse_mode="Markdown"
+    )
+def process_bet(user_id, bet_amount, game_result):
+    user_id = str(user_id)
+    
+    # Kiểm tra nếu user có người giới thiệu
+    inviter_id = user_referrals.get(user_id)
+    
+    if inviter_id:
+        # Tính hoa hồng 5% chỉ cho cược đầu tiên
+        if user_id not in referral_earnings.get(inviter_id, {}):
+            commission = int(bet_amount * 0.05)
+            referral_earnings.setdefault(inviter_id, {})[user_id] = commission
+            users[inviter_id]["balance"] += commission  # Cộng tiền cho người mời
+
+    # Lưu cược vào lịch sử user
+    user_history.setdefault(user_id, []).append({
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "game": "Tài Xỉu",
+        "bet_amount": bet_amount,
+        "result": game_result,
+        "winnings": 100000  # Ví dụ kết quả thắng/thua
+    })
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
@@ -187,15 +222,23 @@ async def check_balance(message: types.Message):
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
+    
+    # Kiểm tra nếu không có dữ liệu lịch sử
     if user_id not in user_history or not user_history[user_id]:
         await message.answer("📜 Bạn chưa có lịch sử cược.", reply_markup=main_menu)
         return
+
+    # Lấy danh sách lịch sử gần nhất (giới hạn 10 dòng để tránh quá dài)
+    history_list = user_history[user_id][-10:]  
+
     text = "\n".join([
-        f"⏰ {r['time']}: {r.get('game','Unknown')} - Cược {r.get('bet_amount', 0)} VNĐ, "
-        f"KQ: {r.get('result', r.get('random_number','?'))}, Thắng/Thua: {r['winnings']} VNĐ"
-        for r in user_history[user_id]
+        f"⏰ {r.get('time', '?')}: {r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
+        f"🔹 Kết quả: {r.get('result', r.get('random_number', '?'))} | "
+        f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
+        for r in history_list
     ])
-    await message.answer(f"📜 Lịch sử cược của bạn:\n{text}", reply_markup=main_menu)
+
+    await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
 
 # ===================== GAME: Tài Xỉu =====================
 @router.message(F.text == "🎲 Tài Xỉu")
