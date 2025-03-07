@@ -160,23 +160,11 @@ async def vip_info(message: types.Message):
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
 # ===================== Hoa Hồng Handler =====================
-from aiogram import types, Router
-from referral import process_new_user, get_referral_info
-
-router = Router()
-
 @router.message(F.text == "🎁 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    referral_link, invite_count, total_earnings = get_referral_info(user_id)
-
-    await message.answer(
-        f"🎁 *Link mời của bạn:* {referral_link}\n"
-        f"📢 *Lượt mời:* {invite_count}\n"
-        f"💰 *Hoa hồng đã nhận:* {total_earnings:,} VNĐ\n\n"
-        f"💡 Bạn nhận *2.000 VNĐ* cho mỗi người được mời!",
-        parse_mode="Markdown"
-    )
+    referral_link = f"https://t.me/your_bot?start={user_id}"
+    await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
 
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
