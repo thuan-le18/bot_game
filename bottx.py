@@ -352,20 +352,7 @@ async def withdraw_crash(message: types.Message):
          crash_games[user_id]["withdraw_event"].set()
          await message.answer("Đang xử lý rút tiền máy bay...", reply_markup=ReplyKeyboardRemove())
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import random
-import logging
-
-# Cấu hình logging
-logging.basicConfig(level=logging.INFO)
-
-# Giả sử rằng rongho_states, user_balance, data và hàm save_data đã được định nghĩa toàn cục
-# Ví dụ:
-# rongho_states = {}
-# user_balance = {}   # user_balance[user_id] = số dư của người dùng
-# data = {...}        # dữ liệu chứa thông tin cần lưu, ví dụ: {"balances": user_balance, ...}
-# def save_data(d): pass
-
+# ===================== GAME: Rồng Hổ =====================
 @router.message(F.text == "🐉Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
@@ -378,7 +365,6 @@ async def start_rongho(message: types.Message):
             InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")
         ]
     ])
-
     await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
 
 @router.callback_query(lambda c: c.data.startswith("rongho_"))
@@ -388,14 +374,9 @@ async def choose_rongho(callback_query: types.CallbackQuery):
     if len(parts) < 2:
         await callback_query.answer("Lỗi dữ liệu callback!")
         return
-    # Lấy lựa chọn: "rong", "hoa" hoặc "ho"
-    choice = parts[1]
+    choice = parts[1]  # "rong", "hoa" hoặc "ho"
     logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
-    
-    # Lưu trạng thái cho người dùng
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
-    
-    # Yêu cầu nhập số tiền cược
     await callback_query.message.answer("💰 Nhập số tiền cược của bạn:")
     await callback_query.answer()
 
@@ -406,27 +387,18 @@ async def bet_rongho_amount(message: types.Message):
     bet_amount = int(message.text.strip())
     state = rongho_states.get(user_id)
     logging.info(f"[bet_rongho_amount] User {user_id} cược {bet_amount}, state={state}")
-
     if state is None:
         await message.answer("⚠️ Lỗi: Không tìm thấy trạng thái game!")
         return
-
-    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
         rongho_states.pop(user_id, None)
         return
-
-    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
-
-    # Chọn kết quả ngẫu nhiên: "rong", "hoa", "ho"
     result = random.choice(["rong", "hoa", "ho"])
     chosen = state.get("choice")
     logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
-
-    # Xử lý kết quả
     if result == "hoa":
         if chosen == "hoa":
             win_amount = int(bet_amount * 7)
@@ -440,14 +412,11 @@ async def bet_rongho_amount(message: types.Message):
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            # Chuyển kết quả thành chữ đẹp hơn
             result_text = "Rồng" if result == "rong" else "Hổ"
             await message.answer(f"🎉 {result_text} thắng! Bạn thắng {win_amount} VNĐ!")
         else:
             result_text = "Rồng" if result == "rong" else "Hổ"
             await message.answer(f"😢 Kết quả: {result_text}! Bạn thua {bet_amount} VNĐ!")
-
-    # Xóa trạng thái game của người dùng
     rongho_states.pop(user_id, None)
     logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
 
@@ -592,24 +561,20 @@ async def daovang_continue(message: types.Message):
         reply_markup=ReplyKeyboardRemove()
     )
 
-import random
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import CallbackContext
-
-# Các bộ bài trong Mini Poker (5 lá)
+# ===================== GAME: Mini Poker =====================
+# Các lá bài của Mini Poker
 POKER_HANDS = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
 
-# Xác suất thắng & thưởng
+# Xác suất thưởng cho các bộ bài
 PRIZES = {
-    "Thùng Phá Sảnh": 10,  # Jackpot (cực hiếm)
-    "Tứ Quý": 5,           # Thắng lớn
-    "Cù Lũ": 3,            # Thắng vừa
-    "Thùng": 2,            # Thắng nhỏ
-    "Sảnh": 1.5,           # Thắng thấp
-    "Đôi": 1.2             # Thắng ít
+    "Thùng Phá Sảnh": 10,
+    "Tứ Quý": 5,
+    "Cù Lũ": 3,
+    "Thùng": 2,
+    "Sảnh": 1.5,
+    "Đôi": 1.2
 }
 
-# Hiệu ứng thắng
 def hien_thi_hieu_ung(so_tien_thang):
     if so_tien_thang >= 500000:
         return "✨💰 **SIÊU THẮNG!!!** 💰✨\n🎆🎇 Bạn vừa thắng {} VNĐ! 🎇🎆".format(so_tien_thang)
@@ -618,54 +583,62 @@ def hien_thi_hieu_ung(so_tien_thang):
     else:
         return "🎊 Chúc mừng! Bạn thắng {} VNĐ! 🎊".format(so_tien_thang)
 
-# Hàm quay Mini Poker
-def quay_poker(update: Update, context: CallbackContext):
-    user = update.message.from_user
-    bet_amount = 50000  # Cược mặc định
-
-    # Xáo trộn bài & lấy 5 lá
-    random.shuffle(POKER_HANDS)
-    cards = random.sample(POKER_HANDS, 5)
-    hand_result = danh_gia_bo_bai(cards)
-
-    # Tính tiền thắng
-    multiplier = PRIZES.get(hand_result, 0)
-    winnings = int(bet_amount * multiplier)
-
-    # Hiệu ứng kết quả
-    ket_qua = "**🎰 MINI POKER 🎰**\n"
-    ket_qua += "🃏 Bài của bạn: " + " | ".join(cards) + "\n"
-    ket_qua += f"➡️ **{hand_result}**\n"
-
-    if winnings > 0:
-        ket_qua += hien_thi_hieu_ung(winnings)
-    else:
-        ket_qua += "😢 Bạn không thắng, chúc may mắn lần sau!"
-
-    # Gửi tin nhắn & nút tương tác (Không có bảng xếp hạng)
-    keyboard = [
-        [InlineKeyboardButton("🎰 Chơi tiếp", callback_data="play_poker")],
-        [InlineKeyboardButton("💰 Rút tiền", callback_data="withdraw")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(ket_qua, reply_markup=reply_markup, parse_mode="Markdown")
-
-# Đánh giá bộ bài Mini Poker
 def danh_gia_bo_bai(cards):
-    # Quy tắc xác định bộ bài
+    # Một số quy tắc đơn giản để đánh giá bộ bài (bạn có thể mở rộng)
     if "♠A" in cards and "♥K" in cards and "♦Q" in cards and "♣J" in cards and "♠10" in cards:
         return "Thùng Phá Sảnh"
     if cards.count(cards[0]) == 4:
         return "Tứ Quý"
-    if cards.count(cards[0]) == 3 and cards.count(cards[3]) == 2:
+    if any(cards.count(card) == 3 for card in cards) and any(cards.count(card) == 2 for card in cards):
         return "Cù Lũ"
     if all(card[-1] == cards[0][-1] for card in cards):
         return "Thùng"
-    if sorted([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]) == list(range(min([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]), max([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]) + 1)):
-        return "Sảnh"
+    try:
+        # Kiểm tra sảnh đơn giản (bạn có thể cải tiến)
+        numbers = [int(card[1:]) if card[1:].isdigit() else 10 for card in cards]
+        if max(numbers) - min(numbers) == 4:
+            return "Sảnh"
+    except Exception:
+        pass
     if len(set(card[:-1] for card in cards)) < 5:
         return "Đôi"
     return "Không có gì"
+
+async def quay_poker(message: types.Message):
+    bet_amount = 50000  # Cược mặc định (bạn có thể mở rộng để cho người dùng nhập cược)
+    cards = random.sample(POKER_HANDS, 5)
+    hand_result = danh_gia_bo_bai(cards)
+    multiplier = PRIZES.get(hand_result, 0)
+    winnings = int(bet_amount * multiplier)
+    
+    ket_qua = "**🎰 MINI POKER 🎰**\n"
+    ket_qua += "🃏 Bài của bạn: " + " | ".join(cards) + "\n"
+    ket_qua += f"➡️ **{hand_result}**\n"
+    if winnings > 0:
+        ket_qua += hien_thi_hieu_ung(winnings)
+    else:
+        ket_qua += "😢 Bạn không thắng, chúc may mắn lần sau!"
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton("🎰 Chơi tiếp", callback_data="play_poker")],
+        [InlineKeyboardButton("💰 Rút tiền", callback_data="withdraw")]
+    ])
+    await message.answer(ket_qua, reply_markup=keyboard, parse_mode="Markdown")
+
+@router.message(Command("minipoker"))
+async def start_minipoker(message: types.Message):
+    await quay_poker(message)
+
+@router.callback_query(lambda c: c.data == "play_poker")
+async def callback_play_poker(callback_query: types.CallbackQuery):
+    logging.info(f"[callback_play_poker] User {callback_query.from_user.id} chọn chơi tiếp")
+    await callback_query.answer()
+    await quay_poker(callback_query.message)
+
+@router.callback_query(lambda c: c.data == "withdraw")
+async def callback_withdraw(callback_query: types.CallbackQuery):
+    logging.info(f"[callback_withdraw] User {callback_query.from_user.id} chọn rút tiền")
+    await callback_query.answer("Chức năng rút tiền đang được cập nhật.", show_alert=True)
 
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
