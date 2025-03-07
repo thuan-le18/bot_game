@@ -56,6 +56,25 @@ withdrawals = data["withdrawals"]
 referrals = data["referrals"]
 current_id = data["current_id"]
 
+# ===================== Hàm tính hoa hồng 2% =====================
+async def add_commission(user_id: str, bet_amount: int):
+    """
+    Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
+    """
+    referrer_id = None
+    for ref_id, referred_list in referrals.items():
+        if user_id in referred_list:
+            referrer_id = ref_id
+            break
+    if referrer_id:
+        commission = int(bet_amount * 0.02)
+        user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
+        save_data(data)
+        try:
+            await bot.send_message(referrer_id, f"🎉 Hoa hồng 2% từ cược của người chơi {user_id}: {commission} VNĐ!")
+        except Exception as e:
+            logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
+
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
 jackpot_states = {}   # Trạng thái game Jackpot
@@ -129,6 +148,10 @@ async def set_bot_commands(user_id: str):
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
     await set_bot_commands(user_id)
+    # Kiểm tra tham số referral từ deep link, ví dụ: "/start 123456789"
+    parts = message.text.split()
+    referrer_id = parts[1] if len(parts) > 1 else None
+
     new_user = False
     if user_id not in user_balance:
         user_balance[user_id] = NEW_USER_BONUS
@@ -137,6 +160,20 @@ async def start_cmd(message: types.Message):
         withdrawals[user_id] = []
         save_data(data)
         new_user = True
+
+        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho người giới thiệu
+        if referrer_id and referrer_id != user_id:
+            if referrer_id not in referrals:
+                referrals[referrer_id] = []
+            if user_id not in referrals[referrer_id]:
+                referrals[referrer_id].append(user_id)
+                user_balance[referrer_id] = user_balance.get(referrer_id, 0) + 2000
+                save_data(data)
+                try:
+                    await bot.send_message(referrer_id, "🎉 Bạn vừa nhận 2.000 VNĐ vì mời được một người chơi mới!")
+                except Exception as e:
+                    logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
+
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
     if new_user:
@@ -160,20 +197,6 @@ async def vip_info(message: types.Message):
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
-    # Xử lý mã giới thiệu nếu có. Giả sử khi người dùng gửi tin nhắn dạng: "🎁 Hoa hồng <referrer_id>"
-    args = message.text.split()
-    if len(args) > 1:
-        referrer_id = args[1]
-        # Kiểm tra xem không tự giới thiệu và chỉ nhận bonus một lần
-        if referrer_id != user_id:
-            if referrer_id not in referrals:
-                referrals[referrer_id] = []
-            if user_id not in referrals[referrer_id]:
-                referrals[referrer_id].append(user_id)
-                user_balance[referrer_id] = user_balance.get(referrer_id, 0) + 2000
-                save_data(data)
-                await bot.send_message(referrer_id, "🎉 Bạn vừa nhận 2.000 VNĐ vì mời được một người chơi mới!")
-    
     await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
 
 # ===================== Danh sách game Handler =====================
@@ -198,14 +221,11 @@ async def check_balance(message: types.Message):
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
     
-    # Kiểm tra nếu không có dữ liệu lịch sử
     if user_id not in user_history or not user_history[user_id]:
         await message.answer("📜 Bạn chưa có lịch sử cược.", reply_markup=main_menu)
         return
 
-    # Lấy danh sách lịch sử gần nhất (giới hạn 10 dòng để tránh quá dài)
     history_list = user_history[user_id][-10:]  
-
     text = "\n".join([
         f"⏰ {r.get('time', '?')}: {r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
         f"🔹 Kết quả: {r.get('result', r.get('random_number', '?'))} | "
@@ -245,11 +265,11 @@ async def play_taixiu(message: types.Message):
         taixiu_states[user_id] = None
         return
 
-    # Trừ tiền cược
+    # Trừ tiền cược và tính hoa hồng nếu có
     user_balance[user_id] -= bet_amount
     save_data(data)
+    await add_commission(user_id, bet_amount)
 
-    # Tung 3 quả xúc xắc với delay 2 giây mỗi lần
     dice_values = []
     for i in range(3):
         dice_msg = await message.answer_dice(emoji="🎲")
@@ -299,6 +319,7 @@ async def jackpot_bet(message: types.Message):
         return
     user_balance[user_id] -= bet_amount
     save_data(data)
+    await add_commission(user_id, bet_amount)
     await message.answer("🎰 Đang quay Jackpot...")
     await asyncio.sleep(2)
     if random.randint(1, 100) <= 10:
@@ -318,8 +339,8 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     await message.answer(
-        "💰 Nhập số tiền cược, bot sẽ khởi động máy bay!",
-        reply_markup=ReplyKeyboardRemove()
+         "💰 Nhập số tiền cược, bot sẽ khởi động máy bay!",
+         reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
@@ -330,12 +351,10 @@ async def initiate_crash_game(message: types.Message):
         await message.answer("❌ Số dư không đủ!")
         crash_states[user_id] = False
         return
-    # Trừ tiền cược
     user_balance[user_id] -= bet
     save_data(data)
-    # Xác định điểm rơi ngẫu nhiên cho máy bay
+    await add_commission(user_id, bet)
     crash_point = round(random.uniform(1.1, 10.0), 2)
-    # Tạo một asyncio.Event để lắng nghe yêu cầu rút tiền ngay
     withdraw_event = asyncio.Event()
     crash_games[user_id] = {
          "bet": bet,
@@ -353,12 +372,9 @@ async def initiate_crash_game(message: types.Message):
          f"🚀 Máy bay đang cất cánh...\n✈️ Hệ số nhân: x1.00\nNhấn 'Rút tiền máy bay' để rút tiền ngay!",
          reply_markup=keyboard
     )
-    # Vòng lặp cập nhật hệ số nhân
     while crash_games[user_id]["running"]:
          try:
-             # Chờ 1 giây hoặc chờ sự kiện rút tiền, nếu có thì sẽ trả về ngay
              await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=1)
-             # Nếu sự kiện được kích hoạt, xử lý rút tiền ngay
              if crash_games[user_id]["withdraw_event"].is_set():
                  win_amount = round(bet * crash_games[user_id]["current_multiplier"])
                  user_balance[user_id] += win_amount
@@ -370,7 +386,6 @@ async def initiate_crash_game(message: types.Message):
                  crash_games[user_id]["running"] = False
                  break
          except asyncio.TimeoutError:
-             # Nếu không có sự kiện rút tiền, cập nhật hệ số nhân sau 1 giây
              new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.2, 2)
              crash_games[user_id]["current_multiplier"] = new_multiplier
              if new_multiplier >= crash_games[user_id]["crash_point"]:
@@ -397,7 +412,6 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import random
 import logging
 
-# Cấu hình logging
 logging.basicConfig(level=logging.INFO)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
@@ -405,8 +419,6 @@ logging.basicConfig(level=logging.INFO)
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
-    
-    # Tạo bàn phím inline cho người chơi chọn cửa cược
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🐉 Rồng", callback_data="rongho_rong"),
@@ -414,7 +426,6 @@ async def start_rongho(message: types.Message):
             InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")
         ]
     ])
-
     await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
 
 # ===================== Handler xử lý lựa chọn cửa cược =====================
@@ -425,15 +436,9 @@ async def choose_rongho(callback_query: types.CallbackQuery):
     if len(parts) < 2:
         await callback_query.answer("Lỗi dữ liệu callback!")
         return
-    
-    # Lấy lựa chọn: "rong", "hoa" hoặc "ho"
     choice = parts[1]
     logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
-    
-    # Lưu trạng thái cho người dùng
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
-    
-    # Yêu cầu nhập số tiền cược
     await callback_query.message.answer("💰 Nhập số tiền cược của bạn:")
     await callback_query.answer()
 
@@ -450,22 +455,19 @@ async def bet_rongho_amount(message: types.Message):
         await message.answer("⚠️ Lỗi: Không tìm thấy trạng thái game!")
         return
 
-    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
         rongho_states.pop(user_id, None)
         return
 
-    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
+    await add_commission(user_id, bet_amount)
 
-    # Chọn kết quả ngẫu nhiên: "rong", "hoa", "ho"
     result = random.choice(["rong", "hoa", "ho"])
     chosen = state.get("choice")
     logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
-    # Xử lý kết quả
     if result == "hoa":
         if chosen == "hoa":
             win_amount = int(bet_amount * 7)
@@ -479,14 +481,12 @@ async def bet_rongho_amount(message: types.Message):
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            # Chuyển kết quả thành chữ đẹp hơn
             result_text = "Rồng" if result == "rong" else "Hổ"
             await message.answer(f"🎉 {result_text} thắng! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
         else:
             result_text = "Rồng" if result == "rong" else "Hổ"
             await message.answer(f"😢 Kết quả: {result_text}! Bạn thua {bet_amount} VNĐ!", reply_markup=main_menu)
 
-    # Xóa trạng thái game của người dùng
     rongho_states.pop(user_id, None)
     logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
 
@@ -514,6 +514,7 @@ async def daovang_set_bet(message: types.Message):
     user_balance[user_id] -= bet
     data["balances"] = user_balance
     save_data(data)
+    await add_commission(user_id, bet)
     daovang_states[user_id] = {
         "bet": bet,
         "awaiting_bomb_count": True
@@ -577,7 +578,6 @@ async def daovang_choose_cell(message: types.Message):
     total_safe = 25 - bomb_count
 
     if safe_count == total_safe:
-        # Nếu đã tìm được hết ô an toàn, chỉ cho phép rút tiền
         keyboard = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="Rút tiền đào vàng")]],
             resize_keyboard=True,
@@ -636,57 +636,37 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
 
 # ===================== Cấu hình Mini Poker =====================
-# Hệ số nhân thưởng cho các loại bài
 PRIZES = {
-    "Thùng Phá Sảnh": 10,  # Jackpot (cực hiếm)
-    "Tứ Quý": 5,           # Thắng lớn
-    "Cù Lũ": 3,            # Thắng vừa
-    "Thùng": 2,            # Thắng nhỏ
-    "Sảnh": 1.5,           # Thắng thấp
-    "Đôi": 1.2,            # Thắng ít
-    "Mậu Thầu": 0          # Không thắng
+    "Thùng Phá Sảnh": 10,
+    "Tứ Quý": 5,
+    "Cù Lũ": 3,
+    "Thùng": 2,
+    "Sảnh": 1.5,
+    "Đôi": 1.2,
+    "Mậu Thầu": 0
 }
 
-# Danh sách các lá bài
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
 
-# ===================== Hàm đánh giá bộ bài =====================
 def danh_gia_bo_bai(cards):
-    # Tách giá trị và chất của các lá bài
-    values = [card[:-1] for card in cards]  # Bỏ ký tự cuối (chất)
-    suits = [card[-1] for card in cards]    # Lấy ký tự cuối (chất)
-
-    # Đếm số lần xuất hiện của mỗi giá trị
+    values = [card[:-1] for card in cards]
+    suits = [card[-1] for card in cards]
     value_counts = {value: values.count(value) for value in set(values)}
 
-    # Kiểm tra Thùng Phá Sảnh
     if len(set(suits)) == 1 and sorted(values) == ["10", "J", "Q", "K", "A"]:
         return "Thùng Phá Sảnh"
-
-    # Kiểm tra Tứ Quý
     if 4 in value_counts.values():
         return "Tứ Quý"
-
-    # Kiểm tra Cù Lũ
     if sorted(value_counts.values()) == [2, 3]:
         return "Cù Lũ"
-
-    # Kiểm tra Thùng
     if len(set(suits)) == 1:
         return "Thùng"
-
-    # Kiểm tra Sảnh
     if sorted(values) == ["10", "J", "Q", "K", "A"]:
         return "Sảnh"
-
-    # Kiểm tra Đôi
     if list(value_counts.values()).count(2) >= 1:
         return "Đôi"
-
-    # Mậu Thầu (không có gì)
     return "Mậu Thầu"
 
-# ===================== Handler bắt đầu game Mini Poker =====================
 @router.message(F.text == "🃏 Mini Poker")
 async def start_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
@@ -696,34 +676,29 @@ async def start_minipoker(message: types.Message):
         reply_markup=ReplyKeyboardRemove()
     )
 
-# ===================== Handler xử lý cược và chơi game =====================
 @router.message(lambda msg: poker_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True and msg.text.isdigit())
 async def play_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
 
-    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
         poker_states.pop(user_id, None)
         return
     
-    # Trừ tiền cược
     user_balance[user_id] -= bet
     save_data(data)
+    await add_commission(user_id, bet)
     
-    # Tạo bài ngẫu nhiên
     cards = random.sample(CARD_DECK, 5)
     hand_type = danh_gia_bo_bai(cards)
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
     
-    # Cộng tiền thắng
     if win_amount > 0:
         user_balance[user_id] += win_amount
         save_data(data)
     
-    # Tạo thông báo kết quả
     result_text = (
         f"🃏 **Bài của bạn:** {' '.join(cards)}\n"
         f"🎯 **Kết quả:** {hand_type}\n"
@@ -733,27 +708,23 @@ async def play_minipoker(message: types.Message):
     else:
         result_text += "😢 **Chúc may mắn lần sau!**"
 
-    # Tạo nút chơi lại
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
     keyboard.button(text="🔙 Quay lại", callback_data="poker_back")
 
-    # Gửi kết quả
     await message.answer(result_text, reply_markup=keyboard.as_markup())
     poker_states.pop(user_id, None)
 
-# ===================== Handler chơi lại =====================
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
     await callback.message.delete()
     await start_minipoker(callback.message)
 
-# ===================== Handler quay lại menu chính =====================
 @router.callback_query(lambda c: c.data == "poker_back")
 async def poker_back(callback: types.CallbackQuery):
     await callback.message.delete()
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    
+
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
