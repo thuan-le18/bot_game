@@ -13,6 +13,7 @@ from aiogram.types import (
     BotCommandScopeChat
 )
 from aiogram.filters import Command
+
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -119,7 +120,7 @@ async def set_bot_commands(user_id: str):
     admin_commands = user_commands + [
         BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
-        BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
+        BotCommand(command="ruttien", description="Admin duyệt rút tiền"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
     if user_id == str(ADMIN_ID):
@@ -159,36 +160,12 @@ async def vip_info(message: types.Message):
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
 # ===================== Hoa Hồng Handler =====================
-from aiogram import types, Router
-from referral import process_new_user, get_referral_info
-
-router = Router()
-
 @router.message(F.text == "🎁 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    referral_link, invite_count, total_earnings = get_referral_info(user_id)
+    referral_link = f"https://t.me/your_bot?start={user_id}"
+    await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
 
-    await message.answer(
-        f"🎁 *Link mời của bạn:* {referral_link}\n"
-        f"📢 *Lượt mời:* {invite_count}\n"
-        f"💰 *Hoa hồng đã nhận:* {total_earnings:,} VNĐ\n\n"
-        f"💡 Bạn nhận *2.000 VNĐ* cho mỗi người được mời!",
-        parse_mode="Markdown"
-    )
-
-@router.message(Command("start"))
-async def start_cmd(message: types.Message):
-    user_id = str(message.from_user.id)
-    args = message.text.split()
-    
-    if len(args) > 1:  # Nếu có mã giới thiệu
-        inviter_id = args[1]
-        if process_new_user(user_id, inviter_id):
-            await message.answer(f"🎉 Bạn đã được mời bởi ID: {inviter_id}, {REFERRAL_BONUS} VNĐ đã được cộng vào tài khoản của họ!")
-
-    await message.answer("👋 Chào mừng bạn đến với bot Tài Xỉu!", reply_markup=main_menu)
-    
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
