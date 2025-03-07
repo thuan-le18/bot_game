@@ -938,7 +938,6 @@ async def process_withdraw_request(message: types.Message):
         reply_markup=main_menu
     )
 
-# ======================================================================
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 # ======================================================================
 @router.message(Command("xacnhan"))
@@ -954,7 +953,15 @@ async def admin_confirm_withdraw(message: types.Message):
             await message.answer("⚠️ Cú pháp: /xacnhan <user_id> <amount>")
             return
         
-        target_user_id = parts[1]
+        target_user_id = parts[1].strip()
+        if not target_user_id:
+            await message.answer("⚠️ ID người dùng không được để trống.")
+            return
+
+        if not target_user_id.isdigit():
+            await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
+            return
+
         amount = int(parts[2])
         
         # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
@@ -977,7 +984,7 @@ async def admin_confirm_withdraw(message: types.Message):
             await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
             return
 
-        # Kiểm tra số tiền pending của user (đã bị khóa) phải đủ
+        # Kiểm tra số tiền pending của user (đã được khóa khi gửi yêu cầu) phải đủ
         if pending_balance.get(target_user_id, 0) < amount:
             await message.answer("⚠️ Số tiền pending của user không đủ để xử lý yêu cầu này.")
             return
@@ -990,12 +997,12 @@ async def admin_confirm_withdraw(message: types.Message):
         request_found["status"] = "completed"
         save_data(data)
         
-        # Nếu admin gửi kèm ảnh (biên lai), lấy file_id của ảnh có kích thước lớn nhất
+        # Nếu admin gửi kèm ảnh biên lai, lấy file_id của ảnh có kích thước lớn nhất
         photo_id = None
         if message.photo:
             photo_id = message.photo[-1].file_id
         
-        # Gửi thông báo cho người dùng: "Yêu cầu rút tiền <amount> VNĐ của bạn đã được xử lý. Vui lòng kiểm tra tài khoản."
+        # Gửi thông báo cho người dùng rằng yêu cầu rút tiền đã được xử lý
         if photo_id:
             try:
                 await bot.send_photo(
@@ -1018,7 +1025,7 @@ async def admin_confirm_withdraw(message: types.Message):
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xử lý yêu cầu rút tiền. Cú pháp: /xacnhan <user_id> <amount>")
         logging.error(f"Lỗi xử lý rút tiền: {e}")
-
+        
 # ===================== Admin: Xem số dư =====================
 @router.message(Command("admin_sodu"))
 async def admin_check_balance(message: types.Message):
