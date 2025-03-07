@@ -178,18 +178,6 @@ async def referral_handler(message: types.Message):
         parse_mode="Markdown"
     )
 
-@router.message(Command("start"))
-async def start_cmd(message: types.Message):
-    user_id = str(message.from_user.id)
-    args = message.text.split()
-    
-    if len(args) > 1:  # Nếu có mã giới thiệu
-        inviter_id = args[1]
-        if process_new_user(user_id, inviter_id):
-            await message.answer(f"🎉 Bạn đã được mời bởi ID: {inviter_id}, {REFERRAL_BONUS} VNĐ đã được cộng vào tài khoản của họ!")
-
-    await message.answer("👋 Chào mừng bạn đến với bot Tài Xỉu Online!", reply_markup=main_menu)
-
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
