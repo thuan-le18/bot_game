@@ -159,7 +159,7 @@ async def vip_info(message: types.Message):
 @router.message(F.text == "🎁 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    referral_link = f"https://t.me/your_bot?start={user_id}"
+    referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
     # Xử lý mã giới thiệu nếu có. Giả sử khi người dùng gửi tin nhắn dạng: "🎁 Hoa hồng <referrer_id>"
     args = message.text.split()
     if len(args) > 1:
