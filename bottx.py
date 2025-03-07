@@ -1,19 +1,3 @@
-import logging
-import asyncio
-import random
-import json
-from datetime import datetime, timedelta
-
-from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardRemove,
-    BotCommand,
-    BotCommandScopeChat
-)
-from aiogram.filters import Command
-
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -36,10 +20,17 @@ def load_data():
             "history": {},
             "deposits": {},
             "withdrawals": {},
-            "current_id": 1,
-            "referrals": {},
-            "referral_earnings": {}
+            "current_id": 1
         }
+    for key in ["balances", "history", "deposits", "withdrawals"]:
+        if key not in data:
+            data[key] = {}
+    for uid in data["deposits"]:
+        if not isinstance(data["deposits"][uid], list):
+            data["deposits"][uid] = []
+    for uid in data["withdrawals"]:
+        if not isinstance(data["withdrawals"][uid], list):
+            data["withdrawals"][uid] = []
     return data
 
 def save_data(data):
@@ -51,8 +42,19 @@ user_balance = data["balances"]
 user_history = data["history"]
 deposits = data["deposits"]
 withdrawals = data["withdrawals"]
-referrals = data["referrals"]
-referral_earnings = data["referral_earnings"]
+current_id = data["current_id"]
+
+# ===================== Các biến trạng thái =====================
+taixiu_states = {}    # Trạng thái game Tài Xỉu
+jackpot_states = {}   # Trạng thái game Jackpot
+crash_states = {}     # Trạng thái game Máy Bay (Crash)
+rongho_states = {}    # Trạng thái game Rồng Hổ
+gold_states = {}      # Không dùng, vì game Đào Vàng dùng daovang_states
+poker_states = {}     # Trạng thái game Mini Poker
+
+# Các biến trạng thái cho giao dịch và game Đào Vàng
+deposit_states = {}
+daovang_states = {}
 
 # ===================== Hệ thống VIP & Bonus =====================
 vip_levels = {
@@ -63,32 +65,58 @@ vip_levels = {
     "VIP 5": 10000000,
 }
 NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
-REFERRAL_BONUS = 2000   # Hoa hồng 2k cho người mời
+MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
 
-# ===================== Xử lý hoa hồng =====================
-def add_referral(user_id, inviter_id):
-    if user_id in referrals:
-        return  # Người dùng đã có người giới thiệu
-    
-    referrals[user_id] = inviter_id
-    referral_earnings.setdefault(inviter_id, 0)
-    referral_earnings[inviter_id] += REFERRAL_BONUS
-    user_balance[inviter_id] += REFERRAL_BONUS  # Cộng tiền ngay cho người mời
-    save_data(data)
+# ===================== Hàm tính hệ số nhân cho game Đào Vàng =====================
+def calculate_multiplier(safe_count, bomb_count):
+    total_safe = 25 - bomb_count
+    if safe_count >= total_safe:
+        # Khi đã chọn hết ô an toàn, trả về hệ số tối đa (bằng tổng ô an toàn)
+        return total_safe
+    return total_safe / (total_safe - safe_count)
 
-def get_referral_info(user_id):
-    user_id = str(user_id)
-    invited_users = [uid for uid, inviter in referrals.items() if inviter == user_id]
-    total_earnings = referral_earnings.get(user_id, 0)
-    return invited_users, total_earnings
+# ===================== Menus =====================
+main_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎮 Danh sách game")],
+        [KeyboardButton(text="💰 Xem số dư"), KeyboardButton(text="📜 Lịch sử cược")],
+        [KeyboardButton(text="🔄 Nạp tiền"), KeyboardButton(text="💸 Rút tiền")],
+        [KeyboardButton(text="🎁 Hoa hồng"), KeyboardButton(text="🏆 VIP")]
+    ],
+    resize_keyboard=True
+)
+
+games_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎲 Tài Xỉu"), KeyboardButton(text="🎰 Jackpot")],
+        [KeyboardButton(text="✈️ Máy Bay"), KeyboardButton(text="🐉 Rồng Hổ")],
+        [KeyboardButton(text="⛏️ Đào Vàng"), KeyboardButton(text="🃏 Mini Poker")],
+        [KeyboardButton(text="🔙 Quay lại")]
+    ],
+    resize_keyboard=True
+)
+
+# ===================== Hàm set_bot_commands =====================
+async def set_bot_commands(user_id: str):
+    user_commands = [
+        BotCommand(command="start", description="Bắt đầu bot"),
+    ]
+    admin_commands = user_commands + [
+        BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
+        BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
+        BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
+        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
+    ]
+    if user_id == str(ADMIN_ID):
+        await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
+    else:
+        await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
 
 # ===================== /start Handler =====================
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
-    args = message.text.split()
-    inviter_id = args[1] if len(args) > 1 else None
-    
+    await set_bot_commands(user_id)
     new_user = False
     if user_id not in user_balance:
         user_balance[user_id] = NEW_USER_BONUS
@@ -97,30 +125,54 @@ async def start_cmd(message: types.Message):
         withdrawals[user_id] = []
         save_data(data)
         new_user = True
-    
-    if inviter_id and inviter_id != user_id:
-        add_referral(user_id, inviter_id)
-    
+    deposit_states[user_id] = None
+    jackpot_states[user_id] = False
     if new_user:
-        await message.answer("👋 Chào mừng bạn đến với Bot Tài Xỉu Online!\n(5k đã được cộng vào số dư)", reply_markup=main_menu)
+        await message.answer("👋 Chào mừng bạn đến với bot Tài Xỉu!\n(5k đã được cộng vào số dư)", reply_markup=main_menu)
     else:
         await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
 
+# ===================== VIP Handler =====================
+@router.message(F.text == "🏆 VIP")
+async def vip_info(message: types.Message):
+    user_id = str(message.from_user.id)
+    total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
+    current_vip = "Chưa đạt VIP nào"
+    for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
+        if total_deposit >= req_amount:
+            current_vip = vip
+    await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
+
 # ===================== Hoa Hồng Handler =====================
+from aiogram import types, Router
+from referral import process_new_user, get_referral_info
+
+router = Router()
+
 @router.message(F.text == "🎁 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    referral_link = f"https://t.me/Bottx_Online_botstart={user_id}"
-    invited_users, total_earnings = get_referral_info(user_id)
-    
+    referral_link, invite_count, total_earnings = get_referral_info(user_id)
+
     await message.answer(
         f"🎁 *Link mời của bạn:* {referral_link}\n"
-        f"📢 *Số người đã mời:* {len(invited_users)}\n"
+        f"📢 *Lượt mời:* {invite_count}\n"
         f"💰 *Hoa hồng đã nhận:* {total_earnings:,} VNĐ\n\n"
-        f"💡 Mời bạn bè tham gia để nhận thêm tiền thưởng!",
-        reply_markup=main_menu,
+        f"💡 Bạn nhận *2.000 VNĐ* cho mỗi người được mời!",
         parse_mode="Markdown"
     )
+
+@router.message(Command("start"))
+async def start_cmd(message: types.Message):
+    user_id = str(message.from_user.id)
+    args = message.text.split()
+    
+    if len(args) > 1:  # Nếu có mã giới thiệu
+        inviter_id = args[1]
+        if process_new_user(user_id, inviter_id):
+            await message.answer(f"🎉 Bạn đã được mời bởi ID: {inviter_id}, {REFERRAL_BONUS} VNĐ đã được cộng vào tài khoản của họ!")
+
+    await message.answer("👋 Chào mừng bạn đến với bot Tài Xỉu!", reply_markup=main_menu)
     
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
