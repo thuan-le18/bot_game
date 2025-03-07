@@ -80,7 +80,7 @@ vip_levels = {
     "VIP 4": 5000000,
     "VIP 5": 10000000,
 }
-NEW_USER_BONUS = 50005000  # Tặng 5k cho người mới
+NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
 MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
 
 # ===================== Hàm tính hệ số nhân cho game Đào Vàng =====================
@@ -865,62 +865,73 @@ async def start_withdraw(message: types.Message):
     )
     await message.answer(withdraw_instruction, reply_markup=ReplyKeyboardRemove())
 
-# ===================== Admin: Lệnh xử lý rút tiền =====================
-@router.message(Command("ruttien"))
-async def admin_process_withdraw(message: types.Message):
-    # Chỉ admin mới có quyền sử dụng lệnh này
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
-        return
+# ===================== Xử lý tin nhắn rút tiền =====================
+@router.message(lambda msg: msg.from_user.id != ADMIN_ID 
+                          and msg.text 
+                          and len(msg.text.split()) >= 4 
+                          and msg.text.split()[0].isdigit())
+async def process_withdraw_request(message: types.Message):
+    user_id = str(message.from_user.id)
+    logging.info(f"[Withdraw] Received withdraw request from user {user_id}: {message.text}")
+    
+    parts = message.text.strip().split()
     try:
-        # Cú pháp: /ruttien user <user_id> <amount>
-        parts = message.text.split()
-        if len(parts) < 4 or parts[1].lower() != "user":
-            await message.answer("⚠️ Cú pháp: /ruttien user <user_id> <amount>")
-            return
-        target_user_id = parts[2]
-        amount = int(parts[3])
-        # Kiểm tra số tiền rút tối thiểu là 50k
-        if amount < 50000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 50k. Vui lòng nhập lại.")
-            return
-        # Tìm yêu cầu rút tiền của target_user_id với số tiền là amount và trạng thái pending
-        if target_user_id not in withdrawals or not withdrawals[target_user_id]:
-            await message.answer("Không tìm thấy yêu cầu rút tiền của user này.")
-            return
-        request_found = None
-        for req in withdrawals[target_user_id]:
-            if req["status"] == "pending" and req["amount"] == amount:
-                request_found = req
-                break
-        if not request_found:
-            await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
-            return
-        # Xác nhận yêu cầu rút tiền
-        request_found["status"] = "completed"
-        save_data(data)
-        
-        # Nếu admin gửi ảnh biên lai, lấy file_id của ảnh lớn nhất
-        photo_id = None
-        if message.photo:
-            photo_id = message.photo[-1].file_id
-        
-        # Gửi thông báo cho người dùng được xử lý yêu cầu rút tiền
-        if photo_id:
-            await bot.send_photo(
-                target_user_id, 
-                photo=photo_id,
-                caption=f"✅ Yêu cầu rút tiền của bạn đã được admin xử lý.\nSố tiền: {amount} VNĐ\nBiên lai chuyển tiền được đính kèm."
-            )
-        else:
-            await bot.send_message(
-                target_user_id,
-                f"✅ Yêu cầu rút tiền của bạn đã được admin xử lý.\nSố tiền: {amount} VNĐ\n(Vui lòng kiểm tra tài khoản.)"
-            )
-        await message.answer(f"✅ Đã xác nhận rút tiền {amount} VNĐ cho user {target_user_id}.")
+        amount = int(parts[0])
     except Exception as e:
-        await message.answer("⚠️ Lỗi khi xử lý rút tiền. Cú pháp: /ruttien user <user_id> <amount>")
-        logging.error(f"Error processing withdraw: {e}")
+        await message.answer("⚠️ Số tiền không hợp lệ.", reply_markup=main_menu)
+        return
+
+    # Kiểm tra số tiền rút tối thiểu là 50k
+    if amount < 50000:
+        await message.answer("⚠️ Số tiền rút tối thiểu là 50k. Vui lòng nhập lại thông tin theo mẫu.", reply_markup=main_menu)
+        return
+
+    if user_id not in user_balance:
+        await message.answer("⚠️ Bạn chưa có tài khoản. Vui lòng /start để tạo tài khoản.", reply_markup=main_menu)
+        return
+
+    if user_balance.get(user_id, 0) < amount:
+        await message.answer("⚠️ Số dư của bạn không đủ để rút tiền.", reply_markup=main_menu)
+        return
+
+    full_name = parts[1]
+    bank_name = parts[2]
+    account_number = " ".join(parts[3:])  # Cho phép số tài khoản có nhiều từ
+
+    w_req = {
+        "user_id": user_id,
+        "amount": amount,
+        "full_name": full_name,
+        "bank_name": bank_name,
+        "account_number": account_number,
+        "status": "pending",
+        "time": datetime.now().isoformat()
+    }
+    if user_id not in withdrawals or not isinstance(withdrawals[user_id], list):
+        withdrawals[user_id] = []
+    withdrawals[user_id].append(w_req)
+    save_data(data)
+    
+    admin_message = (
+        f"📢 Có yêu cầu rút tiền mới từ user {user_id}:\n"
+        f" - Số tiền: {amount} VNĐ\n"
+        f" - Họ tên: {full_name}\n"
+        f" - Ngân hàng: {bank_name}\n"
+        f" - Số tài khoản: {account_number}\n\n"
+        "Vui lòng xử lý yêu cầu này."
+    )
+    await bot.send_message(ADMIN_ID, admin_message)
+    
+    await message.answer(
+        f"✅ Yêu cầu rút tiền của bạn đã được gửi đến admin.\n"
+        f"Chi tiết yêu cầu:\n"
+        f" - Số tiền: {amount} VNĐ\n"
+        f" - Họ tên: {full_name}\n"
+        f" - Ngân hàng: {bank_name}\n"
+        f" - Số tài khoản: {account_number}\n\n"
+        "Vui lòng chờ admin xử lý.",
+        reply_markup=main_menu
+    )
 
 # ===================== Admin: Xem số dư =====================
 @router.message(Command("admin_sodu"))
