@@ -36,17 +36,12 @@ def load_data():
             "history": {},
             "deposits": {},
             "withdrawals": {},
+            "referrals": {},    # Thêm key cho referrals
             "current_id": 1
         }
-    for key in ["balances", "history", "deposits", "withdrawals"]:
+    for key in ["balances", "history", "deposits", "withdrawals", "referrals"]:
         if key not in data:
-            data[key] = {}
-    for uid in data["deposits"]:
-        if not isinstance(data["deposits"][uid], list):
-            data["deposits"][uid] = []
-    for uid in data["withdrawals"]:
-        if not isinstance(data["withdrawals"][uid], list):
-            data["withdrawals"][uid] = []
+            data[key] = {}  # Khởi tạo rỗng cho các key nếu chưa có
     return data
 
 def save_data(data):
@@ -58,6 +53,7 @@ user_balance = data["balances"]
 user_history = data["history"]
 deposits = data["deposits"]
 withdrawals = data["withdrawals"]
+referrals = data["referrals"]
 current_id = data["current_id"]
 
 # ===================== Các biến trạng thái =====================
@@ -164,6 +160,20 @@ async def vip_info(message: types.Message):
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/your_bot?start={user_id}"
+    # Xử lý mã giới thiệu nếu có. Giả sử khi người dùng gửi tin nhắn dạng: "🎁 Hoa hồng <referrer_id>"
+    args = message.text.split()
+    if len(args) > 1:
+        referrer_id = args[1]
+        # Kiểm tra xem không tự giới thiệu và chỉ nhận bonus một lần
+        if referrer_id != user_id:
+            if referrer_id not in referrals:
+                referrals[referrer_id] = []
+            if user_id not in referrals[referrer_id]:
+                referrals[referrer_id].append(user_id)
+                user_balance[referrer_id] = user_balance.get(referrer_id, 0) + 2000
+                save_data(data)
+                await bot.send_message(referrer_id, "🎉 Bạn vừa nhận 2.000 VNĐ vì mời được một người chơi mới!")
+    
     await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
 
 # ===================== Danh sách game Handler =====================
