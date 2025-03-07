@@ -355,7 +355,7 @@ async def withdraw_crash(message: types.Message):
 # Cấu hình logging ...
 logging.basicConfig(level=logging.INFO)
 
-@router.message(F.text == "🐉🐅 Rồng Hòa Hổ")
+@router.message(F.text == "🐉Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
