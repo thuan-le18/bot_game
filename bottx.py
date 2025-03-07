@@ -15,7 +15,7 @@ from aiogram.types import (
 from aiogram.filters import Command
 
 # ===================== Cấu hình bot =====================
-TOKEN = "7586352892:AAFl26m48KYdNqiCR03wNlLmaPkXaccImfw"
+TOKEN = "7501584050:AAF2v9l7Oo2_DP3qTarueUJjX1lD14cVC00"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
 DATA_FILE = "user_data.json"
 
