@@ -1044,7 +1044,7 @@ async def main():
     await bot.set_my_commands([
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
-        BotCommand(command="", description="Admin duyệt rút tiền"),
+        BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="admin_sodu", description="Xem số dư tất cả user (Admin)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
