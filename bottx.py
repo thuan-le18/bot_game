@@ -569,24 +569,80 @@ async def daovang_continue(message: types.Message):
         reply_markup=ReplyKeyboardRemove()
     )
 
-# ===================== GAME: Mini Poker =====================
-@router.message(F.text == "🃏 Mini Poker")
-async def start_poker(message: types.Message):
-    user_id = str(message.from_user.id)
-    poker_states[user_id] = True
-    await message.answer(
-        "💰 Nhập số tiền cược, bot sẽ quay ra một tay bài Poker!",
-        reply_markup=ReplyKeyboardRemove()
-    )
+import random
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CallbackContext
 
-@router.message(lambda msg: poker_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
-async def play_poker(message: types.Message):
-    user_id = str(message.from_user.id)
-    amount = int(message.text)
-    poker_states[user_id] = False
-    hands = ["Đôi", "Sám", "Sảnh", "Thùng", "Cù Lũ", "Tứ Quý", "Thùng Phá Sảnh"]
-    hand = random.choice(hands)
-    await message.answer(f"🃏 Tay bài của bạn: {hand}!")
+# Các bộ bài trong Mini Poker (5 lá)
+POKER_HANDS = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
+
+# Xác suất thắng & thưởng
+PRIZES = {
+    "Thùng Phá Sảnh": 10,  # Jackpot (cực hiếm)
+    "Tứ Quý": 5,           # Thắng lớn
+    "Cù Lũ": 3,            # Thắng vừa
+    "Thùng": 2,            # Thắng nhỏ
+    "Sảnh": 1.5,           # Thắng thấp
+    "Đôi": 1.2             # Thắng ít
+}
+
+# Hiệu ứng thắng
+def hien_thi_hieu_ung(so_tien_thang):
+    if so_tien_thang >= 500000:
+        return "✨💰 **SIÊU THẮNG!!!** 💰✨\n🎆🎇 Bạn vừa thắng {} VNĐ! 🎇🎆".format(so_tien_thang)
+    elif so_tien_thang >= 100000:
+        return "🎉 **BIG WIN!** 🎉\n💵 Bạn thắng {} VNĐ! 💵".format(so_tien_thang)
+    else:
+        return "🎊 Chúc mừng! Bạn thắng {} VNĐ! 🎊".format(so_tien_thang)
+
+# Hàm quay Mini Poker
+def quay_poker(update: Update, context: CallbackContext):
+    user = update.message.from_user
+    bet_amount = 50000  # Cược mặc định
+
+    # Xáo trộn bài & lấy 5 lá
+    random.shuffle(POKER_HANDS)
+    cards = random.sample(POKER_HANDS, 5)
+    hand_result = danh_gia_bo_bai(cards)
+
+    # Tính tiền thắng
+    multiplier = PRIZES.get(hand_result, 0)
+    winnings = int(bet_amount * multiplier)
+
+    # Hiệu ứng kết quả
+    ket_qua = "**🎰 MINI POKER 🎰**\n"
+    ket_qua += "🃏 Bài của bạn: " + " | ".join(cards) + "\n"
+    ket_qua += f"➡️ **{hand_result}**\n"
+
+    if winnings > 0:
+        ket_qua += hien_thi_hieu_ung(winnings)
+    else:
+        ket_qua += "😢 Bạn không thắng, chúc may mắn lần sau!"
+
+    # Gửi tin nhắn & nút tương tác (Không có bảng xếp hạng)
+    keyboard = [
+        [InlineKeyboardButton("🎰 Chơi tiếp", callback_data="play_poker")],
+        [InlineKeyboardButton("💰 Rút tiền", callback_data="withdraw")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(ket_qua, reply_markup=reply_markup, parse_mode="Markdown")
+
+# Đánh giá bộ bài Mini Poker
+def danh_gia_bo_bai(cards):
+    # Quy tắc xác định bộ bài
+    if "♠A" in cards and "♥K" in cards and "♦Q" in cards and "♣J" in cards and "♠10" in cards:
+        return "Thùng Phá Sảnh"
+    if cards.count(cards[0]) == 4:
+        return "Tứ Quý"
+    if cards.count(cards[0]) == 3 and cards.count(cards[3]) == 2:
+        return "Cù Lũ"
+    if all(card[-1] == cards[0][-1] for card in cards):
+        return "Thùng"
+    if sorted([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]) == list(range(min([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]), max([int(c[-1]) if c[-1].isdigit() else 10 for c in cards]) + 1)):
+        return "Sảnh"
+    if len(set(card[:-1] for card in cards)) < 5:
+        return "Đôi"
+    return "Không có gì"
 
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
