@@ -661,13 +661,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import random
 
 # ===================== Cấu hình Mini Poker =====================
+# Giảm hệ số thưởng để game "khó ăn tiền" hơn
 PRIZES = {
-    "Thùng Phá Sảnh": 10,
-    "Tứ Quý": 5,
-    "Cù Lũ": 3,
-    "Thùng": 2,
-    "Sảnh": 1.5,
-    "Đôi": 1.2,
+    "Thùng Phá Sảnh": 8,
+    "Tứ Quý": 4,
+    "Cù Lũ": 2,
+    "Thùng": 1.5,
+    "Sảnh": 1.2,
+    "Đôi": 1.1,
     "Mậu Thầu": 0
 }
 
@@ -711,12 +712,19 @@ async def play_minipoker(message: types.Message):
         poker_states.pop(user_id, None)
         return
     
+    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet
     save_data(data)
     await add_commission(user_id, bet)
     
+    # Rút bài
     cards = random.sample(CARD_DECK, 5)
     hand_type = danh_gia_bo_bai(cards)
+    
+    # Áp dụng house edge: 30% trường hợp nếu bài thắng sẽ ép về "Mậu Thầu"
+    if hand_type != "Mậu Thầu" and random.random() < 0.3:
+         hand_type = "Mậu Thầu"
+    
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
     
@@ -743,12 +751,15 @@ async def play_minipoker(message: types.Message):
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
     await callback.message.delete()
-    await start_minipoker(callback.message)
+    user_id = str(callback.from_user.id)
+    # Khởi tạo lại trạng thái mini poker
+    poker_states[user_id] = {"awaiting_bet": True}
+    await bot.send_message(user_id, "💰 Nhập số tiền cược Mini Poker:", reply_markup=ReplyKeyboardRemove())
 
 @router.callback_query(lambda c: c.data == "poker_back")
 async def poker_back(callback: types.CallbackQuery):
     await callback.message.delete()
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
 
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
