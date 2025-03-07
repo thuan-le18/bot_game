@@ -80,7 +80,7 @@ vip_levels = {
     "VIP 4": 5000000,
     "VIP 5": 10000000,
 }
-NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
+NEW_USER_BONUS = 50005000  # Tặng 5k cho người mới
 MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
 
 # ===================== Hàm tính hệ số nhân cho game Đào Vàng =====================
@@ -226,17 +226,39 @@ async def play_taixiu(message: types.Message):
         await message.answer("❌ Số dư không đủ!")
         taixiu_states[user_id] = None
         return
+
+    # Trừ tiền cược
     user_balance[user_id] -= bet_amount
     save_data(data)
-    result = random.choice(["Tài", "Xỉu"])
+
+    # Tung 3 quả xúc xắc với delay 2 giây mỗi lần
+    dice_values = []
+    for i in range(3):
+        dice_msg = await message.answer_dice(emoji="🎲")
+        dice_values.append(dice_msg.dice.value)
+        await asyncio.sleep(2)
+    
+    total = sum(dice_values)
+    result = "Tài" if total >= 11 else "Xỉu"
     user_choice = taixiu_states[user_id]["choice"]
+
     if user_choice == result:
-        win_amount = bet_amount * 2
+        win_amount = int(bet_amount * 1.98)
         user_balance[user_id] += win_amount
         save_data(data)
-        await message.answer(f"🎉 Kết quả: {result}. Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
+        await message.answer(
+            f"🎉 Kết quả xúc xắc: {dice_values[0]}, {dice_values[1]}, {dice_values[2]}\n"
+            f"✨ Tổng điểm: {total} ({result})\n"
+            f"Bạn thắng {win_amount} VNĐ!",
+            reply_markup=main_menu
+        )
     else:
-        await message.answer(f"💥 Kết quả: {result}. Bạn thua {bet_amount} VNĐ!", reply_markup=main_menu)
+        await message.answer(
+            f"💥 Kết quả xúc xắc: {dice_values[0]}, {dice_values[1]}, {dice_values[2]}\n"
+            f"✨ Tổng điểm: {total} ({result})\n"
+            f"Bạn thua {bet_amount} VNĐ!",
+            reply_markup=main_menu
+        )
     taixiu_states[user_id] = None
 
 # ===================== GAME: Jackpot =====================
@@ -753,7 +775,7 @@ async def deposit_photo_handler(message: types.Message):
     else:
         return
 
-# ===================== Xử lý tin nhắn số (cho nạp tiền & đặt cược Tài Xỉu) =====================
+# ===================== Xử lý tin nhắn số (cho nạp tiền) =====================
 @router.message(lambda msg: msg.text.isdigit())
 async def handle_digit_message(message: types.Message):
     user_id = str(message.from_user.id)
@@ -772,40 +794,6 @@ async def handle_digit_message(message: types.Message):
         deposit_states[user_id] = "awaiting_slip"
         await message.answer(f"Bạn muốn nạp {amount} VNĐ.\nVui lòng gửi ảnh biên lai nạp tiền.")
         return
-    if user_id in current_bets:
-        if user_balance.get(user_id, 0) < amount:
-            await message.answer("⚠️ Bạn không đủ số dư để đặt cược!", reply_markup=main_menu)
-            return
-        user_balance[user_id] -= amount
-        dice_values = []
-        for _ in range(3):
-            dice_msg = await message.answer_dice(emoji="🎲")
-            dice_values.append(dice_msg.dice.value)
-            await asyncio.sleep(2)
-        total = sum(dice_values)
-        result = "Tài" if total >= 11 else "Xỉu"
-        bet_choice = current_bets[user_id]["choice"]
-        if bet_choice == result:
-            winnings = amount * 1.96
-            user_balance[user_id] += winnings
-            msg_result = f"🎉 Chúc mừng! Bạn đã thắng {winnings:.0f} VNĐ!"
-        else:
-            msg_result = f"😢 Bạn đã thua cược. Số dư bị trừ: {amount} VNĐ."
-        record = {
-            "time": datetime.now().isoformat(),
-            "game": "Tài Xỉu",
-            "choice": bet_choice,
-            "bet_amount": amount,
-            "result": result,
-            "winnings": winnings if bet_choice == result else -amount
-        }
-        user_history[user_id].append(record)
-        del current_bets[user_id]
-        save_data(data)
-        await message.answer(f"🎲 Kết quả tung xúc xắc: {dice_values[0]}, {dice_values[1]}, {dice_values[2]}\n✨ Tổng điểm: {total} ({result})\n{msg_result}\n💰 Số dư hiện tại của bạn: {user_balance[user_id]} VNĐ", reply_markup=main_menu)
-        return
-    await message.answer("Vui lòng bấm nút '🎲 Tài Xỉu' và chọn Tài/Xỉu trước khi đặt cược, hoặc chọn lệnh phù hợp.")
-    return
 
 # ===================== Admin: Duyệt nạp tiền =====================
 @router.message(Command("naptien"))
