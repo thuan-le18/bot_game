@@ -359,15 +359,24 @@ import logging
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
 
+# Giả sử rằng rongho_states, user_balance, data và hàm save_data đã được định nghĩa toàn cục
+# Ví dụ:
+# rongho_states = {}
+# user_balance = {}   # user_balance[user_id] = số dư của người dùng
+# data = {...}        # dữ liệu chứa thông tin cần lưu, ví dụ: {"balances": user_balance, ...}
+# def save_data(d): pass
+
 @router.message(F.text == "🐉Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🐉 Rồng", callback_data="rongho_rong"),
-         InlineKeyboardButton(text="⚖️ Hòa", callback_data="rongho_hoa"),
-         InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")]
+        [
+            InlineKeyboardButton(text="🐉 Rồng", callback_data="rongho_rong"),
+            InlineKeyboardButton(text="⚖️ Hòa", callback_data="rongho_hoa"),
+            InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")
+        ]
     ])
 
     await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
@@ -375,12 +384,19 @@ async def start_rongho(message: types.Message):
 @router.callback_query(lambda c: c.data.startswith("rongho_"))
 async def choose_rongho(callback_query: types.CallbackQuery):
     user_id = str(callback_query.from_user.id)
-    choice = callback_query.data.split("_")[1]  # Lấy giá trị 'rong', 'hoa' hoặc 'ho'
+    parts = callback_query.data.split("_")
+    if len(parts) < 2:
+        await callback_query.answer("Lỗi dữ liệu callback!")
+        return
+    # Lấy lựa chọn: "rong", "hoa" hoặc "ho"
+    choice = parts[1]
     logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
-
+    
+    # Lưu trạng thái cho người dùng
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
-
-    await callback_query.message.answer("💰 Nhập số tiền cược:")
+    
+    # Yêu cầu nhập số tiền cược
+    await callback_query.message.answer("💰 Nhập số tiền cược của bạn:")
     await callback_query.answer()
 
 @router.message(lambda msg: rongho_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True 
@@ -391,23 +407,26 @@ async def bet_rongho_amount(message: types.Message):
     state = rongho_states.get(user_id)
     logging.info(f"[bet_rongho_amount] User {user_id} cược {bet_amount}, state={state}")
 
-    if not state:
+    if state is None:
         await message.answer("⚠️ Lỗi: Không tìm thấy trạng thái game!")
         return
 
+    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
         rongho_states.pop(user_id, None)
         return
 
+    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
 
+    # Chọn kết quả ngẫu nhiên: "rong", "hoa", "ho"
     result = random.choice(["rong", "hoa", "ho"])
     chosen = state.get("choice")
-
     logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
+    # Xử lý kết quả
     if result == "hoa":
         if chosen == "hoa":
             win_amount = int(bet_amount * 7)
@@ -416,17 +435,21 @@ async def bet_rongho_amount(message: types.Message):
             await message.answer(f"🎉 Kết quả: ⚖️ Hòa! Bạn thắng {win_amount} VNĐ!")
         else:
             await message.answer(f"😢 Kết quả: ⚖️ Hòa! Bạn thua {bet_amount} VNĐ!")
-
     else:
         if chosen == result:
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            await message.answer(f"🎉 {result.capitalize()} thắng! Bạn thắng {win_amount} VNĐ!")
+            # Chuyển kết quả thành chữ đẹp hơn
+            result_text = "Rồng" if result == "rong" else "Hổ"
+            await message.answer(f"🎉 {result_text} thắng! Bạn thắng {win_amount} VNĐ!")
         else:
-            await message.answer(f"😢 Kết quả: {result.capitalize()}! Bạn thua {bet_amount} VNĐ!")
+            result_text = "Rồng" if result == "rong" else "Hổ"
+            await message.answer(f"😢 Kết quả: {result_text}! Bạn thua {bet_amount} VNĐ!")
 
+    # Xóa trạng thái game của người dùng
     rongho_states.pop(user_id, None)
+    logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
 
 # ===================== GAME: Đào Vàng (Mines Gold style) =====================
 @router.message(F.text == "⛏️ Đào Vàng")
