@@ -823,17 +823,17 @@ async def admin_confirm_deposit(message: types.Message):
         await message.answer("⚠️ Lỗi khi xác nhận nạp tiền. Cú pháp: /naptien <user_id>")
         logging.error(f"Error confirming deposit: {e}")
 # ===================== Admin: Lệnh cộng tiền =====================
-@router.message(Command("naptien"))
+@router.message(Command("congtien"))
 async def admin_deposit(message: types.Message):
     # Chỉ admin mới có quyền sử dụng lệnh này
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
         return
     try:
-        # Cú pháp: /naptien user <user_id> <amount>
+        # Cú pháp: /congtien user <user_id> <amount>
         parts = message.text.split()
         if len(parts) < 4 or parts[1].lower() != "user":
-            await message.answer("⚠️ Cú pháp: /naptien user <user_id> <amount>")
+            await message.answer("⚠️ Cú pháp: /congtien user <user_id> <amount>")
             return
         target_user_id = parts[2]
         amount = int(parts[3])
@@ -846,7 +846,7 @@ async def admin_deposit(message: types.Message):
         await bot.send_message(target_user_id, f"✅ Bạn đã được admin cộng {amount} VNĐ vào số dư.")
         await message.answer(f"✅ Đã cộng {amount} VNĐ cho user {target_user_id}.")
     except Exception as e:
-        await message.answer("⚠️ Lỗi khi nạp tiền. Cú pháp: /naptien user <user_id> <amount>")
+        await message.answer("⚠️ Lỗi khi cộng tiền. Cú pháp: /congtien user <user_id> <amount>")
         logging.error(f"Error in admin deposit: {e}")
 
 # ===================== Nút Rút tiền =====================
