@@ -144,6 +144,8 @@ async def set_bot_commands(user_id: str):
         await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
 
 # ===================== /start Handler =====================
+from datetime import datetime
+
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
@@ -165,8 +167,12 @@ async def start_cmd(message: types.Message):
         if referrer_id and referrer_id != user_id:
             if referrer_id not in referrals:
                 referrals[referrer_id] = []
-            if user_id not in referrals[referrer_id]:
-                referrals[referrer_id].append(user_id)
+            # Kiểm tra xem user_id đã được mời chưa (so sánh theo key "user_id")
+            if user_id not in [ref.get("user_id") for ref in referrals[referrer_id]]:
+                referrals[referrer_id].append({
+                    "user_id": user_id,
+                    "timestamp": datetime.now().isoformat()
+                })
                 user_balance[referrer_id] = user_balance.get(referrer_id, 0) + 2000
                 save_data(data)
                 try:
@@ -197,8 +203,18 @@ async def vip_info(message: types.Message):
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
-    await message.answer(f"🎁 Link mời của bạn: {referral_link}\nBạn nhận 2% hoa hồng từ số tiền cược của người được mời.", reply_markup=main_menu)
-
+    records = referrals.get(user_id, [])
+    total_referrals = len(records)
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
+    
+    await message.answer(
+         f"🎁 Link mời của bạn: {referral_link}\n"
+         f"Tổng lượt mời: {total_referrals}\n"
+         f"Lượt mời hôm nay: {today_count}\n"
+         "Bạn nhận 2% hoa hồng từ số tiền cược của người được mời.",
+         reply_markup=main_menu
+    )
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
