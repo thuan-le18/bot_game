@@ -1044,11 +1044,39 @@ async def admin_view_players(message: types.Message):
     players_info = []
     for uid in user_balance.keys():
         info = f"User {uid}: Số dư: {user_balance.get(uid, 0)} VNĐ"
-        if uid in current_bets:
-            info += f", đang chơi Tài Xỉu (cược {current_bets[uid]['choice']})"
+        
+        # Tài Xỉu: Kiểm tra nếu user có trạng thái trong taixiu_states
+        if uid in taixiu_states and taixiu_states[uid]:
+            state = taixiu_states[uid]
+            if isinstance(state, dict) and "choice" in state:
+                info += f", đang chơi Tài Xỉu (chọn {state['choice']})"
+            else:
+                info += ", đang chờ lựa chọn Tài Xỉu"
+        
+        # Jackpot: Kiểm tra nếu jackpot_states của user là True
         if uid in jackpot_states and jackpot_states[uid]:
             info += ", đang chơi Jackpot"
-        # Bạn có thể mở rộng cho các game khác nếu cần
+        
+        # Máy Bay (Crash)
+        if uid in crash_states and crash_states[uid]:
+            info += ", đang chơi Máy Bay (Crash)"
+        
+        # Rồng Hổ: Kiểm tra nếu có trạng thái trong rongho_states
+        if uid in rongho_states and rongho_states[uid]:
+            state = rongho_states[uid]
+            if isinstance(state, dict) and "choice" in state:
+                info += f", đang chơi Rồng Hổ (chọn {state['choice']})"
+            else:
+                info += ", đang chơi Rồng Hổ"
+        
+        # Đào Vàng: Kiểm tra nếu trạng thái active của daovang_states là True
+        if uid in daovang_states and daovang_states[uid].get("active", False):
+            info += ", đang chơi Đào Vàng"
+        
+        # Mini Poker: Kiểm tra nếu user có trạng thái trong poker_states
+        if uid in poker_states and poker_states[uid]:
+            info += ", đang chơi Mini Poker"
+        
         players_info.append(info)
     result = "\n".join(players_info)
     await message.answer(f"🕵️ Danh sách người chơi:\n{result}")
