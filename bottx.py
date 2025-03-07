@@ -353,7 +353,7 @@ async def initiate_crash_game(message: types.Message):
                  break
          except asyncio.TimeoutError:
              # Nếu không có sự kiện rút tiền, cập nhật hệ số nhân sau 1 giây
-             new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.3, 2)
+             new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.2, 2)
              crash_games[user_id]["current_multiplier"] = new_multiplier
              if new_multiplier >= crash_games[user_id]["crash_point"]:
                   await message.answer(
@@ -932,6 +932,72 @@ async def process_withdraw_request(message: types.Message):
         "Vui lòng chờ admin xử lý.",
         reply_markup=main_menu
     )
+Lệnh Admin Xử lý Rút tiền (/ruttien)
+@router.message(Command("ruttien"))
+async def admin_process_withdraw(message: types.Message):
+    # Chỉ admin mới có quyền dùng lệnh này
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
+        return
+    try:
+        # Cú pháp: /ruttien user <user_id> <amount>
+        parts = message.text.split()
+        if len(parts) < 4 or parts[1].lower() != "user":
+            await message.answer("⚠️ Cú pháp: /ruttien user <user_id> <amount>")
+            return
+        target_user_id = parts[2]
+        amount = int(parts[3])
+        
+        # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
+        if amount < 50000:
+            await message.answer("⚠️ Số tiền rút tối thiểu là 50.000 VNĐ. Vui lòng nhập lại.")
+            return
+
+        # Tìm yêu cầu rút tiền của user với số tiền amount và trạng thái "pending"
+        if target_user_id not in withdrawals or not withdrawals[target_user_id]:
+            await message.answer("Không tìm thấy yêu cầu rút tiền của user này.")
+            return
+        request_found = None
+        for req in withdrawals[target_user_id]:
+            if req["status"] == "pending" and req["amount"] == amount:
+                request_found = req
+                break
+        if not request_found:
+            await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
+            return
+
+        # Cập nhật trạng thái yêu cầu thành "completed"
+        request_found["status"] = "completed"
+        save_data(data)
+        
+        # Nếu admin gửi kèm ảnh biên lai, lấy file_id của ảnh có kích thước lớn nhất
+        photo_id = None
+        if message.photo:
+            photo_id = message.photo[-1].file_id
+        
+        # Gửi thông báo cho người dùng: "Yêu cầu rút tiền <amount> của bạn đã được xử lý. Vui lòng kiểm tra tài khoản."
+        if photo_id:
+            try:
+                await bot.send_photo(
+                    target_user_id,
+                    photo=photo_id,
+                    caption=f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                )
+            except Exception as e:
+                logging.error(f"Lỗi gửi ảnh đến user {target_user_id}: {e}")
+                await bot.send_message(
+                    target_user_id,
+                    f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                )
+        else:
+            await bot.send_message(
+                target_user_id,
+                f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+            )
+        await message.answer(f"✅ Đã xác nhận xử lý rút tiền {amount} VNĐ cho user {target_user_id}.")
+    except Exception as e:
+        await message.answer("⚠️ Lỗi khi xử lý rút tiền. Cú pháp: /ruttien user <user_id> <amount>")
+        logging.error(f"Lỗi xử lý rút tiền: {e}")
 
 # ===================== Admin: Xem số dư =====================
 @router.message(Command("admin_sodu"))
