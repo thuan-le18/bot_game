@@ -109,10 +109,10 @@ def calculate_multiplier(safe_count, bomb_count):
 # ===================== Menus =====================
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🎮 Danh sách game")],
-        [KeyboardButton(text="💰 Xem số dư"), KeyboardButton(text="📜 Lịch sử cược")],
-        [KeyboardButton(text="🔄 Nạp tiền"), KeyboardButton(text="💸 Rút tiền")],
-        [KeyboardButton(text="🎁 Hoa hồng"), KeyboardButton(text="🏆 VIP")]
+        [KeyboardButton(text="🎮 Danh sách game"), KeyboardButton(text="💰 Xem số dư")],
+        [KeyboardButton(text="📜 Lịch sử cược"), KeyboardButton(text="🔄 Nạp tiền")],
+        [KeyboardButton(text="💸 Rút tiền"), KeyboardButton(text="🎁 Hoa hồng")],
+        [KeyboardButton(text="🏆 VIP"), KeyboardButton(text="💬 Hỗ trợ")]
     ],
     resize_keyboard=True
 )
@@ -251,6 +251,15 @@ async def bet_history(message: types.Message):
 
     await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
 
+# Handler cho nút Hỗ trợ:
+@router.message(F.text == "💬 Hỗ trợ")
+async def support_handler(message: types.Message):
+    support_text = (
+        "📞 **Hỗ trợ Bot Tài Xỉu**\n\n"
+        "Nếu bạn gặp khó khăn hoặc cần trợ giúp, vui lòng liên hệ:\n"
+        "- Liên hệ admin: @hoanganh11829\n\n"
+    )
+    await message.answer(support_text, reply_markup=main_menu)
 # ===================== GAME: Tài Xỉu =====================
 @router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
