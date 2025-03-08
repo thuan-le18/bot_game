@@ -19,11 +19,9 @@ import mysql.connector
 db = mysql.connector.connect(
     host=os.environ.get('DB_HOST', '127.0.0.1'),
     user=os.environ.get('DB_USER', 'root'),
-    password=os.environ['azglkhsq_bot_game'],
-    password = os.environ.get('DB_PASS', 'defaultpassword'),
-    port=int(os.environ.get('DB_PORT', 3306))  # Mặc định cổng 3306
+    password=os.environ.get('DB_PASS', 'defaultpassword'),
+    database=os.environ.get('DB_NAME', 'mydatabase')
 )
-cursor = db.cursor()
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
