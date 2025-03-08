@@ -13,6 +13,17 @@ from aiogram.types import (
     BotCommandScopeChat
 )
 from aiogram.filters import Command
+import os
+import mysql.connector  
+
+db = mysql.connector.connect(
+    host=os.environ['localhost'],
+    user=os.environ['azglkhsq_bot_game'],
+    password=os.environ['azglkhsq_bot_game'],
+    database=os.environ['azglkhsq_bot_game'],
+    port=int(os.environ.get('DB_PORT', 3306))  # Mặc định cổng 3306
+)
+cursor = db.cursor()
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
