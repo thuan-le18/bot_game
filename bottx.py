@@ -208,7 +208,7 @@ async def start_cmd(message: types.Message):
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
     if new_user:
-    welcome_text = ("👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
+    await message.answer("👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
         "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
         "• Tài Xỉu\n"
         "• Jackpot\n"
