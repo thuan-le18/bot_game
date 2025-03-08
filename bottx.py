@@ -13,16 +13,6 @@ from aiogram.types import (
     BotCommandScopeChat
 )
 from aiogram.filters import Command
-import os
-import mysql.connector  
-
-db = mysql.connector.connect(
-    host=os.environ.get('DB_HOST', '127.0.0.1'),  # Thay '127.0.0.1' nếu MySQL ở server khác
-    user=os.environ.get('DB_USER', 'root'),       # Kiểm tra username
-    password=os.environ.get('DB_PASS', ''),       # Kiểm tra password
-    database=os.environ.get('DB_NAME', 'mydatabase'),
-    port=int(os.environ.get('DB_PORT', 3306))     # Kiểm tra cổng MySQL
-)
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
