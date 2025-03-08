@@ -830,11 +830,10 @@ async def start_deposit(message: types.Message):
         f"📌 Nội dung chuyển khoản: NAPTK {user_id}\n\n"
         "Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển:"
     )
-    await message.answer(deposit_info, reply_markup=ReplyKeyboardRemove())
-    
-@router.message(F.text == "🔙 Quay lại")
-async def back_to_main(message: types.Message):
-    await message.answer("Quay lại menu chính", reply_markup=main_menu)
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
+    await message.answer(deposit_info, reply_markup=kb.as_markup())
 
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
@@ -945,7 +944,6 @@ async def admin_add_money(message: types.Message):
 # ===================== Nút Rút tiền =====================
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
-    # Hướng dẫn người dùng nhập thông tin rút tiền theo mẫu:
     withdraw_instruction = (
         "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
         "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
@@ -956,7 +954,10 @@ async def start_withdraw(message: types.Message):
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    await message.answer(withdraw_instruction, reply_markup=ReplyKeyboardRemove())
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
+    await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
 
 @router.callback_query(lambda c: c.data == "withdraw_history")
 async def withdraw_history_handler(callback: types.CallbackQuery):
@@ -1203,7 +1204,9 @@ async def force_all_games(message: types.Message):
             results.append(f"Máy Bay - User {uid}: Không có game đang chạy.")
             return
         bet = game.get("bet", 0)
+        # Sử dụng inline keyboard sẽ không cần cho game Crash vì trả về menu chính
         if outcome == "win":
+            # Forced WIN: ép multiplier thành một giá trị trong khoảng [4.5, 5.0]
             forced_multiplier = round(random.uniform(4.5, 5.0), 2)
             win_amount = round(bet * forced_multiplier)
             user_balance[uid] = user_balance.get(uid, 0) + win_amount
@@ -1213,6 +1216,7 @@ async def force_all_games(message: types.Message):
             except Exception as e:
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         else:
+            # Forced LOSE: sử dụng crash_point hiện tại, không thay đổi multiplier
             results.append(f"Máy Bay - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
             try:
                 await bot.send_message(uid, f"💥 Máy bay rơi tại x{game.get('crash_point', '?')}! Bạn thua {bet} VNĐ!", reply_markup=main_menu)
@@ -1228,13 +1232,17 @@ async def force_all_games(message: types.Message):
             results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
             return
         bet = state.get("bet", 0)
-        multiplier = state.get("multiplier", 1.0)
+        bomb_count = state.get("bomb_count", 3)
+        total_safe = 25 - bomb_count
         if outcome == "win":
-            win_amount = int(bet * multiplier)
+            # Forced WIN: giả lập người chơi đạt số ô an toàn tối đa là 15 (nếu total_safe>=15)
+            forced_safe = 15 if total_safe >= 15 else total_safe
+            forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
+            win_amount = int(bet * forced_multiplier)
             user_balance[uid] = user_balance.get(uid, 0) + win_amount
-            results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ).")
+            results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
             try:
-                await bot.send_message(uid, f"🎉 Rút vàng thành công! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
+                await bot.send_message(uid, f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", reply_markup=main_menu)
             except Exception as e:
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         else:
@@ -1247,11 +1255,15 @@ async def force_all_games(message: types.Message):
 
     # --- Force outcome cho game Mini Poker ---
     async def process_poker(uid):
-        if uid not in poker_states or "bet" not in poker_states[uid]:
-            results.append(f"Mini Poker - User {uid}: Không có cược đang chờ.")
+        if uid not in poker_states or not poker_states[uid].get("awaiting_bet"):
+            results.append(f"Mini Poker - User {uid}: Không có game đang chờ.")
             return
 
-        bet = poker_states[uid]["bet"]
+        bet = poker_states[uid].get("bet")
+        if bet is None:
+            results.append(f"Mini Poker - User {uid}: Chưa có cược xác định.")
+            return
+        
         # Dùng InlineKeyboard cho Mini Poker
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         poker_keyboard = InlineKeyboardBuilder()
@@ -1268,12 +1280,13 @@ async def force_all_games(message: types.Message):
             )
             results.append(f"Mini Poker - User {uid}: Ép thành LOSE.")
             try:
-                await bot.send_message(uid, result_text, reply_markup=poker_keyboard.as_markup())
+                await bot.send_message(uid, result_text, reply_markup=main_menu)
             except Exception as e:
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         else:
             hand_type = "Đôi"
             cards = random.sample(CARD_DECK, 5)
+            # Ép 2 lá đầu thành A để tạo đôi
             cards[0] = "♠A"
             cards[1] = "♥A"
             multiplier = PRIZES.get(hand_type, 0)
