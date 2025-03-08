@@ -834,6 +834,10 @@ async def start_deposit(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(deposit_info, reply_markup=kb.as_markup())
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(callback: types.CallbackQuery):
+    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await callback.answer()
 
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
@@ -958,6 +962,10 @@ async def start_withdraw(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(callback: types.CallbackQuery):
+    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await callback.answer()
 
 @router.callback_query(lambda c: c.data == "withdraw_history")
 async def withdraw_history_handler(callback: types.CallbackQuery):
