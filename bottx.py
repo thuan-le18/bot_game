@@ -156,9 +156,9 @@ async def set_bot_commands(user_id: str):
     ]
     admin_commands = user_commands + [
         BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
+        BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="ruttien", description="Admin duyệt rút tiền"),
-        BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
