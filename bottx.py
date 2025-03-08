@@ -651,11 +651,15 @@ async def play_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
 
+    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
         poker_states.pop(user_id, None)
         return
     
+    # Lưu số tiền cược vào trạng thái của game
+    poker_states[user_id]["bet"] = bet
+
     # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet
     save_data(data)
@@ -685,27 +689,28 @@ async def play_minipoker(message: types.Message):
     else:
         result_text += "😢 **Chúc may mắn lần sau!**"
 
+    from aiogram.utils.keyboard import InlineKeyboardBuilder  # Đảm bảo import đúng chỗ
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
     keyboard.button(text="🔙 Quay lại", callback_data="poker_back")
 
     await message.answer(result_text, reply_markup=keyboard.as_markup())
-    record_bet_history(user_id, "Mini Poker", bet, f"{hand_type} - {'win' if win_amount>0 else 'lose'}", win_amount)
+    record_bet_history(user_id, "Mini Poker", bet, f"{hand_type} - {'win' if win_amount > 0 else 'lose'}", win_amount)
     poker_states.pop(user_id, None)
 
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
     await callback.message.delete()
     user_id = str(callback.from_user.id)
-    # Khởi tạo lại trạng thái mini poker
-    poker_states[user_id] = {"awaiting_bet": True}
+    # Khởi tạo lại trạng thái mini poker, lưu bet = 0 để đảm bảo nếu dùng trong forceall
+    poker_states[user_id] = {"awaiting_bet": True, "bet": 0}
     await bot.send_message(user_id, "💰 Nhập số tiền cược Mini Poker:", reply_markup=ReplyKeyboardRemove())
 
 @router.callback_query(lambda c: c.data == "poker_back")
 async def poker_back(callback: types.CallbackQuery):
     await callback.message.delete()
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
-
+    
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
