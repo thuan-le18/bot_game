@@ -192,7 +192,6 @@ async def start_cmd(message: types.Message):
         if referrer_id and referrer_id != user_id:
             if referrer_id not in referrals:
                 referrals[referrer_id] = []
-            # Kiểm tra xem user_id đã được mời chưa (so sánh theo key "user_id")
             if user_id not in [ref.get("user_id") for ref in referrals[referrer_id]]:
                 referrals[referrer_id].append({
                     "user_id": user_id,
@@ -207,21 +206,23 @@ async def start_cmd(message: types.Message):
 
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
-     if new_user:
-    welcome_text = (
-        "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
-        "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
-        "• Tài Xỉu\n"
-        "• Jackpot\n"
-        "• Máy Bay\n"
-        "• Rồng Hổ\n"
-        "• Đào Vàng\n"
-        "• Mini Poker\n\n"
-        "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
-    )
-    await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
-else:
-    await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
+
+    # Sửa lỗi thụt lề cho if new_user:
+    if new_user:
+        welcome_text = (
+            "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
+            "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
+            "• Tài Xỉu\n"
+            "• Jackpot\n"
+            "• Máy Bay\n"
+            "• Rồng Hổ\n"
+            "• Đào Vàng\n"
+            "• Mini Poker\n\n"
+            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
+        )
+        await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
+    else:
+        await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
 
 # ===================== VIP Handler =====================
 @router.message(F.text == "🏆 VIP")
