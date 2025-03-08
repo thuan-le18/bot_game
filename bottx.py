@@ -10,8 +10,11 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardRemove,
     BotCommand,
-    BotCommandScopeChat
+    BotCommandScopeChat,
+    InlineKeyboardMarkup,   # Dòng này
+    InlineKeyboardButton    # và dòng này
 )
+
 from aiogram.filters import Command
 
 # ===================== Cấu hình bot =====================
