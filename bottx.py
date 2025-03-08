@@ -17,7 +17,7 @@ import os
 import mysql.connector  
 
 db = mysql.connector.connect(
-    host=os.environ['localhost'],
+    host=os.environ.get('DB_HOST', '127.0.0.1'),
     user=os.environ['azglkhsq_bot_game'],
     password=os.environ['azglkhsq_bot_game'],
     database=os.environ['azglkhsq_bot_game'],
