@@ -1110,14 +1110,11 @@ async def force_all_games(message: types.Message):
         await message.answer("Outcome phải là 'win' hoặc 'lose'.")
         return
 
-    target_user = None
-    if len(args) >= 3:
-        target_user = args[2]  # ép cho người dùng cụ thể
-
+    target_user = args[2] if len(args) >= 3 else None
     results = []
 
     # --- Force outcome cho game Máy Bay (Crash) ---
-    def process_crash(uid):
+    async def process_crash(uid):
         game = crash_games[uid]
         bet = game.get("bet", 0)
         if outcome == "win":
@@ -1137,17 +1134,8 @@ async def force_all_games(message: types.Message):
         crash_games[uid]["running"] = False
         del crash_games[uid]
 
-    if target_user:
-        if target_user in crash_games:
-            await process_crash(target_user)
-        else:
-            results.append(f"Máy Bay: User {target_user} không đang chơi.")
-    else:
-        for uid in list(crash_games.keys()):
-            await process_crash(uid)
-
-    # --- Force outcome cho game Đào Vàng (Bomb Game) ---
-    def process_daovang(uid):
+    # --- Force outcome cho game Đào Vàng ---
+    async def process_daovang(uid):
         state = daovang_states[uid]
         bet = state.get("bet", 0)
         multiplier = state.get("multiplier", 1.0)
@@ -1167,19 +1155,9 @@ async def force_all_games(message: types.Message):
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         del daovang_states[uid]
 
-    if target_user:
-        if target_user in daovang_states and daovang_states[target_user].get("active"):
-            await process_daovang(target_user)
-        else:
-            results.append(f"Đào Vàng: User {target_user} không đang chơi hoặc game đã kết thúc.")
-    else:
-        for uid, state in list(daovang_states.items()):
-            if state.get("active"):
-                await process_daovang(uid)
-
     # --- Force outcome cho game Mini Poker ---
-    def process_poker(uid):
-        # Nếu ép LOSE, mô phỏng ván chơi với kết quả "Mậu Thầu" và một bộ bài ngẫu nhiên.
+    async def process_poker(uid):
+        # Forced LOSE: mô phỏng ván chơi với kết quả bắt buộc là "Mậu Thầu"
         hand_type = "Mậu Thầu"
         cards = random.sample(CARD_DECK, 5)
         result_text = (
@@ -1194,7 +1172,16 @@ async def force_all_games(message: types.Message):
             logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         del poker_states[uid]
 
+    # Xử lý theo từng người dùng nếu target_user được chỉ định
     if target_user:
+        if target_user in crash_games:
+            await process_crash(target_user)
+        else:
+            results.append(f"Máy Bay: User {target_user} không đang chơi.")
+        if target_user in daovang_states and daovang_states[target_user].get("active"):
+            await process_daovang(target_user)
+        else:
+            results.append(f"Đào Vàng: User {target_user} không đang chơi hoặc game đã kết thúc.")
         if target_user in poker_states and poker_states[target_user].get("awaiting_bet"):
             if outcome == "win":
                 results.append(f"Mini Poker - User {target_user}: Không có cược đang chờ để ép WIN.")
@@ -1202,11 +1189,18 @@ async def force_all_games(message: types.Message):
                     await bot.send_message(target_user, "[Admin] Mini Poker: No active bet found to force WIN.")
                 except Exception as e:
                     logging.error(f"Không thể gửi tin nhắn đến {target_user}: {e}")
+                del poker_states[target_user]
             else:
                 await process_poker(target_user)
         else:
             results.append(f"Mini Poker: User {target_user} không có game đang chờ.")
     else:
+        # Nếu không có target_user, ép cho tất cả
+        for uid in list(crash_games.keys()):
+            await process_crash(uid)
+        for uid, state in list(daovang_states.items()):
+            if state.get("active"):
+                await process_daovang(uid)
         for uid, state in list(poker_states.items()):
             if state.get("awaiting_bet"):
                 if outcome == "lose":
