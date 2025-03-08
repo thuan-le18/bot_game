@@ -136,6 +136,7 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="ruttien", description="Admin duyệt rút tiền"),
+        BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
@@ -849,31 +850,39 @@ async def admin_confirm_deposit(message: types.Message):
         await message.answer("⚠️ Lỗi khi xác nhận nạp tiền. Cú pháp: /naptien <user_id>")
         logging.error(f"Error confirming deposit: {e}")
 # ===================== Admin: Lệnh cộng tiền =====================
-@router.message(Command("naptien"))
-async def admin_deposit(message: types.Message):
+@router.message(Command("congtien"))
+async def admin_add_money(message: types.Message):
     # Chỉ admin mới có quyền sử dụng lệnh này
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
         return
     try:
-        # Cú pháp: /naptien user <user_id> <amount>
+        # Cú pháp: /congtien <user_id> <amount>
         parts = message.text.split()
-        if len(parts) < 4 or parts[1].lower() != "user":
-            await message.answer("⚠️ Cú pháp: /naptien user <user_id> <amount>")
+        if len(parts) < 3:
+            await message.answer("⚠️ Cú pháp: /congtien <user_id> <amount>")
             return
-        target_user_id = parts[2]
-        amount = int(parts[3])
+        
+        target_user_id = parts[1]
+        amount = int(parts[2])
+        
         # Nếu user chưa có số dư, khởi tạo bằng 0
         if target_user_id not in user_balance:
             user_balance[target_user_id] = 0
+        
         user_balance[target_user_id] += amount
         save_data(data)
-        # Gửi thông báo đến user được cộng tiền
-        await bot.send_message(target_user_id, f"✅ Bạn đã được admin cộng {amount} VNĐ vào số dư.")
+        
+        # Gửi thông báo đến người dùng được cộng tiền (nếu có)
+        try:
+            await bot.send_message(target_user_id, f"✅ Bạn đã được admin cộng {amount} VNĐ vào số dư.")
+        except Exception as e:
+            logging.error(f"Không thể gửi tin nhắn đến user {target_user_id}: {e}")
+            
         await message.answer(f"✅ Đã cộng {amount} VNĐ cho user {target_user_id}.")
     except Exception as e:
-        await message.answer("⚠️ Lỗi khi cộng tiền. Cú pháp: /naptiennaptien user <user_id> <amount>")
-        logging.error(f"Error in admin deposit: {e}")
+        await message.answer("⚠️ Lỗi khi cộng tiền. Cú pháp: /congtien <user_id> <amount>")
+        logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
 @router.message(F.text == "💸 Rút tiền")
@@ -1225,6 +1234,7 @@ async def main():
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
+        BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="admin_sodu", description="Xem số dư tất cả user (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
