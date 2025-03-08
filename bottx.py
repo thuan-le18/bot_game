@@ -507,33 +507,43 @@ async def bet_rongho_amount(message: types.Message):
         rongho_states.pop(user_id, None)
         return
 
+    # Trừ tiền cược và lưu lại dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
 
+    # Lấy kết quả ngẫu nhiên từ bộ ba: "rong", "hoa", "ho"
     result = random.choice(["rong", "hoa", "ho"])
     chosen = state.get("choice")
     logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
+    win_amount = 0
+    outcome_text = ""
+
     if result == "hoa":
         if chosen == "hoa":
-            win_amount = int(bet_amount * 7)
+            win_amount = int(bet_amount * 6.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            await message.answer(f"🎉 Kết quả: ⚖️ Hòa! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
+            outcome_text = f"⚖️ Hòa! Bạn thắng {win_amount} VNĐ!"
         else:
-            await message.answer(f"😢 Kết quả: ⚖️ Hòa! Bạn thua {bet_amount} VNĐ!", reply_markup=main_menu)
+            outcome_text = f"⚖️ Hòa! Bạn thua {bet_amount} VNĐ!"
     else:
         if chosen == result:
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
             save_data(data)
             result_text = "Rồng" if result == "rong" else "Hổ"
-            await message.answer(f"🎉 {result_text} thắng! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
+            outcome_text = f"{result_text} thắng! Bạn thắng {win_amount} VNĐ!"
         else:
             result_text = "Rồng" if result == "rong" else "Hổ"
-            await message.answer(f"😢 Kết quả: {result_text}! Bạn thua {bet_amount} VNĐ!", reply_markup=main_menu)
+            outcome_text = f"{result_text}! Bạn thua {bet_amount} VNĐ!"
 
+    await message.answer(f"🎉 Kết quả: {outcome_text}", reply_markup=main_menu)
+    
+    # Lưu lịch sử cược cho game Rồng Hổ
+    record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
+    
     rongho_states.pop(user_id, None)
     logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
     
