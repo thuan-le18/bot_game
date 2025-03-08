@@ -269,25 +269,50 @@ async def back_to_main(message: types.Message):
 async def check_balance(message: types.Message):
     user_id = str(message.from_user.id)
     balance = user_balance.get(user_id, 0)
-    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=main_menu)
-
-@router.message(F.text == "📜 Lịch sử cược")
-async def bet_history(message: types.Message):
-    user_id = str(message.from_user.id)
     
-    if user_id not in user_history or not user_history[user_id]:
-        await message.answer("📜 Bạn chưa có lịch sử cược.", reply_markup=main_menu)
-        return
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📜 Lịch sử nạp", callback_data="deposit_history")
+    kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
+    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
+    
+    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
-    history_list = user_history[user_id][-10:]
-    text = "\n".join([
-        f"⏰ {r.get('time', '?')}: {r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
-        f"🔹 Kết quả: {r.get('result', '?')} | "
-        f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
-        for r in history_list
-    ])
+@router.callback_query(lambda c: c.data == "deposit_history")
+async def deposit_history_callback(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    # Lấy lịch sử nạp từ biến deposits (lưu trữ dưới dạng dictionary: {user_id: [record, ...]})
+    deposit_list = deposits.get(user_id, [])
+    if not deposit_list:
+        text = "Bạn chưa có lịch sử nạp tiền."
+    else:
+        text = "\n".join([
+            f"⏰ {record.get('time', '?')}: Nạp {record.get('amount', 0):,} VNĐ"
+            for record in deposit_list
+        ])
+    await callback.message.answer(f"📜 Lịch sử nạp tiền của bạn:\n{text}", reply_markup=main_menu)
+    await callback.answer()
 
-    await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
+@router.callback_query(lambda c: c.data == "withdraw_history")
+async def withdraw_history_callback(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    # Lấy lịch sử rút từ biến withdrawals (lưu trữ dưới dạng dictionary: {user_id: [record, ...]})
+    withdraw_list = withdrawals.get(user_id, [])
+    if not withdraw_list:
+        text = "Bạn chưa có lịch sử rút tiền."
+    else:
+        text = "\n".join([
+            f"⏰ {record.get('time', '?')}: Rút {record.get('amount', 0):,} VNĐ"
+            for record in withdraw_list
+        ])
+    await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu)
+    await callback.answer()
+
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_callback(callback: types.CallbackQuery):
+    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await callback.answer()
+
 
 # ===================== Handler Hỗ trợ =====================
 @router.message(F.text == "💬 Hỗ trợ")
