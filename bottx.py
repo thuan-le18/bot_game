@@ -273,14 +273,8 @@ async def check_balance(message: types.Message):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
-    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
-
-@router.callback_query(lambda c: c.data == "back_to_menu")
-async def back_to_menu_callback(callback: types.CallbackQuery):
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    await callback.answer()
 
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
