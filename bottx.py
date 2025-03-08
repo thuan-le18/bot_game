@@ -831,6 +831,10 @@ async def start_deposit(message: types.Message):
         "Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển:"
     )
     await message.answer(deposit_info, reply_markup=ReplyKeyboardRemove())
+    
+@router.message(F.text == "🔙 Quay lại")
+async def back_to_main(message: types.Message):
+    await message.answer("Quay lại menu chính", reply_markup=main_menu)
 
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
