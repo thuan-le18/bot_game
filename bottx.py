@@ -207,8 +207,9 @@ async def start_cmd(message: types.Message):
 
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
-    if new_user:
-    await message.answer("👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
+   if new_user:
+    welcome_text = (
+        "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
         "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
         "• Tài Xỉu\n"
         "• Jackpot\n"
@@ -221,6 +222,7 @@ async def start_cmd(message: types.Message):
     await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
 else:
     await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
+
 
 # ===================== VIP Handler =====================
 @router.message(F.text == "🏆 VIP")
