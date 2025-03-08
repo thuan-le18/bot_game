@@ -18,7 +18,7 @@ import mysql.connector
 
 db = mysql.connector.connect(
     host=os.environ.get('DB_HOST', '127.0.0.1'),
-    user=os.environ['azglkhsq_bot_game'],
+    user=os.environ.get('DB_USER', 'root'),
     password=os.environ['azglkhsq_bot_game'],
     database=os.environ['azglkhsq_bot_game'],
     port=int(os.environ.get('DB_PORT', 3306))  # Mặc định cổng 3306
