@@ -436,7 +436,7 @@ async def initiate_crash_game(message: types.Message):
          one_time_keyboard=True
     )
     await message.answer(
-         f"🚀 Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền máy bay' để rút tiền ngay!",
+         f"✈️ Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền máy bay' để rút tiền ngay!",
          reply_markup=keyboard
     )
     while crash_games[user_id]["running"]:
