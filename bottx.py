@@ -133,7 +133,7 @@ main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎮 Danh sách game"), KeyboardButton(text="💰 Xem số dư")],
         [KeyboardButton(text="📜 Lịch sử cược"), KeyboardButton(text="🔄 Nạp tiền")],
-        [KeyboardButton(text="💸 Rút tiền"), KeyboardButton(text="🎁 Hoa hồng")],
+        [KeyboardButton(text="💸 Rút tiền"), KeyboardButton(text="🌹 Hoa hồng")],
         [KeyboardButton(text="🏆 VIP"), KeyboardButton(text="💬 Hỗ trợ")]
     ],
     resize_keyboard=True
@@ -221,7 +221,7 @@ async def vip_info(message: types.Message):
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
 # ===================== Hoa Hồng Handler =====================
-@router.message(F.text == "🎁 Hoa hồng")
+@router.message(F.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
@@ -231,10 +231,10 @@ async def referral_handler(message: types.Message):
     today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
     
     await message.answer(
-         f"🎁 Link mời của bạn: {referral_link}\n"
+         f"🌹 Link mời của bạn: {referral_link}\n"
          f"Tổng lượt mời: {total_referrals}\n"
          f"Lượt mời hôm nay: {today_count}\n"
-         "Bạn nhận 2% hoa hồng từ số tiền cược của người được mời.",
+         "Bạn nhận 2000vnd và 2% hoa hồng từ số tiền cược của người được mời.",
          reply_markup=main_menu
     )
 
