@@ -547,16 +547,16 @@ async def withdraw_crash(callback: types.CallbackQuery):
         crash_games[user_id]["running"] = False
         crash_games[user_id]["withdraw_event"].set()
 
-        # Thông báo rút tiền thành công
+        # Thông báo rút tiền thành công với số tiền cụ thể
         try:
             await callback.message.edit_text(
-                f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
+                f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {win_amount:,} VNĐ\n📈 Hệ số nhân: x{multiplier}",
                 reply_markup=main_menu
             )
         except Exception as e:
             logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
 
-        await callback.answer("💸 Bạn đã rút tiền thành công!")
+        await callback.answer(f"💸 Bạn đã rút {win_amount:,} VNĐ thành công!")
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
         
