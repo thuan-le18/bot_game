@@ -404,6 +404,12 @@ async def jackpot_bet(message: types.Message):
     jackpot_states[user_id] = False
 
 # --- GAME: Máy Bay (Crash Game) ---
+import asyncio
+import random
+import logging
+from aiogram import Router, types, F
+from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+
 router = Router()
 
 # Khởi tạo biến lưu trạng thái game
