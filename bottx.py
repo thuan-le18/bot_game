@@ -501,23 +501,23 @@ async def initiate_crash_game(message: types.Message):
             crash_games[user_id]["current_multiplier"] = new_multiplier
 
             if new_multiplier >= crash_games[user_id]["crash_point"]:
-    loss_amount = bet  # Số tiền bị mất = tiền cược
-    try:
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=crash_games[user_id]["message_id"],
-            text=f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
-            reply_markup=main_menu
-        )
-    except Exception as e:
-        logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
+                loss_amount = bet  # Số tiền bị mất = tiền cược
+                try:
+                    await message.bot.edit_message_text(
+                        chat_id=message.chat.id,
+                        message_id=crash_games[user_id]["message_id"],
+                        text=f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
+                        reply_markup=main_menu
+                    )
+                except Exception as e:
+                    logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
 
-    # Ghi nhận lịch sử thua
-    record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
+                # Ghi nhận lịch sử thua
+                record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
 
-    # Kết thúc game
-    crash_games[user_id]["running"] = False
-    break
+                # Kết thúc game
+                crash_games[user_id]["running"] = False
+                break
 
             try:
                 await message.bot.edit_message_text(
@@ -564,7 +564,7 @@ async def withdraw_crash(callback: types.CallbackQuery):
         await callback.answer(f"💸 Bạn đã rút {win_amount:,} VNĐ thành công!")
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-        
+
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
