@@ -411,7 +411,7 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     await message.answer(
-         "💰 Nhập số tiền cược, bot sẽ khởi động máy bay!",
+         "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
          reply_markup=ReplyKeyboardRemove()
     )
 
@@ -419,13 +419,24 @@ async def start_crash(message: types.Message):
 async def initiate_crash_game(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
+    
+    # Kiểm tra cược tối thiểu là 1.000 VNĐ
+    if bet < 1000:
+        await message.answer("❌ Cược tối thiểu là 1.000 VNĐ!")
+        crash_states[user_id] = False
+        return
+
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
         crash_states[user_id] = False
         return
+
+    # Trừ tiền cược và lưu dữ liệu
     user_balance[user_id] -= bet
     save_data(data)
     await add_commission(user_id, bet)
+    
+    # Xác định điểm crash ngẫu nhiên (ví dụ 1.1 đến 10.0)
     crash_point = round(random.uniform(1.1, 10.0), 2)
     withdraw_event = asyncio.Event()
     crash_games[user_id] = {
@@ -435,24 +446,30 @@ async def initiate_crash_game(message: types.Message):
          "crash_point": crash_point,
          "withdraw_event": withdraw_event
     }
-    keyboard = ReplyKeyboardMarkup(
-         keyboard=[[KeyboardButton(text="Rút tiền máy bay")]],
-         resize_keyboard=True,
-         one_time_keyboard=True
-    )
-    await message.answer(
+    
+    # Gửi tin nhắn status ban đầu và lưu lại message_id để sau này edit tin nhắn này
+    status_msg = await message.answer(
          f"✈️ Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00\nNhấn 'Rút tiền máy bay' để rút tiền ngay!",
-         reply_markup=keyboard
+         reply_markup=ReplyKeyboardMarkup(
+             keyboard=[[KeyboardButton(text="Rút tiền máy bay")]],
+             resize_keyboard=True,
+             one_time_keyboard=True
+         )
     )
+    
+    # Vòng lặp cập nhật hệ số nhân một cách mượt mà bằng cách edit tin nhắn status
     while crash_games[user_id]["running"]:
          try:
+             # Chờ 1 giây hoặc chờ sự kiện rút tiền
              await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=1)
              if crash_games[user_id]["withdraw_event"].is_set():
                  win_amount = round(bet * crash_games[user_id]["current_multiplier"])
                  user_balance[user_id] += win_amount
                  save_data(data)
-                 await message.answer(
-                     f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
+                 await bot.edit_message_text(
+                     chat_id=message.chat.id,
+                     message_id=status_msg.message_id,
+                     text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
                      reply_markup=main_menu
                  )
                  record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
@@ -460,16 +477,34 @@ async def initiate_crash_game(message: types.Message):
                  break
          except asyncio.TimeoutError:
              new_multiplier = round(crash_games[user_id]["current_multiplier"] + 0.2, 2)
+             if new_multiplier > 20.0:
+                 new_multiplier = 20.0
              crash_games[user_id]["current_multiplier"] = new_multiplier
-             if new_multiplier >= crash_games[user_id]["crash_point"]:
-                  await message.answer(
-                      f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Bạn thua {bet} VNĐ!",
+             # Nếu hệ số nhân đạt crash_point hoặc 20x, máy bay rơi (thua)
+             if new_multiplier >= crash_games[user_id]["crash_point"] or new_multiplier >= 20.0:
+                  await bot.edit_message_text(
+                      chat_id=message.chat.id,
+                      message_id=status_msg.message_id,
+                      text=f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Bạn thua {bet} VNĐ!",
                       reply_markup=main_menu
                   )
                   record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
                   crash_games[user_id]["running"] = False
                   break
-             await message.answer(f"📈 Hệ số nhân: x{new_multiplier}")
+             # Cập nhật tin nhắn status với hệ số nhân mới
+             try:
+                 await bot.edit_message_text(
+                     chat_id=message.chat.id,
+                     message_id=status_msg.message_id,
+                     text=f"✈️ Máy bay đang bay với hệ số nhân: x{new_multiplier}",
+                     reply_markup=ReplyKeyboardMarkup(
+                         keyboard=[[KeyboardButton(text="Rút tiền máy bay")]],
+                         resize_keyboard=True,
+                         one_time_keyboard=True
+                     )
+                 )
+             except Exception as e:
+                 logging.error(f"Lỗi khi cập nhật tin nhắn: {e}")
     crash_states[user_id] = False
     if user_id in crash_games:
          del crash_games[user_id]
