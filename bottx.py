@@ -477,7 +477,7 @@ async def initiate_crash_game(message: types.Message):
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
-                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!",
+                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
                         reply_markup=main_menu
                     )
                 except Exception as e:
@@ -500,8 +500,9 @@ async def initiate_crash_game(message: types.Message):
                 new_multiplier = 20.0
             crash_games[user_id]["current_multiplier"] = new_multiplier
 
+            # Nếu hệ số nhân đạt crash_point, người chơi thua toàn bộ tiền cược
             if new_multiplier >= crash_games[user_id]["crash_point"]:
-                loss_amount = bet  # Số tiền bị mất = tiền cược
+                loss_amount = bet  # Bạn thua toàn bộ số tiền cược
                 try:
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
@@ -511,11 +512,7 @@ async def initiate_crash_game(message: types.Message):
                     )
                 except Exception as e:
                     logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
-
-                # Ghi nhận lịch sử thua
                 record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
-
-                # Kết thúc game
                 crash_games[user_id]["running"] = False
                 break
 
@@ -532,7 +529,7 @@ async def initiate_crash_game(message: types.Message):
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
-
+    
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
