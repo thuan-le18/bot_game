@@ -477,8 +477,7 @@ async def initiate_crash_game(message: types.Message):
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
-                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
-                        reply_markup=main_menu
+                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!"
                     )
                 except Exception as e:
                     logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
@@ -503,17 +502,20 @@ async def initiate_crash_game(message: types.Message):
             # Nếu hệ số nhân đạt crash_point, người chơi thua toàn bộ tiền cược
             if new_multiplier >= crash_games[user_id]["crash_point"]:
                 loss_amount = bet  # Bạn thua toàn bộ số tiền cược
+                from aiogram.utils.markdown import hbold
                 try:
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
-                        text=f"💥 Máy bay rơi tại x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
-                        reply_markup=main_menu
+                        text=f"💥 {hbold('Máy bay rơi tại')} x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!"
                     )
                 except Exception as e:
                     logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
                 record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
                 crash_games[user_id]["running"] = False
+                crash_states[user_id] = False
+                crash_games.pop(user_id, None)
+                await message.answer("🏠 Bạn đã quay về menu chính.", reply_markup=main_menu)
                 break
 
             try:
@@ -795,11 +797,11 @@ async def daovang_continue(message: types.Message):
 # Giảm hệ số thưởng để game "khó ăn tiền" hơn
 PRIZES = {
     "Thùng Phá Sảnh": 8,
-    "Tứ Quý": 4,
-    "Cù Lũ": 2,
-    "Thùng": 1.5,
-    "Sảnh": 1.2,
-    "Đôi": 1.1,
+    "Tứ Quý": 4.5,
+    "Cù Lũ": 2.4,
+    "Thùng": 1.7,
+    "Sảnh": 1.4,
+    "Đôi": 1.2,
     "Mậu Thầu": 0
 }
 
