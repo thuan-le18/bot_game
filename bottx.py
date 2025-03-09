@@ -510,8 +510,8 @@ async def initiate_crash_game(message: types.Message):
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     if user_id in crash_games and crash_games[user_id]["running"]:
-         crash_games[user_id]["withdraw_event"].set()
-         await callback.answer("Đang xử lý rút tiền máy bay...")
+        crash_games[user_id]["withdraw_event"].set()
+        await callback.answer("Đang xử lý rút tiền máy bay...")
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
