@@ -155,7 +155,7 @@ games_menu = ReplyKeyboardMarkup(
 # ===================== Hàm set_bot_commands =====================
 async def set_bot_commands(user_id: str):
     user_commands = [
-        BotCommand(command="start", description="Bắt đầu bot và khởi động lại nếu lỗi"),
+        BotCommand(command="start", description="Bắt đầu bot"),
     ]
     admin_commands = user_commands + [
         BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
