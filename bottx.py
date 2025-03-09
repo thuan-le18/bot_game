@@ -1317,31 +1317,29 @@ async def force_all_games(message: types.Message):
         del crash_games[uid]
 
     # --- Force outcome cho game Đào Vàng ---
-    async def process_daovang(uid):
-        state = daovang_states.get(uid)
-        if not state:
-            results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
-            return
-        bet = state.get("bet", 0)
-        bomb_count = state.get("bomb_count", 3)
-        total_safe = 25 - bomb_count
-        if outcome == "win":
-            forced_safe = 15 if total_safe >= 15 else total_safe
-            forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
-            win_amount = int(bet * forced_multiplier)
-            user_balance[uid] = user_balance.get(uid, 0) + win_amount
-            results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
-            try:
-                await bot.send_message(uid, f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
-        else:
-            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
-            try:
-                await bot.send_message(uid, f"💣 BOM nổ! Bạn mất {bet} VNĐ!", reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
-        del daovang_states[uid]
+async def process_daovang(uid):
+    state = daovang_states.get(uid)
+    if not state:
+        results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
+        return
+    bet = state.get("bet", 0)
+    bomb_count = state.get("bomb_count", 3)
+    total_safe = 25 - bomb_count
+    if outcome == "win":
+        forced_safe = 15 if total_safe >= 15 else total_safe
+        forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
+        win_amount = int(bet * forced_multiplier)
+        user_balance[uid] = user_balance.get(uid, 0) + win_amount
+        results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
+        try:
+            await bot.send_message(uid, f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", reply_markup=main_menu)
+        except Exception as e:
+            logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
+    else:
+        results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
+        # Ở outcome lose, bỏ việc gửi tin nhắn cho người dùng.
+        # Nếu cần, bạn có thể thêm tự động callback về menu chính ở đây, nhưng hiện tại chỉ update results.
+    del daovang_states[uid]
 
     # --- Force outcome cho game Mini Poker ---
     async def process_poker(uid):
