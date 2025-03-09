@@ -1272,7 +1272,6 @@ async def admin_view_players(message: types.Message):
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
 async def force_all_games(message: types.Message):
-    # Chỉ admin mới được sử dụng lệnh này
     if message.from_user.id != ADMIN_ID:
         return
 
@@ -1296,9 +1295,9 @@ async def force_all_games(message: types.Message):
             results.append(f"Máy Bay - User {uid}: Không có game đang chạy.")
             return
         bet = game.get("bet", 0)
-        # Sử dụng inline keyboard sẽ không cần cho game Crash vì trả về menu chính
+        crash_point = game.get("crash_point", 1.0)  # Lấy hệ số hiện tại
+        
         if outcome == "win":
-            # Forced WIN: ép multiplier thành một giá trị trong khoảng [4.5, 5.0]
             forced_multiplier = round(random.uniform(4.5, 5.0), 2)
             win_amount = round(bet * forced_multiplier)
             user_balance[uid] = user_balance.get(uid, 0) + win_amount
@@ -1308,10 +1307,10 @@ async def force_all_games(message: types.Message):
             except Exception as e:
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         else:
-            # Forced LOSE: sử dụng crash_point hiện tại, không thay đổi multiplier
-            results.append(f"Máy Bay - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
+            loss_amount = bet
+            results.append(f"Máy Bay - User {uid}: Ép thành LOSE (-{loss_amount} VNĐ) tại x{crash_point}.")
             try:
-                await bot.send_message(uid, f"💥 Máy bay rơi tại x{game.get('crash_point', '?')}! Bạn thua {bet} VNĐ!", reply_markup=main_menu)
+                await bot.send_message(uid, f"💥 Máy bay rơi tại x{crash_point}! ❌ Bạn đã mất {loss_amount:,} VNĐ!", reply_markup=main_menu)
             except Exception as e:
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         crash_games[uid]["running"] = False
@@ -1327,7 +1326,6 @@ async def force_all_games(message: types.Message):
         bomb_count = state.get("bomb_count", 3)
         total_safe = 25 - bomb_count
         if outcome == "win":
-            # Forced WIN: giả lập người chơi đạt số ô an toàn tối đa là 15 (nếu total_safe>=15)
             forced_safe = 15 if total_safe >= 15 else total_safe
             forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
             win_amount = int(bet * forced_multiplier)
@@ -1356,7 +1354,6 @@ async def force_all_games(message: types.Message):
             results.append(f"Mini Poker - User {uid}: Chưa có cược xác định.")
             return
         
-        # Dùng InlineKeyboard cho Mini Poker
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         poker_keyboard = InlineKeyboardBuilder()
         poker_keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
@@ -1378,7 +1375,6 @@ async def force_all_games(message: types.Message):
         else:
             hand_type = "Đôi"
             cards = random.sample(CARD_DECK, 5)
-            # Ép 2 lá đầu thành A để tạo đôi
             cards[0] = "♠A"
             cards[1] = "♥A"
             multiplier = PRIZES.get(hand_type, 0)
@@ -1397,22 +1393,13 @@ async def force_all_games(message: types.Message):
                 logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
         del poker_states[uid]
 
-    # ===================== Áp dụng logic ép cho từng user hoặc tất cả =====================
     if target_user:
         if target_user in crash_games:
             await process_crash(target_user)
-        else:
-            results.append(f"Máy Bay - User {target_user}: Không đang chơi.")
-        
         if target_user in daovang_states and daovang_states[target_user].get("active"):
             await process_daovang(target_user)
-        else:
-            results.append(f"Đào Vàng - User {target_user}: Không đang chơi hoặc game đã kết thúc.")
-        
         if target_user in poker_states and poker_states[target_user].get("awaiting_bet"):
             await process_poker(target_user)
-        else:
-            results.append(f"Mini Poker - User {target_user}: Không có game đang chờ.")
     else:
         for uid in list(crash_games.keys()):
             await process_crash(uid)
