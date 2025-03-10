@@ -1074,11 +1074,6 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Rút tiền Handler =====================
-from aiogram import Router, types, F
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-
-router = Router()
-
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
     withdraw_instruction = (
