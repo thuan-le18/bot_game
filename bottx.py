@@ -1217,57 +1217,81 @@ async def admin_confirm_withdraw(message: types.Message):
         logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
-@router.message(Command("admin_sodu"))
-async def admin_check_balance(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    balances = "\n".join([f"ID {uid}: {amt} VNĐ" for uid, amt in user_balance.items()])
-    await message.answer(f"📊 Số dư của tất cả người dùng:\n{balances}")
+from datetime import datetime, timedelta
+from aiogram import Router, types
+from aiogram.filters import Command
+import logging
 
-# ===================== Admin: Xem danh sách người chơi =====================
-@router.message(Command("tracuu"))
-async def admin_view_players(message: types.Message):
+router = Router()
+
+# Giả sử các biến toàn cục sau đã được định nghĩa và cập nhật từ các phần code khác:
+# user_balance, taixiu_states, jackpot_states, crash_states, rongho_states, daovang_states, poker_states, main_menu
+# Hàm: save_data, record_bet_history, add_commission, calculate_multiplier, v.v.
+
+# Dictionary để lưu thời gian hoạt động cuối cùng của người dùng
+online_users = {}
+timeout_duration = timedelta(minutes=5)  # Nếu không hoạt động trong 5 phút, xem là offline
+
+def update_user_status(user_id: str):
+    online_users[user_id] = datetime.now()
+
+def get_online_status():
+    now = datetime.now()
+    online_list = []
+    offline_list = []
+    for uid, last_seen in online_users.items():
+        if now - last_seen <= timeout_duration:
+            online_list.append(uid)
+        else:
+            offline_list.append(uid)
+    return online_list, offline_list
+
+# Lệnh /online (chỉ admin sử dụng) để hiển thị số dư và trạng thái online/offline kèm trò chơi đang tham gia
+@router.message(Command("online"))
+async def admin_online_status(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
+
+    # Cập nhật trạng thái cho admin
+    update_user_status(str(message.from_user.id))
+    
+    # Lấy danh sách online/offline dựa trên hoạt động
+    online_list, offline_list = get_online_status()
+    
+    # Tạo danh sách số dư của tất cả người dùng
+    balances_text = "\n".join([f"User {uid}: {amt} VNĐ" for uid, amt in user_balance.items()])
+    
+    # Tạo danh sách thông tin người chơi kèm trạng thái game và online/offline
     players_info = []
     for uid in user_balance.keys():
-        info = f"User {uid}: Số dư: {user_balance.get(uid, 0)} VNĐ"
-        
-        # Tài Xỉu: Kiểm tra nếu user có trạng thái trong taixiu_states
+        balance = user_balance.get(uid, 0)
+        game_status = []
+        # Tài Xỉu
         if uid in taixiu_states and taixiu_states[uid]:
             state = taixiu_states[uid]
             if isinstance(state, dict) and "choice" in state:
-                info += f", đang chơi Tài Xỉu (chọn {state['choice']})"
+                game_status.append(f"Tài Xỉu (chọn {state['choice']})")
             else:
-                info += ", đang chờ lựa chọn Tài Xỉu"
-        
-        # Jackpot: Kiểm tra nếu jackpot_states của user là True
+                game_status.append("Tài Xỉu")
+        # Jackpot
         if uid in jackpot_states and jackpot_states[uid]:
-            info += ", đang chơi Jackpot"
-        
+            game_status.append("Jackpot")
         # Máy Bay (Crash)
         if uid in crash_states and crash_states[uid]:
-            info += ", đang chơi Máy Bay (Crash)"
-        
-        # Rồng Hổ: Kiểm tra nếu có trạng thái trong rongho_states
+            game_status.append("Máy Bay")
+        # Rồng Hổ
         if uid in rongho_states and rongho_states[uid]:
             state = rongho_states[uid]
             if isinstance(state, dict) and "choice" in state:
-                info += f", đang chơi Rồng Hổ (chọn {state['choice']})"
+                game_status.append(f"Rồng Hổ (chọn {state['choice']})")
             else:
-                info += ", đang chơi Rồng Hổ"
-        
-        # Đào Vàng: Kiểm tra nếu trạng thái active của daovang_states là True
-        if uid in daovang_states and daovang_states[uid].get("active", False):
-            info += ", đang chơi Đào Vàng"
-        
-        # Mini Poker: Kiểm tra nếu user có trạng thái trong poker_states
-        if uid in poker_states and poker_states[uid]:
-            info += ", đang chơi Mini Poker"
-        
-        players_info.append(info)
-    result = "\n".join(players_info)
-    await message.answer(f"🕵️ Danh sách người chơi:\n{result}")
+                game_status.append("Rồng Hổ")
+        # Đào Vàng\n        if uid in daovang_states and daovang_states[uid].get(\"active\", False):\n            game_status.append(\"Đào Vàng\")\n        # Mini Poker\n        if uid in poker_states and poker_states[uid]:\n            game_status.append(\"Mini Poker\")\n        status_str = \", \".join(game_status) if game_status else \"Không chơi\"\n        online_status = \"Online\" if uid in online_list else \"Offline\"\n        players_info.append(f\"User {uid}: {balance} VNĐ | {status_str} | {online_status}\")\n    \n    players_text = \"\\n\".join(players_info)\n    response = (\"📊 Số dư của tất cả người dùng:\\n\" + balances_text + \"\\n\\n\" +\n                \"🕵️ Danh sách người chơi:\\n\" + players_text)\n    await message.answer(response)
+
+# Handler bắt mọi tin nhắn để cập nhật trạng thái hoạt động của người dùng
+@router.message()
+async def track_activity(message: types.Message):
+    update_user_status(str(message.from_user.id))
 
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
