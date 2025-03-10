@@ -1220,6 +1220,17 @@ async def admin_confirm_withdraw(message: types.Message):
 online_users = {}
 timeout_duration = timedelta(minutes=5)  # 5 phút không hoạt động sẽ bị xem là offline
 
+# Thêm biến toàn cục (cần khai báo trước khi sử dụng)
+user_balance = {}  # Giả sử đây là dictionary lưu số dư
+taixiu_states = {}
+jackpot_states = {}
+crash_states = {}
+rongho_states = {}
+daovang_states = {}
+poker_states = {}
+
+ADMIN_ID = 1985817060  # Thay bằng ID admin thật
+
 def update_user_status(user_id: str):
     """ Cập nhật thời gian hoạt động của người dùng """
     online_users[user_id] = datetime.now()
@@ -1240,34 +1251,33 @@ def get_game_status(uid: str):
     """ Kiểm tra người dùng đang chơi game nào """
     status = []
 
-    # Cập nhật trạng thái nếu chơi game
     if uid in taixiu_states and taixiu_states[uid]:
-        status.append(f"Tài Xỉu (chọn {taixiu_states[uid]['choice']})")
-        update_user_status(uid)
+        state = taixiu_states[uid]
+        if isinstance(state, dict) and "choice" in state and state["choice"]:
+            status.append(f"Tài Xỉu (chọn {state['choice']})")
+        else:
+            status.append("Tài Xỉu")
 
     if uid in jackpot_states and jackpot_states[uid]:
         status.append("Jackpot")
-        update_user_status(uid)
 
     if uid in crash_states and crash_states[uid]:
         status.append("Máy Bay")
-        update_user_status(uid)
 
     if uid in rongho_states and rongho_states[uid]:
-        status.append(f"Rồng Hổ (chọn {rongho_states[uid]['choice']})")
-        update_user_status(uid)
+        state = rongho_states[uid]
+        if isinstance(state, dict) and "choice" in state and state["choice"]:
+            status.append(f"Rồng Hổ (chọn {state['choice']})")
+        else:
+            status.append("Rồng Hổ")
 
-    if uid in daovang_states and daovang_states[uid].get("active"):
+    if uid in daovang_states and isinstance(daovang_states[uid], dict) and daovang_states[uid].get("active"):
         status.append("Đào Vàng")
-        update_user_status(uid)
 
     if uid in poker_states and poker_states[uid]:
         status.append("Mini Poker")
-        update_user_status(uid)
 
     return ", ".join(status) if status else "Không chơi"
-
-router = Router()
 
 @router.message(Command("online"))
 async def admin_online_status(message: types.Message):
@@ -1275,20 +1285,26 @@ async def admin_online_status(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    update_user_status(str(message.from_user.id))
-    online_list, offline_list = get_online_status()
-    balances_text = "\n".join([f"User {uid}: {amt} VNĐ" for uid, amt in user_balance.items()])
+    try:
+        update_user_status(str(message.from_user.id))  # Cập nhật trạng thái admin
 
-    online_info = [f"User {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list]
-    offline_info = [f"User {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list]
+        online_list, offline_list = get_online_status()  # Lấy danh sách online/offline
 
-    response = (
-        "📊 Số dư của tất cả người dùng:\n" + balances_text + "\n\n"
-        "🟢 Online:\n" + ("\n".join(online_info) if online_info else "Không có ai online.") + "\n\n"
-        "🔴 Offline:\n" + ("\n".join(offline_info) if offline_info else "Không có ai offline.")
-    )
+        balances_text = "\n".join([f"User {uid}: {user_balance.get(uid, 0)} VNĐ" for uid in user_balance])
 
-    await message.answer(response)
+        online_info = [f"🟢 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list]
+        offline_info = [f"🔴 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list]
+
+        response = (
+            "📊 **Số dư của tất cả người dùng:**\n" + (balances_text if balances_text else "Không có dữ liệu.") + "\n\n"
+            "🟢 **Online:**\n" + ("\n".join(online_info) if online_info else "Không có ai online.") + "\n\n"
+            "🔴 **Offline:**\n" + ("\n".join(offline_info) if offline_info else "Không có ai offline.")
+        )
+
+        await message.answer(response, parse_mode="Markdown")
+
+    except Exception as e:
+        await message.answer(f"⚠️ Lỗi khi lấy danh sách online: {str(e)}")
 
 @router.message()
 async def track_activity(message: types.Message):
@@ -1297,7 +1313,7 @@ async def track_activity(message: types.Message):
 
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
-    """ Cập nhật trạng thái khi người dùng bấm nút inline """
+    """ Cập nhật trạng thái người dùng khi họ bấm nút inline """
     update_user_status(str(callback.from_user.id))
     await callback.answer()
     
