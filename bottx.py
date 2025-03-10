@@ -1074,28 +1074,42 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
-from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-# --- HANDLER 1: Người dùng nhấn "💸 Rút tiền" ---
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
-    logging.info("DEBUG: start_withdraw triggered")
     withdraw_instruction = (
         "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
         "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
         "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
         "⚠️ Lưu ý:\n"
         "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
-        "- Số tiền rút tối thiểu là 50,000 VNĐ.\n"
+        "- Số tiền rút tối thiểu là 50k.\n"
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
-    ])
-    await message.answer(withdraw_instruction, reply_markup=kb)
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
+    await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(callback: types.CallbackQuery):
+    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await callback.answer()
 
+@router.callback_query(lambda c: c.data == "withdraw_history")
+async def withdraw_history_handler(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    if user_id not in withdrawals or not withdrawals[user_id]:
+        await callback.message.answer("📜 Bạn chưa có lịch sử rút tiền.", reply_markup=main_menu)
+        await callback.answer()
+        return
+
+    history_list = withdrawals[user_id]
+    text = "\n".join([
+        f"⏰ {req.get('time', '?')}: Rút {req.get('amount', 0):,} VNĐ - Tài khoản: {req.get('account_number', 'N/A')}"
+        for req in history_list
+    ])
+    await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu, parse_mode="Markdown")
+    await callback.answer()
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
