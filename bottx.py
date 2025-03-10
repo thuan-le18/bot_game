@@ -1308,12 +1308,12 @@ async def admin_online_status(message: types.Message):
 
 @router.message()
 async def track_activity(message: types.Message):
-    """ Cập nhật trạng thái người dùng khi họ gửi tin nhắn """
+    print("track_activity:", message.from_user.id)  # Debug
     update_user_status(str(message.from_user.id))
 
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
-    """ Cập nhật trạng thái người dùng khi họ bấm nút inline """
+    print("track_callback:", callback.from_user.id)  # Debug
     update_user_status(str(callback.from_user.id))
     await callback.answer()
     
