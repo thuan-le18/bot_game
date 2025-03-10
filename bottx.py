@@ -266,17 +266,19 @@ async def back_to_main(message: types.Message):
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # ===================== Xem số dư & Lịch sử Handler =====================
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 @router.message(F.text == "💰 Xem số dư")
 async def check_balance(message: types.Message):
     user_id = str(message.from_user.id)
     balance = user_balance.get(user_id, 0)
     
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
-
-    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb)
+    
+    # Chuyển đổi về InlineKeyboardMarkup
+    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
