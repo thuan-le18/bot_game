@@ -272,8 +272,22 @@ async def check_balance(message: types.Message):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
+    kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
+
+@router.callback_query(F.data == "deposit_history")
+async def deposit_history(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    history = deposit_records.get(user_id, [])
+
+    if not history:
+        await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
+        return
+
+    history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
+    await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
+    await callback.answer()
 
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
@@ -913,15 +927,28 @@ async def start_deposit(message: types.Message):
         f"📌 Nội dung chuyển khoản: NAPTK {user_id}\n\n"
         "Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển:"
     )
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
-    kb = InlineKeyboardBuilder()
-    kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
-    await message.answer(deposit_info, reply_markup=kb.as_markup())
-@router.callback_query(lambda c: c.data == "back_to_menu")
-async def back_to_menu_handler(callback: types.CallbackQuery):
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    await callback.answer()
+    await message.answer(deposit_info)
 
+@router.message()
+async def process_deposit(message: types.Message):
+    user_id = str(message.from_user.id)
+
+    if deposit_states.get(user_id) == "awaiting_amount":
+        try:
+            amount = int(message.text)  # Lấy số tiền người dùng nhập
+            if amount <= 0:
+                await message.answer("⚠️ Số tiền không hợp lệ. Vui lòng nhập số tiền dương.")
+                return
+
+            user_balance[user_id] = user_balance.get(user_id, 0) + amount  # Cộng số dư
+            add_deposit_record(user_id, amount)  # Lưu lịch sử nạp tiền
+            
+            await message.answer(f"✅ Bạn đã nạp thành công {amount} VNĐ vào tài khoản!")
+            del deposit_states[user_id]  # Xóa trạng thái
+
+        except ValueError:
+            await message.answer("⚠️ Vui lòng nhập một số tiền hợp lệ.")
+    
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
 async def deposit_photo_handler(message: types.Message):
