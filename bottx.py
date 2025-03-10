@@ -1536,6 +1536,7 @@ async def unlock_players(message: types.Message):
 
 # ===================== Chạy bot =====================
 async def main():
+    asyncio.create_task(update_players())
     await bot.set_my_commands([
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
