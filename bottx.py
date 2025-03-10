@@ -1074,11 +1074,18 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
-@router.message()
-async def debug_message_handler(message: types.Message):
-    logging.info(f"DEBUG: Tin nhắn nhận được: {message.text}")
-    await message.answer("✅ Bot nhận được tin nhắn này!")
-    
+@router.message(F.text == "💸 Rút tiền")
+async def start_withdraw(message: types.Message):
+    withdraw_instruction = (
+        "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
+        "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
+        "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
+        "⚠️ Lưu ý:\n"
+        "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
+        "- Số tiền rút tối thiểu là 50k.\n"
+        "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
+        "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
+    )
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
@@ -1103,6 +1110,7 @@ async def withdraw_history_handler(callback: types.CallbackQuery):
     ])
     await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu, parse_mode="Markdown")
     await callback.answer()
+logging.info(f"DEBUG: Nhận tin nhắn từ {message.from_user.id}: {message.text}")
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
