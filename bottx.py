@@ -263,21 +263,23 @@ async def show_games(message: types.Message):
 async def back_to_main(message: types.Message):
     await message.answer("Quay lại menu chính", reply_markup=main_menu)
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 # ===================== Xem số dư & Lịch sử Handler =====================
 @router.message(F.text == "💰 Xem số dư")
 async def check_balance(message: types.Message):
     user_id = str(message.from_user.id)
     balance = user_balance.get(user_id, 0)
     
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
-     kb = InlineKeyboardMarkup(
+    # Sử dụng InlineKeyboardMarkup thay vì ReplyKeyboardMarkup
+    kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="💸 Lịch sử rút", callback_data="withdraw_history")],
             [InlineKeyboardButton(text="📥 Lịch sử nạp", callback_data="deposit_history")]
         ]
     )
-    
-    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
+
+    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb)
 
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
