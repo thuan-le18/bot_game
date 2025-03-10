@@ -1074,6 +1074,9 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Rút tiền Handler =====================
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# ===================== Nút Rút tiền =====================
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
     withdraw_instruction = (
@@ -1086,7 +1089,11 @@ async def start_withdraw(message: types.Message):
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
+    # Khởi tạo nút "Quay lại" dùng InlineKeyboardMarkup
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
+    ])
+    await message.answer(withdraw_instruction, reply_markup=kb)
 
 @router.callback_query(lambda c: c.data == "withdraw_history")
 async def withdraw_history_handler(callback: types.CallbackQuery):
