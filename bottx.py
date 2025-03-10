@@ -1074,6 +1074,9 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Rút tiền Handler =====================
+class WithdrawState(StatesGroup):
+    waiting_for_amount = State()
+
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message, state: FSMContext):
     await state.clear()
