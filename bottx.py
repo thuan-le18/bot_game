@@ -1217,11 +1217,11 @@ async def admin_confirm_withdraw(message: types.Message):
         
 # ===================== Admin: Xem số dư =====================
 import time
-from datetime import datetime, timedelta
 from aiogram import Router, types
 from aiogram.filters import Command
 
-# ... các khai báo khác
+# Router để xử lý lệnh
+router = Router()
 
 # Dictionary lưu thời gian hoạt động của người dùng
 online_users = {}
@@ -1239,7 +1239,7 @@ poker_states = {}
 ADMIN_ID = 1985817060  
 
 def update_user_status(user_id):
-    """ Cập nhật thời gian hoạt động của user """
+    """ Cập nhật trạng thái online theo thời gian thực """
     user_id = str(user_id)  
     online_users[user_id] = time.time()
 
@@ -1284,6 +1284,7 @@ def get_game_status(uid: str):
 
 @router.message(Command("online"))
 async def check_online(message: types.Message):
+    """ Kiểm tra danh sách người online/offline """
     try:
         online_list, offline_list = get_online_status()
 
@@ -1299,18 +1300,52 @@ async def check_online(message: types.Message):
 @router.message()
 async def track_activity(message: types.Message):
     """ Cập nhật trạng thái online khi user nhắn tin """
-    update_user_status(str(message.from_user.id))
+    update_user_status(message.from_user.id)
 
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
     """ Cập nhật trạng thái online khi user bấm nút """
-    update_user_status(str(callback.from_user.id))
+    update_user_status(callback.from_user.id)
     await callback.answer()
 
-# Cập nhật trạng thái online khi user tham gia game
-def player_join_game(user_id):
+# ================== Cập nhật trạng thái online khi vào game ==================
+def player_join_game(user_id, game_name):
     """ Gọi khi người dùng tham gia bất kỳ game nào """
     update_user_status(user_id)
+    user_id = str(user_id)
+    
+    # Cập nhật game mà user đang chơi
+    if game_name == "Tài Xỉu":
+        taixiu_states[user_id] = True
+    elif game_name == "Jackpot":
+        jackpot_states[user_id] = True
+    elif game_name == "Máy Bay":
+        crash_states[user_id] = True
+    elif game_name == "Rồng Hổ":
+        rongho_states[user_id] = True
+    elif game_name == "Đào Vàng":
+        daovang_states[user_id] = {"active": True}
+    elif game_name == "Mini Poker":
+        poker_states[user_id] = True
+
+# ================== Khi user thoát game ==================
+def player_exit_game(user_id, game_name):
+    """ Gọi khi người dùng rời khỏi một game """
+    user_id = str(user_id)
+
+    # Xóa trạng thái game của user
+    if game_name == "Tài Xỉu":
+        taixiu_states.pop(user_id, None)
+    elif game_name == "Jackpot":
+        jackpot_states.pop(user_id, None)
+    elif game_name == "Máy Bay":
+        crash_states.pop(user_id, None)
+    elif game_name == "Rồng Hổ":
+        rongho_states.pop(user_id, None)
+    elif game_name == "Đào Vàng":
+        daovang_states.pop(user_id, None)
+    elif game_name == "Mini Poker":
+        poker_states.pop(user_id, None)
 
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
