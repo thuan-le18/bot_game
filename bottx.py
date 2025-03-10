@@ -147,6 +147,7 @@ games_menu = ReplyKeyboardMarkup(
         [KeyboardButton(text="🎲 Tài Xỉu"), KeyboardButton(text="🎰 Jackpot")],
         [KeyboardButton(text="✈️ Máy Bay"), KeyboardButton(text="🐉 Rồng Hổ")],
         [KeyboardButton(text="⛏️ Đào Vàng"), KeyboardButton(text="🃏 Mini Poker")],
+        [KeyboardButton(text="👥 Số người đang chơi")],  # Nút hiển thị số người đang chơi
         [KeyboardButton(text="🔙 Quay lại")]
     ],
     resize_keyboard=True
@@ -1477,6 +1478,61 @@ async def process_daovang(uid):
         await message.answer("\n".join(results))
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
+
+# ===================== Quản lý số người chơi ảo =====================
+game_players = {
+    "🎲 Tài Xỉu": random.randint(40, 60),
+    "🎰 Jackpot": random.randint(40, 60),
+    "✈️ Máy Bay": random.randint(40, 60),
+    "🐉 Rồng Hổ": random.randint(40, 60),
+    "⛏️ Đào Vàng": random.randint(40, 60),
+    "🃏 Mini Poker": random.randint(40, 60)
+}
+
+player_lock = False  # Nếu True, số người chơi không thay đổi
+player_fixed_value = None  # Nếu không phải None, số người chơi cố định
+
+async def update_players():
+    while True:
+        if not player_lock:  # Chỉ cập nhật nếu không bị khóa
+            for game in game_players:
+                game_players[game] += random.randint(-3, 3)  # Biến động nhẹ
+                game_players[game] = max(40, min(100, game_players[game]))  # Giữ trong khoảng 40-100
+        elif player_fixed_value is not None:
+            for game in game_players:
+                game_players[game] = player_fixed_value  # Cố định số lượng
+        await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
+
+asyncio.create_task(update_players())
+
+# ===================== Xử lý nút số người đang chơi =====================
+@router.message(F.text == "👥 Số người đang chơi")
+async def show_players(message: types.Message):
+    player_text = "📊 Số người đang chơi mỗi game:\n\n"
+    for game, count in game_players.items():
+        player_text += f"{game}: {count} người chơi\n"
+    await message.answer(player_text)
+
+# ===================== Admin Tùy chỉnh số người chơi =====================
+@router.message(F.text.startswith("/setplayers "))
+async def set_players(message: types.Message):
+    global player_fixed_value, player_lock
+    args = message.text.split()
+    if len(args) != 2 or not args[1].isdigit():
+        await message.answer("⚠️ Sử dụng: /setplayers [số người]")
+        return
+    player_fixed_value = int(args[1])
+    player_lock = True
+    for game in game_players:
+        game_players[game] = player_fixed_value
+    await message.answer(f"🔒 Đã cố định số người chơi ở mức {player_fixed_value} người.")
+
+@router.message(F.text == "/unlockplayers")
+async def unlock_players(message: types.Message):
+    global player_lock, player_fixed_value
+    player_lock = False
+    player_fixed_value = None
+    await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
 
 # ===================== Chạy bot =====================
 async def main():
