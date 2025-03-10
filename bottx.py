@@ -162,6 +162,8 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
+        BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
+        BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
@@ -1553,6 +1555,8 @@ async def main():
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
+        BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
+        BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
     await dp.start_polling(bot)
