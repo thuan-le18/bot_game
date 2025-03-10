@@ -1092,7 +1092,23 @@ async def start_withdraw(message: types.Message):
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
     await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
-    
+
+@router.callback_query(lambda c: c.data == "withdraw_history")
+async def withdraw_history_handler(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    if user_id not in withdrawals or not withdrawals[user_id]:
+        await callback.message.answer("📜 Bạn chưa có lịch sử rút tiền.", reply_markup=main_menu)
+        await callback.answer()
+        return
+
+    history_list = withdrawals[user_id]
+    text = "\n".join([
+        f"⏰ {req.get('time', '?')}: Rút {req.get('amount', 0):,} VNĐ - Tài khoản: {req.get('account_number', 'N/A')}"
+        for req in history_list
+    ])
+    await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu, parse_mode="Markdown")
+    await callback.answer()
+
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
 @router.message(lambda msg: msg.from_user.id != ADMIN_ID 
