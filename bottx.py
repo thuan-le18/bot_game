@@ -1312,6 +1312,11 @@ async def admin_online_status(message: types.Message):
 async def track_activity(message: types.Message):
     """ Cập nhật trạng thái người dùng khi họ gửi tin nhắn """
     update_user_status(str(message.from_user.id))
+# ====================== Cập nhật trạng thái khi người dùng bấm nút inline ======================
+@router.callback_query()
+async def track_callback(callback: types.CallbackQuery):
+    update_user_status(str(callback.from_user.id))
+    await callback.answer()
     
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
