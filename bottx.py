@@ -1074,11 +1074,15 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
-# ===================== Nút Rút tiền =====================
+class WithdrawState(StatesGroup):
+    waiting_for_amount = State()
+
 @router.message(F.text == "💸 Rút tiền")
-async def start_withdraw(message: types.Message):
+async def start_withdraw(message: types.Message, state: FSMContext):
     withdraw_instruction = (
         "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
         "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
@@ -1090,52 +1094,28 @@ async def start_withdraw(message: types.Message):
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
     
-    # ✅ Sửa lỗi import và tạo nút bấm đúng cách
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
         ]
     )
+    
     await message.answer(withdraw_instruction, reply_markup=kb)
+    await state.set_state(WithdrawState.waiting_for_amount)
 
-# ===================== Quay lại menu =====================
-@router.callback_query(lambda c: c.data == "back_to_menu")
-async def back_to_menu_handler(callback: types.CallbackQuery):
-    main_menu = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🏠 Menu chính", callback_data="main_menu")]
-        ]
-    )
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    await callback.answer()
+@router.message(StateFilter(WithdrawState.waiting_for_amount))
+async def process_withdraw_amount(message: types.Message, state: FSMContext):
+    try:
+        data = message.text.split()
+        amount = int(data[0])  # Lấy số tiền
+        if amount < 50000:
+            await message.answer("⚠️ Số tiền tối thiểu để rút là 50,000 VNĐ.")
+            return
 
-# ===================== Lịch sử rút tiền =====================
-@router.callback_query(lambda c: c.data == "withdraw_history")
-async def withdraw_history_handler(callback: types.CallbackQuery):
-    user_id = str(callback.from_user.id)
-
-    if user_id not in withdrawals or not withdrawals[user_id]:
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
-            ]
-        )
-        await callback.message.answer("📜 Bạn chưa có lịch sử rút tiền.", reply_markup=kb)
-        await callback.answer()
-        return
-
-    history_list = withdrawals[user_id]
-    text = "\n".join([
-        f"⏰ {req.get('time', '?')}: Rút {req.get('amount', 0):,} VNĐ - Tài khoản: {req.get('account_number', 'N/A')}"
-        for req in history_list
-    ])
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
-        ]
-    )
-    await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=kb, parse_mode="Markdown")
-    await callback.answer()
+        await message.answer(f"✅ Bạn đã yêu cầu rút {amount:,} VNĐ. Vui lòng chờ admin xử lý.")
+        await state.clear()  # Xóa trạng thái
+    except (ValueError, IndexError):
+        await message.answer("⚠️ Vui lòng nhập một số tiền hợp lệ theo định dạng!")
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
