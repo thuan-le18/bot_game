@@ -274,7 +274,7 @@ async def check_balance(message: types.Message):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
-    kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")]
+    kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
         ]
     )
 
