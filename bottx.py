@@ -158,12 +158,11 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="start", description="Bắt đầu bot"),
     ]
     admin_commands = user_commands + [
-        BotCommand(command="admin_sodu", description="Xem số dư (Admin)"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
-        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
+        BotCommand(command="online", description="Xem người chơi (Admin)")
     ]
     if user_id == str(ADMIN_ID):
         await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
@@ -1451,9 +1450,8 @@ async def main():
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
-        BotCommand(command="admin_sodu", description="Xem số dư tất cả user (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
-        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
+        BotCommand(command="online", description="Xem người chơi (Admin)")
     ])
     await dp.start_polling(bot)
 
