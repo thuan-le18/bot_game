@@ -901,6 +901,19 @@ async def poker_back(callback: types.CallbackQuery):
     await callback.message.delete()
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
+
+# Dictionary lưu trạng thái nạp tiền và lịch sử nạp
+deposit_states = {}
+deposit_records = {}
+user_balance = {}
+
+def add_deposit_record(user_id, amount):
+    """ Lưu lịch sử nạp tiền của người dùng """
+    user_id = str(user_id)
+    if user_id not in deposit_records:
+        deposit_records[user_id] = []
+    deposit_records[user_id].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "amount": amount})
+
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
@@ -935,8 +948,9 @@ async def process_deposit(message: types.Message):
 
         except ValueError:
             await message.answer("⚠️ Vui lòng nhập một số tiền hợp lệ.")
-    
-    @router.callback_query(F.data == "deposit_history")
+
+# ===================== Callback: Lịch sử nạp tiền =====================
+@router.callback_query(F.data == "deposit_history")
 async def deposit_history(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     history = deposit_records.get(user_id, [])
