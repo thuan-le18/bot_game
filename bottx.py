@@ -1086,7 +1086,8 @@ async def start_withdraw(message: types.Message):
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-
+    await message.answer(withdraw_instruction)
+    
 @router.callback_query(lambda c: c.data == "withdraw_history")
 async def withdraw_history_handler(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
