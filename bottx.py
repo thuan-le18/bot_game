@@ -276,19 +276,6 @@ async def check_balance(message: types.Message):
     
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
-@router.callback_query(F.data == "deposit_history")
-async def deposit_history(callback: types.CallbackQuery):
-    user_id = str(callback.from_user.id)
-    history = deposit_records.get(user_id, [])
-
-    if not history:
-        await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
-        return
-
-    history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
-    await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
-    await callback.answer()
-
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
@@ -949,6 +936,19 @@ async def process_deposit(message: types.Message):
         except ValueError:
             await message.answer("⚠️ Vui lòng nhập một số tiền hợp lệ.")
     
+    @router.callback_query(F.data == "deposit_history")
+async def deposit_history(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    history = deposit_records.get(user_id, [])
+
+    if not history:
+        await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
+        return
+
+    history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
+    await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
+    await callback.answer()
+
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
 async def deposit_photo_handler(message: types.Message):
