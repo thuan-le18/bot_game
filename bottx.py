@@ -1536,10 +1536,8 @@ async def unlock_players(message: types.Message):
 
 # ===================== Chạy bot =====================
 async def main():
-    loop = asyncio.get_event_loop()  # Lấy hoặc tạo event loop
-
-    # Chạy update_players trong background
-    loop.create_task(update_players())
+    # Chạy update_players() trong background
+    asyncio.create_task(update_players())
 
     # Thiết lập các lệnh cho bot
     await bot.set_my_commands([
@@ -1554,12 +1552,16 @@ async def main():
     # Bắt đầu bot với polling
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     try:
-        loop = asyncio.new_event_loop()  # Tạo event loop mới nếu cần
+        # Khởi tạo event loop mới
+        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())  # Chạy main trong event loop
+
+        # Chạy bot
+        loop.run_until_complete(main())
     except RuntimeError as e:
         print(f"Error: {e}")
