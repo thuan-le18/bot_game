@@ -1093,7 +1093,7 @@ async def start_withdraw(message: types.Message, state: FSMContext):
     await message.answer(withdraw_instruction, parse_mode="Markdown")
     await state.set_state(WithdrawState.waiting_for_amount)
 
-@router.message(StateFilter(WithdrawState.waiting_for_amount))
+@router.message(F.state == WithdrawState.waiting_for_amount)
 async def process_withdraw_amount(message: types.Message, state: FSMContext):
     try:
         amount = int(message.text)
