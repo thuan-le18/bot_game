@@ -270,9 +270,12 @@ async def check_balance(message: types.Message):
     balance = user_balance.get(user_id, 0)
     
     from aiogram.utils.keyboard import InlineKeyboardBuilder
-    kb = InlineKeyboardBuilder()
-    kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
-    kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
+     kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💸 Lịch sử rút", callback_data="withdraw_history")],
+            [InlineKeyboardButton(text="📥 Lịch sử nạp", callback_data="deposit_history")]
+        ]
+    )
     
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
