@@ -162,7 +162,7 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
-        BotCommand(command="online", description="Xem người chơi (Admin)")
+        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
     if user_id == str(ADMIN_ID):
         await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
@@ -1223,12 +1223,8 @@ from aiogram.filters import Command
 # Router để xử lý lệnh
 router = Router()
 
-# Dictionary lưu thời gian hoạt động của người dùng
-user_last_active = {}
-timeout_duration = 300  # 5 phút không hoạt động sẽ bị xem là offline
-
 # Dữ liệu game & tài khoản
-user_balance = {}
+user_balance = {}  # Lưu số dư người chơi
 taixiu_states = {}
 jackpot_states = {}
 crash_states = {}
@@ -1238,73 +1234,48 @@ poker_states = {}
 
 ADMIN_ID = 1985817060  
 
-def update_user_activity(user_id):
-    """ Cập nhật thời gian hoạt động """
-    user_last_active[user_id] = time.time()
-
-def get_online_users():
-    """ Lấy danh sách người online/offline """
-    now = time.time()
-    online_users = []
-    offline_users = []
-    
-    for user_id in user_balance:
-        last_seen = user_last_active.get(user_id, 0)
-        if now - last_seen <= timeout_duration:
-            online_users.append(user_id)
-        else:
-            offline_users.append(user_id)
-    
-    return online_users, offline_users
-
 def get_game_status(uid: str):
-    """ Kiểm tra người dùng đang chơi game nào """
+    """ Kiểm tra người dùng đang chơi game gì """
     status = []
 
-    if taixiu_states.get(uid):
+    if uid in taixiu_states and taixiu_states[uid]:
         status.append("Tài Xỉu")
-    if jackpot_states.get(uid):
+    if uid in jackpot_states and jackpot_states[uid]:
         status.append("Jackpot")
-    if crash_states.get(uid):
+    if uid in crash_states and crash_states[uid]:
         status.append("Máy Bay")
-    if rongho_states.get(uid):
+    if uid in rongho_states and rongho_states[uid]:
         status.append("Rồng Hổ")
-    if daovang_states.get(uid, {}).get("active"):
+    if uid in daovang_states and isinstance(daovang_states[uid], dict) and daovang_states[uid].get("active"):
         status.append("Đào Vàng")
-    if poker_states.get(uid):
+    if uid in poker_states and poker_states[uid]:
         status.append("Mini Poker")
 
     return ", ".join(status) if status else "Không chơi"
 
-@router.message(Command("online"))
-async def check_online(message: types.Message):
-    """ Kiểm tra danh sách người online/offline """
+@router.message(Command("tracuu"))
+async def check_balance(message: types.Message):
+    """ Xem danh sách người chơi, số dư và game đang chơi """
     try:
-        online_list, offline_list = get_online_users()
+        if not user_balance:
+            await message.answer("⚠️ Hiện chưa có người chơi nào có số dư.")
+            return
 
-        online_text = "\n".join([f"🟢 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list])
-        offline_text = "\n".join([f"🔴 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list])
-
-        response = "📊 Trạng thái người chơi:\n" + (online_text + "\n\n" if online_text else "") + offline_text
+        player_list = [
+            f"{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}"
+            for uid in user_balance.keys()
+        ]
+        
+        response = "📊 Danh sách người chơi & số dư:\n" + "\n".join(player_list)
         await message.answer(response)
+
     except Exception as e:
-        await message.answer(f"⚠️ Lỗi khi lấy danh sách online: {str(e)}")
+        print(f"Lỗi khi lấy danh sách số dư: {str(e)}")
+        await message.answer(f"⚠️ Lỗi khi lấy danh sách số dư: {str(e)}")
 
-@router.message()
-async def track_activity(message: types.Message):
-    """ Cập nhật trạng thái online khi user nhắn tin """
-    update_user_activity(message.from_user.id)
-
-@router.callback_query()
-async def track_callback(callback: types.CallbackQuery):
-    """ Cập nhật trạng thái online khi user bấm nút """
-    update_user_activity(callback.from_user.id)
-    await callback.answer()
-
-# ================== Cập nhật trạng thái online khi vào game ==================
+# ================== Khi người chơi tham gia game ==================
 def player_join_game(user_id, game_name):
     """ Gọi khi người dùng tham gia bất kỳ game nào """
-    update_user_activity(user_id)
     user_id = str(user_id)
     
     # Cập nhật game mà user đang chơi
@@ -1321,7 +1292,7 @@ def player_join_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states[user_id] = True
 
-# ================== Khi user thoát game ==================
+# ================== Khi người chơi thoát game ==================
 def player_exit_game(user_id, game_name):
     """ Gọi khi người dùng rời khỏi một game """
     user_id = str(user_id)
@@ -1499,7 +1470,7 @@ async def main():
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
-        BotCommand(command="online", description="Xem người chơi (Admin)")
+        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
     await dp.start_polling(bot)
 
