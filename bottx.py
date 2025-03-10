@@ -1216,13 +1216,6 @@ async def admin_confirm_withdraw(message: types.Message):
         logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
-from datetime import datetime, timedelta
-from aiogram import Router, types
-from aiogram.filters import Command
-import logging
-
-router = Router()
-
 ADMIN_ID = 1985817060  # Thay bằng ID admin của bạn
 timeout_duration = timedelta(minutes=5)
 online_users = {}  # key: user_id, value: datetime của lần hoạt động cuối cùng
