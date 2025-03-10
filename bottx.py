@@ -1077,8 +1077,6 @@ async def admin_add_money(message: types.Message):
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-router = Router()
-
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
     print("DEBUG: start_withdraw triggered")  # Kiểm tra log
