@@ -1249,7 +1249,7 @@ def get_online_status():
     online_list = []
     offline_list = []
 
-    for user_id in user_balance:  # Duyệt theo danh sách người có số dư
+    for user_id in online_users.keys():  # Duyệt danh sách có hoạt động gần đây
         last_seen = online_users.get(user_id, 0)
         if now - last_seen <= timeout_duration:
             online_list.append(user_id)
@@ -1288,18 +1288,18 @@ async def check_online(message: types.Message):
     try:
         online_list, offline_list = get_online_status()
 
-        # Debug: In ra danh sách online và offline
-        print(f"Online Users: {online_list}")
-        print(f"Offline Users: {offline_list}")
+        if not online_list and not offline_list:
+            await message.answer("⚠️ Hiện không có người dùng nào online hoặc có số dư.")
+            return
 
-        online_text = "\n".join([f"🟢 Online:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list])
-        offline_text = "\n".join([f"🔴 Offline:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list])
+        online_text = "\n".join([f"🟢 {uid}: {user_balance.get(str(uid), 0)} VNĐ | {get_game_status(uid)}" for uid in online_list])
+        offline_text = "\n".join([f"🔴 {uid}: {user_balance.get(str(uid), 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list])
 
         response = "📊 Số dư của tất cả người dùng:\n" + (online_text + "\n\n" if online_text else "") + offline_text
         await message.answer(response)
 
     except Exception as e:
-        print(f"Lỗi khi lấy danh sách online: {str(e)}")  # Debug lỗi
+        print(f"Lỗi khi lấy danh sách online: {str(e)}")
         await message.answer(f"⚠️ Lỗi khi lấy danh sách online: {str(e)}")
 
 @router.message()
