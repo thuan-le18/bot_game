@@ -1536,9 +1536,6 @@ async def unlock_players(message: types.Message):
 
 # ===================== Chạy bot =====================
 async def main():
-    # Chạy update_players trong background
-    asyncio.create_task(update_players())
-
     # Thiết lập các lệnh cho bot
     await bot.set_my_commands([
         BotCommand(command="start", description="Bắt đầu bot"),
@@ -1549,18 +1546,20 @@ async def main():
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
 
+    # Chạy update_players trong background
+    asyncio.create_task(update_players())
+
     # Bắt đầu bot với polling
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"Lỗi khi chạy bot: {e}")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    
+
+    # Đảm bảo asyncio chạy đúng event loop
     try:
-        asyncio.run(main())
-    except RuntimeError:
-        logging.error("Event loop đã tồn tại, thử chạy main() trực tiếp.")
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(main())
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(main())
