@@ -297,7 +297,7 @@ async def bet_history(message: types.Message):
 @router.message(F.text == "💬 Hỗ trợ")
 async def support_handler(message: types.Message):
     support_text = (
-        "📞 **Hỗ trợ Bot Tài Xỉu**\n\n"
+        "📞 **Hỗ trợ Mega6casino**\n\n"
         "Nếu bạn gặp khó khăn hoặc cần trợ giúp, vui lòng liên hệ:\n"
         "- Liên hệ admin: @hoanganh11829\n\n"
     )
