@@ -1074,7 +1074,6 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
-dp.include_router(router)
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
