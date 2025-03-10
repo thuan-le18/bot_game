@@ -902,6 +902,17 @@ async def poker_back(callback: types.CallbackQuery):
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
 # Dictionary lưu trạng thái nạp tiền và lịch sử nạp
+deposit_states = {}
+deposit_records = {}
+user_balance = {}
+
+def add_deposit_record(user_id, amount):
+    """ Lưu lịch sử nạp tiền của người dùng """
+    user_id = str(user_id)
+    if user_id not in deposit_records:
+        deposit_records[user_id] = []
+    deposit_records[user_id].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "amount": amount})
+
 # ===================== Nạp tiền =====================
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
