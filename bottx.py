@@ -1478,98 +1478,6 @@ async def process_daovang(uid):
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
 
-import asyncio
-import random
-from aiogram import Router, types, F
-from aiogram.filters import Command
-
-router = Router()
-
-ADMIN_ID = 1985817060
-
-# Dictionary lưu số người chơi ảo cho từng game
-fake_players = {
-    "taixiu":    {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-    "jackpot":   {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-    "maybay":    {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-    "rongho":    {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-    "daovang":   {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-    "minipoker": {"current": random.randint(40, 60), "lower": 40, "upper": 60, "update_interval": 5},
-}
-
-async def update_fake_players():
-    """
-    Hàm chạy nền để cập nhật số người chơi ảo cho mỗi game.
-    Mỗi 5 giây (hoặc theo update_interval của từng game) số người chơi sẽ thay đổi ngẫu nhiên trong khoảng -3 đến +3,
-    và luôn nằm trong khoảng [lower, upper].
-    """
-    while True:
-        for game, config in fake_players.items():
-            # Thay đổi ngẫu nhiên từ -3 đến +3
-            change = random.randint(-3, 3)
-            new_value = config["current"] + change
-            # Đảm bảo không vượt quá giới hạn
-            new_value = max(config["lower"], min(new_value, config["upper"]))
-            config["current"] = new_value
-        await asyncio.sleep(5)
-
-@router.message(Command("online_status"))
-async def show_online_status(message: types.Message):
-    """
-    Lệnh /online_status hiển thị số người chơi ảo của từng game.
-    Chỉ admin dùng được lệnh này.
-    """
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    lines = []
-    for game, config in fake_players.items():
-        lines.append(f"{game.title()}: {config['current']} người chơi")
-    response = "📊 Số người chơi hiện tại:\n" + "\n".join(lines)
-    await message.answer(response)
-
-@router.message(Command("set_fake_players"))
-async def set_fake_players(message: types.Message):
-    """
-    Lệnh /set_fake_players cho phép admin điều chỉnh số người chơi ảo cho một game.
-    Cú pháp: /set_fake_players <game> <current> <lower> <upper> <update_interval>
-    Ví dụ: /set_fake_players maybay 120 100 150 5
-    """
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    parts = message.text.split()
-    if len(parts) != 6:
-        await message.answer("⚠️ Cú pháp: /set_fake_players <game> <current> <lower> <upper> <update_interval>")
-        return
-
-    game = parts[1].lower()
-    if game not in fake_players:
-        await message.answer(f"⚠️ Game '{game}' không tồn tại.")
-        return
-
-    try:
-        current = int(parts[2])
-        lower = int(parts[3])
-        upper = int(parts[4])
-        update_interval = int(parts[5])
-    except ValueError:
-        await message.answer("⚠️ Vui lòng nhập số hợp lệ cho current, lower, upper và update_interval.")
-        return
-
-    fake_players[game] = {
-        "current": current,
-        "lower": lower,
-        "upper": upper,
-        "update_interval": update_interval
-    }
-    await message.answer(f"✅ Đã cập nhật {game.title()}: current={current}, lower={lower}, upper={upper}, interval={update_interval} giây.")
-
-# -----------------------------------------
-# Để chạy tự động cập nhật số người chơi ảo, gọi hàm này khi bot khởi chạy:
-# asyncio.create_task(update_fake_players())
-# -----------------------------------------
-
 # ===================== Chạy bot =====================
 async def main():
     await bot.set_my_commands([
@@ -1581,7 +1489,7 @@ async def main():
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
     await dp.start_polling(bot)
-asyncio.create_task(update_fake_players())
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())    
