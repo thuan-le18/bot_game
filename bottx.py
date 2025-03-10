@@ -1216,8 +1216,9 @@ async def admin_confirm_withdraw(message: types.Message):
         logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
+# Dictionary lưu thời gian hoạt động của người dùng
 online_users = {}
-timeout_duration = timedelta(minutes=5)  # Nếu không hoạt động trong 5 phút, xem là offline
+timeout_duration = timedelta(minutes=5)  # 5 phút không hoạt động sẽ bị xem là offline
 
 def update_user_status(user_id: str):
     """ Cập nhật thời gian hoạt động của người dùng """
@@ -1240,7 +1241,7 @@ def get_game_status(uid: str):
     status = []
 
     # Kiểm tra Tài Xỉu
-    if uid in taixiu_states and bool(taixiu_states[uid]):
+    if uid in taixiu_states and taixiu_states[uid]:
         state = taixiu_states[uid]
         if isinstance(state, dict) and "choice" in state and state["choice"]:
             status.append(f"Tài Xỉu (chọn {state['choice']})")
@@ -1248,15 +1249,15 @@ def get_game_status(uid: str):
             status.append("Tài Xỉu")
 
     # Kiểm tra Jackpot
-    if uid in jackpot_states and bool(jackpot_states[uid]):
+    if uid in jackpot_states and jackpot_states[uid]:
         status.append("Jackpot")
 
     # Kiểm tra Máy Bay
-    if uid in crash_states and bool(crash_states[uid]):
+    if uid in crash_states and crash_states[uid]:
         status.append("Máy Bay")
 
     # Kiểm tra Rồng Hổ
-    if uid in rongho_states and bool(rongho_states[uid]):
+    if uid in rongho_states and rongho_states[uid]:
         state = rongho_states[uid]
         if isinstance(state, dict) and "choice" in state and state["choice"]:
             status.append(f"Rồng Hổ (chọn {state['choice']})")
@@ -1264,11 +1265,11 @@ def get_game_status(uid: str):
             status.append("Rồng Hổ")
 
     # Kiểm tra Đào Vàng
-    if uid in daovang_states and daovang_states[uid].get("active", False):
+    if uid in daovang_states and isinstance(daovang_states[uid], dict) and daovang_states[uid].get("active"):
         status.append("Đào Vàng")
 
     # Kiểm tra Mini Poker
-    if uid in poker_states and bool(poker_states[uid]):
+    if uid in poker_states and poker_states[uid]:
         status.append("Mini Poker")
 
     return ", ".join(status) if status else "Không chơi"
@@ -1279,7 +1280,7 @@ async def admin_online_status(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    update_user_status(str(message.from_user.id))  # Cập nhật trạng thái cho admin
+    update_user_status(str(message.from_user.id))  # Cập nhật trạng thái admin
 
     online_list, offline_list = get_online_status()  # Lấy danh sách online/offline
 
