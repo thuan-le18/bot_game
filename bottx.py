@@ -1216,13 +1216,6 @@ async def admin_confirm_withdraw(message: types.Message):
         logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
-import time
-from aiogram import Router, types
-from aiogram.filters import Command
-
-# Router để xử lý lệnh
-router = Router()
-
 # Dữ liệu game & tài khoản
 user_balance = {}  # Lưu số dư người chơi
 taixiu_states = {}
