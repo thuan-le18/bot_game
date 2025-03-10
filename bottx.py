@@ -1074,11 +1074,15 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Rút tiền Handler =====================
+from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+router = Router()
+
 class WithdrawState(StatesGroup):
     waiting_for_amount = State()
-
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message, state: FSMContext):
     await state.clear()
