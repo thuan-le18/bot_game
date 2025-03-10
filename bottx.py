@@ -1288,6 +1288,10 @@ async def check_online(message: types.Message):
     try:
         online_list, offline_list = get_online_status()
 
+        # Debug: In ra danh sách online và offline
+        print(f"Online Users: {online_list}")
+        print(f"Offline Users: {offline_list}")
+
         online_text = "\n".join([f"🟢 Online:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list])
         offline_text = "\n".join([f"🔴 Offline:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list])
 
@@ -1295,6 +1299,7 @@ async def check_online(message: types.Message):
         await message.answer(response)
 
     except Exception as e:
+        print(f"Lỗi khi lấy danh sách online: {str(e)}")  # Debug lỗi
         await message.answer(f"⚠️ Lỗi khi lấy danh sách online: {str(e)}")
 
 @router.message()
