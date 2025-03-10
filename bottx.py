@@ -272,7 +272,7 @@ async def check_balance(message: types.Message):
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
-    
+    kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
 @router.message(F.text == "📜 Lịch sử cược")
@@ -901,6 +901,17 @@ async def poker_back(callback: types.CallbackQuery):
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
 # ===================== Nạp tiền =====================
+deposit_states = {}
+deposit_records = {}
+user_balance = {}
+
+def add_deposit_record(user_id, amount):
+    """ Lưu lịch sử nạp tiền của người dùng """
+    user_id = str(user_id)
+    if user_id not in deposit_records:
+        deposit_records[user_id] = []
+    deposit_records[user_id].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "amount": amount})
+
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
@@ -922,6 +933,18 @@ async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
     await callback.answer()
 
+@router.callback_query(F.data == "deposit_history")
+async def deposit_history(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    history = deposit_records.get(user_id, [])
+
+    if not history:
+        await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
+        return
+
+    history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
+    await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
+    await callback.answer()
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
 async def deposit_photo_handler(message: types.Message):
