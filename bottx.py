@@ -1074,49 +1074,31 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Nút Rút tiền =====================
-import logging
-import time
+dp.include_router(router)
 from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 router = Router()
 
-# Dummy main_menu để test (nếu bạn đã có định nghĩa khác, thay thế nó)
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="Menu chính")]],
-    resize_keyboard=True
-)
-
-class WithdrawState(StatesGroup):
-    waiting_for_amount = State()
-
 @router.message(F.text == "💸 Rút tiền")
-async def start_withdraw(message: types.Message, state: FSMContext):
-    logging.info(f"start_withdraw triggered by user {message.from_user.id}")
+async def start_withdraw(message: types.Message):
+    print("DEBUG: start_withdraw triggered")  # Kiểm tra log
     withdraw_instruction = (
-        "💸 *Hướng dẫn rút tiền:*\n\n"
+        "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
         "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
-        "📝 *Ví dụ:* `1000000 NguyenVanA BIDV 1234567890`\n\n"
-        "⚠️ *Lưu ý:*\n"
+        "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
+        "⚠️ Lưu ý:\n"
         "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
         "- Số tiền rút tối thiểu là 50,000 VNĐ.\n"
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    # Tạo nút "Quay lại" dùng InlineKeyboardMarkup
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
-    ])
-    await message.answer(withdraw_instruction, parse_mode="Markdown", reply_markup=kb)
-    await state.set_state(WithdrawState.waiting_for_amount)
-
-@router.callback_query(lambda c: c.data == "back_to_menu")
-async def back_to_menu_handler(callback: types.CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    await callback.answer()
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
+        ]
+    )
+    await message.answer(withdraw_instruction, reply_markup=kb)
 
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
