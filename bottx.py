@@ -1073,9 +1073,6 @@ async def admin_add_money(message: types.Message):
         await message.answer("⚠️ Lỗi khi cộng tiền. Cú pháp: /congtien <user_id> <amount>")
         logging.error(f"Error in admin add money: {e}")
 
-# ===================== Rút tiền Handler =====================
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 # ===================== Nút Rút tiền =====================
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
