@@ -1110,7 +1110,6 @@ async def withdraw_history_handler(callback: types.CallbackQuery):
     ])
     await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu, parse_mode="Markdown")
     await callback.answer()
-logging.info(f"DEBUG: Nhận tin nhắn từ {message.from_user.id}: {message.text}")
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
