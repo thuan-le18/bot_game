@@ -1216,13 +1216,6 @@ async def admin_confirm_withdraw(message: types.Message):
         logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
-from datetime import datetime, timedelta
-from aiogram import Router, types
-from aiogram.filters import Command
-import logging
-
-router = Router()
-
 # Giả sử các biến toàn cục sau đã được định nghĩa ở các phần code khác:
 # user_balance, taixiu_states, jackpot_states, crash_states, rongho_states, daovang_states, poker_states, main_menu
 # Các hàm: save_data, record_bet_history, add_commission, calculate_multiplier, v.v.
