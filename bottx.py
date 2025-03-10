@@ -1240,39 +1240,34 @@ def get_game_status(uid: str):
     """ Kiểm tra người dùng đang chơi game nào """
     status = []
 
-    # Kiểm tra Tài Xỉu
+    # Cập nhật trạng thái nếu chơi game
     if uid in taixiu_states and taixiu_states[uid]:
-        state = taixiu_states[uid]
-        if isinstance(state, dict) and "choice" in state and state["choice"]:
-            status.append(f"Tài Xỉu (chọn {state['choice']})")
-        else:
-            status.append("Tài Xỉu")
+        status.append(f"Tài Xỉu (chọn {taixiu_states[uid]['choice']})")
+        update_user_status(uid)
 
-    # Kiểm tra Jackpot
     if uid in jackpot_states and jackpot_states[uid]:
         status.append("Jackpot")
+        update_user_status(uid)
 
-    # Kiểm tra Máy Bay
     if uid in crash_states and crash_states[uid]:
         status.append("Máy Bay")
+        update_user_status(uid)
 
-    # Kiểm tra Rồng Hổ
     if uid in rongho_states and rongho_states[uid]:
-        state = rongho_states[uid]
-        if isinstance(state, dict) and "choice" in state and state["choice"]:
-            status.append(f"Rồng Hổ (chọn {state['choice']})")
-        else:
-            status.append("Rồng Hổ")
+        status.append(f"Rồng Hổ (chọn {rongho_states[uid]['choice']})")
+        update_user_status(uid)
 
-    # Kiểm tra Đào Vàng
-    if uid in daovang_states and isinstance(daovang_states[uid], dict) and daovang_states[uid].get("active"):
+    if uid in daovang_states and daovang_states[uid].get("active"):
         status.append("Đào Vàng")
+        update_user_status(uid)
 
-    # Kiểm tra Mini Poker
     if uid in poker_states and poker_states[uid]:
         status.append("Mini Poker")
+        update_user_status(uid)
 
     return ", ".join(status) if status else "Không chơi"
+
+router = Router()
 
 @router.message(Command("online"))
 async def admin_online_status(message: types.Message):
@@ -1280,29 +1275,16 @@ async def admin_online_status(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    update_user_status(str(message.from_user.id))  # Cập nhật trạng thái admin
-
-    online_list, offline_list = get_online_status()  # Lấy danh sách online/offline
-
+    update_user_status(str(message.from_user.id))
+    online_list, offline_list = get_online_status()
     balances_text = "\n".join([f"User {uid}: {amt} VNĐ" for uid, amt in user_balance.items()])
 
-    # Danh sách người online
-    online_info = []
-    for uid in online_list:
-        balance = user_balance.get(uid, 0)
-        game_status = get_game_status(uid)
-        online_info.append(f"User {uid}: {balance} VNĐ | {game_status}")
-
-    # Danh sách người offline
-    offline_info = []
-    for uid in offline_list:
-        balance = user_balance.get(uid, 0)
-        game_status = get_game_status(uid)
-        offline_info.append(f"User {uid}: {balance} VNĐ | {game_status}")
+    online_info = [f"User {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list]
+    offline_info = [f"User {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list]
 
     response = (
-        "📊 Số dư của tất cả người dùng:\n" + balances_text + "\n\n" +
-        "🟢 Online:\n" + ("\n".join(online_info) if online_info else "Không có ai online.") + "\n\n" +
+        "📊 Số dư của tất cả người dùng:\n" + balances_text + "\n\n"
+        "🟢 Online:\n" + ("\n".join(online_info) if online_info else "Không có ai online.") + "\n\n"
         "🔴 Offline:\n" + ("\n".join(offline_info) if offline_info else "Không có ai offline.")
     )
 
@@ -1312,9 +1294,10 @@ async def admin_online_status(message: types.Message):
 async def track_activity(message: types.Message):
     """ Cập nhật trạng thái người dùng khi họ gửi tin nhắn """
     update_user_status(str(message.from_user.id))
-# ====================== Cập nhật trạng thái khi người dùng bấm nút inline ======================
+
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
+    """ Cập nhật trạng thái khi người dùng bấm nút inline """
     update_user_status(str(callback.from_user.id))
     await callback.answer()
     
