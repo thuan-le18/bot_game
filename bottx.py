@@ -1218,10 +1218,10 @@ async def admin_confirm_withdraw(message: types.Message):
 # ===================== Admin: Xem số dư =====================
 # Dictionary lưu thời gian hoạt động của người dùng
 online_users = {}
-timeout_duration = timedelta(minutes=5)  # 5 phút không hoạt động sẽ bị xem là offline
+timeout_duration = 300  # 5 phút không hoạt động sẽ bị xem là offline
 
-# Thêm biến toàn cục (cần khai báo trước khi sử dụng)
-user_balance = {}  # Giả sử đây là dictionary lưu số dư
+# Thêm biến toàn cục
+user_balance = {}  
 taixiu_states = {}
 jackpot_states = {}
 crash_states = {}
@@ -1229,15 +1229,16 @@ rongho_states = {}
 daovang_states = {}
 poker_states = {}
 
-ADMIN_ID = 1985817060  # Thay bằng ID admin thật
+ADMIN_ID = 1985817060  
 
-def update_user_status(user_id: str):
-    """ Cập nhật thời gian hoạt động của người dùng """
-    online_users[user_id] = datetime.now()
+def update_user_status(user_id):
+    user_id = str(user_id)  # Đảm bảo user_id luôn là chuỗi
+    online_users[user_id] = time.time()
+    print(f"🟢 {user_id} đã được cập nhật vào online_users")  # Debug
 
 def get_online_status():
     """ Lấy danh sách người online và offline """
-    now = datetime.now()
+    now = time.time()  
     online_list = []
     offline_list = []
     for uid, last_seen in online_users.items():
@@ -1280,43 +1281,39 @@ def get_game_status(uid: str):
     return ", ".join(status) if status else "Không chơi"
 
 @router.message(Command("online"))
-async def admin_online_status(message: types.Message):
-    """ Lệnh /online kiểm tra số dư và trạng thái của người dùng (chỉ admin) """
-    if message.from_user.id != ADMIN_ID:
-        return
-
+async def check_online(message: types.Message):
     try:
-        update_user_status(str(message.from_user.id))  # Cập nhật trạng thái admin
+        print("==> Danh sách user_balance:", user_balance)  # Debug toàn bộ user balance
+        print("==> Danh sách online_users:", online_users)  # Debug danh sách online
 
-        online_list, offline_list = get_online_status()  # Lấy danh sách online/offline
+        online_list = []
+        offline_list = []
 
-        balances_text = "\n".join([f"User {uid}: {user_balance.get(uid, 0)} VNĐ" for uid in user_balance])
+        for user_id, balance in user_balance.items():
+            if user_id in online_users:
+                online_list.append(f"🟢 Online:\n{user_id}: {balance} VNĐ | {get_game_status(user_id)}")
+            else:
+                offline_list.append(f"🔴 Offline:\n{user_id}: {balance} VNĐ | {get_game_status(user_id)}")
 
-        online_info = [f"🟢 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list]
-        offline_info = [f"🔴 {uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list]
-
-        response = (
-            "📊 **Số dư của tất cả người dùng:**\n" + (balances_text if balances_text else "Không có dữ liệu.") + "\n\n"
-            "🟢 **Online:**\n" + ("\n".join(online_info) if online_info else "Không có ai online.") + "\n\n"
-            "🔴 **Offline:**\n" + ("\n".join(offline_info) if offline_info else "Không có ai offline.")
-        )
-
-        await message.answer(response, parse_mode="Markdown")
+        response = "📊 Số dư của tất cả người dùng:\n" + "\n".join(online_list) + "\n\n" + "\n".join(offline_list)
+        await message.answer(response)
 
     except Exception as e:
         await message.answer(f"⚠️ Lỗi khi lấy danh sách online: {str(e)}")
 
 @router.message()
 async def track_activity(message: types.Message):
-    print("track_activity:", message.from_user.id)  # Debug
-    update_user_status(str(message.from_user.id))
+    user_id = str(message.from_user.id)
+    print(f"🔵 track_activity: {user_id} đã gửi tin nhắn")  
+    update_user_status(user_id)
 
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
-    print("track_callback:", callback.from_user.id)  # Debug
-    update_user_status(str(callback.from_user.id))
+    user_id = str(callback.from_user.id)
+    print(f"🟣 track_callback: {user_id} đã bấm nút")  
+    update_user_status(user_id)
     await callback.answer()
-    
+
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
 async def force_all_games(message: types.Message):
