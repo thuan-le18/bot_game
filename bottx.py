@@ -1073,45 +1073,28 @@ async def admin_add_money(message: types.Message):
         await message.answer("⚠️ Lỗi khi cộng tiền. Cú pháp: /congtien <user_id> <amount>")
         logging.error(f"Error in admin add money: {e}")
 
-# ===================== Nút Rút tiền =====================
-from aiogram.filters import StateFilter
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-
-class WithdrawState(StatesGroup):
-    waiting_for_amount = State()
-
+# ===================== Rút tiền Handler =====================
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message, state: FSMContext):
-    await state.clear()  # Reset trạng thái trước khi bắt đầu
-
+    await state.clear()
     withdraw_instruction = (
         "💸 *Hướng dẫn rút tiền:*\n"
-        "Vui lòng nhập thông tin theo mẫu sau:\n\n"
-        "`[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]`\n\n"
-        "📝 *Ví dụ:* `1000000 NguyenVanA BIDV 1234567890`\n\n"
-        "⚠️ *Lưu ý:*\n"
-        "- Số tiền tối thiểu để rút là 50k.\n"
-        "- Họ tên phải khớp với tài khoản ngân hàng.\n"
-        "- Admin sẽ xử lý giao dịch sau khi xác minh."
+        "Nhập số tiền bạn muốn rút (tối thiểu 50,000 VNĐ)."
     )
-
     await message.answer(withdraw_instruction, parse_mode="Markdown")
     await state.set_state(WithdrawState.waiting_for_amount)
 
 @router.message(StateFilter(WithdrawState.waiting_for_amount))
 async def process_withdraw_amount(message: types.Message, state: FSMContext):
     try:
-        data = message.text.split()
-        amount = int(data[0])  # Lấy số tiền
+        amount = int(message.text)
         if amount < 50000:
             await message.answer("⚠️ Số tiền tối thiểu để rút là 50,000 VNĐ. Vui lòng nhập lại.")
             return
-
         await message.answer(f"✅ Bạn đã yêu cầu rút {amount:,} VNĐ. Vui lòng chờ admin xử lý.")
-        await state.clear()  # Xóa trạng thái sau khi nhập xong
-    except (ValueError, IndexError):
-        await message.answer("⚠️ Vui lòng nhập số tiền hợp lệ theo đúng định dạng!")
+        await state.clear()
+    except ValueError:
+        await message.answer("⚠️ Vui lòng nhập số tiền hợp lệ!")
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
