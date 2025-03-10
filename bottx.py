@@ -1220,8 +1220,8 @@ async def admin_confirm_withdraw(message: types.Message):
 online_users = {}
 timeout_duration = 300  # 5 phút không hoạt động sẽ bị xem là offline
 
-# Thêm biến toàn cục
-user_balance = {}  
+# Dữ liệu game & tài khoản
+user_balance = {}
 taixiu_states = {}
 jackpot_states = {}
 crash_states = {}
@@ -1232,20 +1232,23 @@ poker_states = {}
 ADMIN_ID = 1985817060  
 
 def update_user_status(user_id):
-    user_id = str(user_id)  # Đảm bảo user_id luôn là chuỗi
+    """ Cập nhật thời gian hoạt động của user """
+    user_id = str(user_id)  
     online_users[user_id] = time.time()
-    print(f"🟢 {user_id} đã được cập nhật vào online_users")  # Debug
 
 def get_online_status():
-    """ Lấy danh sách người online và offline """
-    now = time.time()  
+    """ Trả về danh sách người online và offline """
+    now = time.time()
     online_list = []
     offline_list = []
-    for uid, last_seen in online_users.items():
+
+    for user_id in user_balance:  # Duyệt theo danh sách người có số dư
+        last_seen = online_users.get(user_id, 0)
         if now - last_seen <= timeout_duration:
-            online_list.append(uid)
+            online_list.append(user_id)
         else:
-            offline_list.append(uid)
+            offline_list.append(user_id)
+
     return online_list, offline_list
 
 def get_game_status(uid: str):
@@ -1253,11 +1256,7 @@ def get_game_status(uid: str):
     status = []
 
     if uid in taixiu_states and taixiu_states[uid]:
-        state = taixiu_states[uid]
-        if isinstance(state, dict) and "choice" in state and state["choice"]:
-            status.append(f"Tài Xỉu (chọn {state['choice']})")
-        else:
-            status.append("Tài Xỉu")
+        status.append("Tài Xỉu")
 
     if uid in jackpot_states and jackpot_states[uid]:
         status.append("Jackpot")
@@ -1266,11 +1265,7 @@ def get_game_status(uid: str):
         status.append("Máy Bay")
 
     if uid in rongho_states and rongho_states[uid]:
-        state = rongho_states[uid]
-        if isinstance(state, dict) and "choice" in state and state["choice"]:
-            status.append(f"Rồng Hổ (chọn {state['choice']})")
-        else:
-            status.append("Rồng Hổ")
+        status.append("Rồng Hổ")
 
     if uid in daovang_states and isinstance(daovang_states[uid], dict) and daovang_states[uid].get("active"):
         status.append("Đào Vàng")
@@ -1283,19 +1278,12 @@ def get_game_status(uid: str):
 @router.message(Command("online"))
 async def check_online(message: types.Message):
     try:
-        print("==> Danh sách user_balance:", user_balance)  # Debug toàn bộ user balance
-        print("==> Danh sách online_users:", online_users)  # Debug danh sách online
+        online_list, offline_list = get_online_status()
 
-        online_list = []
-        offline_list = []
+        online_text = "\n".join([f"🟢 Online:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in online_list])
+        offline_text = "\n".join([f"🔴 Offline:\n{uid}: {user_balance.get(uid, 0)} VNĐ | {get_game_status(uid)}" for uid in offline_list])
 
-        for user_id, balance in user_balance.items():
-            if user_id in online_users:
-                online_list.append(f"🟢 Online:\n{user_id}: {balance} VNĐ | {get_game_status(user_id)}")
-            else:
-                offline_list.append(f"🔴 Offline:\n{user_id}: {balance} VNĐ | {get_game_status(user_id)}")
-
-        response = "📊 Số dư của tất cả người dùng:\n" + "\n".join(online_list) + "\n\n" + "\n".join(offline_list)
+        response = "📊 Số dư của tất cả người dùng:\n" + (online_text + "\n\n" if online_text else "") + offline_text
         await message.answer(response)
 
     except Exception as e:
@@ -1303,16 +1291,19 @@ async def check_online(message: types.Message):
 
 @router.message()
 async def track_activity(message: types.Message):
-    user_id = str(message.from_user.id)
-    print(f"🔵 track_activity: {user_id} đã gửi tin nhắn")  
-    update_user_status(user_id)
+    """ Cập nhật trạng thái online khi user nhắn tin """
+    update_user_status(str(message.from_user.id))
 
 @router.callback_query()
 async def track_callback(callback: types.CallbackQuery):
-    user_id = str(callback.from_user.id)
-    print(f"🟣 track_callback: {user_id} đã bấm nút")  
-    update_user_status(user_id)
+    """ Cập nhật trạng thái online khi user bấm nút """
+    update_user_status(str(callback.from_user.id))
     await callback.answer()
+
+# Cập nhật trạng thái online khi user tham gia game
+def player_join_game(user_id):
+    """ Gọi khi người dùng tham gia bất kỳ game nào """
+    update_user_status(user_id)
 
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
