@@ -1077,9 +1077,10 @@ async def admin_add_money(message: types.Message):
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# --- HANDLER 1: Người dùng nhấn "💸 Rút tiền" ---
 @router.message(F.text == "💸 Rút tiền")
 async def start_withdraw(message: types.Message):
-    print("DEBUG: start_withdraw triggered")  # Kiểm tra log
+    logging.info("DEBUG: start_withdraw triggered")
     withdraw_instruction = (
         "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
         "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
@@ -1090,11 +1091,9 @@ async def start_withdraw(message: types.Message):
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
-        ]
-    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Quay lại", callback_data="back_to_menu")]
+    ])
     await message.answer(withdraw_instruction, reply_markup=kb)
 
 
