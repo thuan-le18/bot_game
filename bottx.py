@@ -1494,16 +1494,17 @@ player_fixed_value = None  # Nếu không phải None, số người chơi cố 
 
 async def update_players():
     while True:
-        if not player_lock:  # Chỉ cập nhật nếu không bị khóa
-            for game in game_players:
-                game_players[game] += random.randint(-3, 3)  # Biến động nhẹ
-                game_players[game] = max(40, min(100, game_players[game]))  # Giữ trong khoảng 40-100
-        elif player_fixed_value is not None:
-            for game in game_players:
-                game_players[game] = player_fixed_value  # Cố định số lượng
-        await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
-
-asyncio.create_task(update_players())
+        try:
+            if not player_lock:
+                for game in game_players:
+                    game_players[game] += random.randint(-3, 3)
+                    game_players[game] = max(40, min(100, game_players[game]))
+            elif player_fixed_value is not None:
+                for game in game_players:
+                    game_players[game] = player_fixed_value
+            await asyncio.sleep(5)
+        except Exception as e:
+            print(f"🔥 Lỗi trong update_players(): {e}")
 
 # ===================== Xử lý nút số người đang chơi =====================
 @router.message(F.text == "👥 Số người đang chơi")
@@ -1536,10 +1537,7 @@ async def unlock_players(message: types.Message):
 
 # ===================== Chạy bot =====================
 async def main():
-    # Chạy update_players() trong background
-    asyncio.create_task(update_players())
-
-    # Thiết lập các lệnh cho bot
+    asyncio.create_task(update_players())  # Chạy trong event loop
     await bot.set_my_commands([
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
@@ -1548,20 +1546,12 @@ async def main():
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
-
-    # Bắt đầu bot với polling
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
+    
     try:
-        # Khởi tạo event loop mới
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        # Chạy bot
-        loop.run_until_complete(main())
+        asyncio.run(main())  # Dùng asyncio.run() để chạy
     except RuntimeError as e:
         print(f"Error: {e}")
