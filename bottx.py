@@ -1075,36 +1075,24 @@ async def admin_add_money(message: types.Message):
 
 # ===================== Rút tiền Handler =====================
 from aiogram import Router, types, F
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 router = Router()
 
-class WithdrawState(StatesGroup):
-    waiting_for_amount = State()
 @router.message(F.text == "💸 Rút tiền")
-async def start_withdraw(message: types.Message, state: FSMContext):
-    await state.clear()
+async def start_withdraw(message: types.Message):
     withdraw_instruction = (
-        "💸 *Hướng dẫn rút tiền:*\n"
-        "Nhập số tiền bạn muốn rút (tối thiểu 50,000 VNĐ)."
+        "💸 Để rút tiền, vui lòng nhập thông tin theo mẫu sau:\n\n"
+        "[Số tiền] [Họ tên] [Ngân hàng] [Số tài khoản]\n\n"
+        "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
+        "⚠️ Lưu ý:\n"
+        "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
+        "- Số tiền rút tối thiểu là 50,000 VNĐ.\n"
+        "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
+        "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
-    await message.answer(withdraw_instruction, parse_mode="Markdown")
-    await state.set_state(WithdrawState.waiting_for_amount)
-
-@router.message(F.state == WithdrawState.waiting_for_amount)
-async def process_withdraw_amount(message: types.Message, state: FSMContext):
-    try:
-        amount = int(message.text)
-        if amount < 50000:
-            await message.answer("⚠️ Số tiền tối thiểu để rút là 50,000 VNĐ. Vui lòng nhập lại.")
-            return
-        await message.answer(f"✅ Bạn đã yêu cầu rút {amount:,} VNĐ. Vui lòng chờ admin xử lý.")
-        await state.clear()
-    except ValueError:
-        await message.answer("⚠️ Vui lòng nhập số tiền hợp lệ!")
-
+    await message.answer(withdraw_instruction, reply_markup=kb.as_markup())
+    
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
 @router.message(lambda msg: msg.from_user.id != ADMIN_ID 
