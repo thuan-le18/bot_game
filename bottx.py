@@ -1581,7 +1581,7 @@ async def main():
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
     await dp.start_polling(bot)
-
+asyncio.create_task(update_fake_players())
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())    
