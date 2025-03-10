@@ -1074,6 +1074,8 @@ async def admin_add_money(message: types.Message):
         logging.error(f"Error in admin add money: {e}")
 
 # ===================== Rút tiền Handler =====================
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 class WithdrawState(StatesGroup):
     waiting_for_amount = State()
 
