@@ -909,27 +909,12 @@ async def poker_back(callback: types.CallbackQuery):
     
 # ===================== Nạp tiền =====================
 import pytz
-import json
+from datetime import datetime
 
 deposit_states = {}
 deposit_records = {}
 user_balance = {}
 
-# Hàm tải dữ liệu từ file JSON
-def load_deposit_data():
-    global deposit_records
-    try:
-        with open("deposit_records.json", "r", encoding="utf-8") as f:
-            deposit_records = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        deposit_records = {}
-
-# Hàm lưu dữ liệu vào file JSON
-def save_deposit_data():
-    with open("deposit_records.json", "w", encoding="utf-8") as f:
-        json.dump(deposit_records, f)
-
-# Hàm lấy thời gian theo giờ Việt Nam
 def get_vietnam_time():
     vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
     return datetime.now(vn_tz).strftime('%Y-%m-%d %H:%M:%S')
@@ -940,9 +925,7 @@ def add_deposit_record(user_id, amount):
     if user_id not in deposit_records:
         deposit_records[user_id] = []
     deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
-    save_deposit_data()  # Lưu vào file JSON
 
-@router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
     deposit_states[user_id] = "awaiting_amount"
@@ -959,12 +942,10 @@ async def start_deposit(message: types.Message):
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(deposit_info, reply_markup=kb.as_markup())
 
-@router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
     await callback.answer()
 
-@router.callback_query(F.data == "deposit_history")
 async def deposit_history(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     history = deposit_records.get(user_id, [])
@@ -976,9 +957,6 @@ async def deposit_history(callback: types.CallbackQuery):
     history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
     await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
     await callback.answer()
-
-# Load dữ liệu khi khởi động bot
-load_deposit_data()
     
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
