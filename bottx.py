@@ -357,6 +357,7 @@ async def support_handler(message: types.Message):
 
 # ===================== Chuyển Tiền Handler =====================
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 class TransferState(StatesGroup):
     waiting_for_receiver = State()
