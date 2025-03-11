@@ -14,7 +14,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,   # Dòng này
     InlineKeyboardButton    # và dòng này
 )
-
+import os
 from aiogram.filters import Command
 # File lưu trữ danh sách mời
 REFERRAL_FILE = "referrals.json"
