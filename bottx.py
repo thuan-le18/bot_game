@@ -1118,14 +1118,27 @@ async def withdraw_history_handler(callback: types.CallbackQuery):
 
     history_list = withdrawals[user_id]
     text = "\n".join([
-        f"⏰ {req.get('time', '?')}: Rút {req.get('amount', 0):,} VNĐ - Tài khoản: {req.get('account_number', 'N/A')}"
+        f"⏰ {req.get('time', '?')}\n"
+        f"💸 Số tiền: {req.get('amount', 0):,} VNĐ\n"
+        f"🏦 Ngân hàng: {req.get('bank_name', 'N/A')}\n"
+        f"👤 Người nhận: {req.get('full_name', 'N/A')}\n"
+        f"🔢 Số tài khoản: {req.get('account_number', 'N/A')}\n"
+        f"----------------------"
         for req in history_list
     ])
-    await callback.message.answer(f"📜 Lịch sử rút tiền của bạn:\n{text}", reply_markup=main_menu, parse_mode="Markdown")
+    
+    await callback.message.answer(f"📜 *Lịch sử rút tiền của bạn:*\n{text}", parse_mode="Markdown")
     await callback.answer()
+
 
 #               XỬ LÝ YÊU CẦU RÚT TIỀN CỦA NGƯỜI DÙNG
 # ======================================================================
+from datetime import datetime, timedelta
+
+# Hàm lấy thời gian hiện tại theo giờ Việt Nam
+def get_vietnam_time():
+    return (datetime.utcnow() + timedelta(hours=7)).strftime("%d-%m-%Y %H:%M:%S")
+
 @router.message(lambda msg: msg.from_user.id != ADMIN_ID 
                           and msg.text 
                           and len(msg.text.split()) >= 4 
@@ -1133,7 +1146,7 @@ async def withdraw_history_handler(callback: types.CallbackQuery):
 async def process_withdraw_request(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[Yêu cầu Rút tiền] Nhận từ user {user_id}: {message.text}")
-    
+
     parts = message.text.strip().split()
     try:
         amount = int(parts[0])
@@ -1141,7 +1154,6 @@ async def process_withdraw_request(message: types.Message):
         await message.answer("⚠️ Số tiền không hợp lệ.", reply_markup=main_menu)
         return
 
-    # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
     if amount < 50000:
         await message.answer("⚠️ Số tiền rút tối thiểu là 50.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
         return
@@ -1155,13 +1167,13 @@ async def process_withdraw_request(message: types.Message):
 
     full_name = parts[1]
     bank_name = parts[2]
-    account_number = " ".join(parts[3:])  # Cho phép số tài khoản có nhiều từ
+    account_number = " ".join(parts[3:])  
 
-    # Trừ số dư của người dùng ngay lập tức
+    # Trừ số dư ngay lập tức
     user_balance[user_id] -= amount
     save_data(data)
-    
-    # Tạo yêu cầu rút tiền với trạng thái "pending"
+
+    # Lưu thông tin yêu cầu rút tiền
     w_req = {
         "user_id": user_id,
         "amount": amount,
@@ -1169,31 +1181,32 @@ async def process_withdraw_request(message: types.Message):
         "bank_name": bank_name,
         "account_number": account_number,
         "status": "pending",
-        "time": datetime.now().isoformat()
+        "time": get_vietnam_time()  # Lấy thời gian theo giờ Việt Nam
     }
+    
     if user_id not in withdrawals or not isinstance(withdrawals[user_id], list):
         withdrawals[user_id] = []
     withdrawals[user_id].append(w_req)
     save_data(data)
-    
-    # Gửi thông báo cho admin
-    admin_message = (
-        f"📢 Có yêu cầu rút tiền mới từ user {user_id}:\n"
-        f" - Số tiền: {amount} VNĐ\n"
-        f" - Họ tên: {full_name}\n"
-        f" - Ngân hàng: {bank_name}\n"
-        f" - Số tài khoản: {account_number}\n\n"
-        "Yêu cầu của bạn đang chờ xử lý."
-    )
-    await bot.send_message(ADMIN_ID, admin_message)
-    
-    # Thông báo cho người dùng
+
+    await bot.send_message(ADMIN_ID, (
+        f"📢 *Yêu cầu rút tiền mới từ user {user_id}:*\n"
+        f"💸 Số tiền: {amount:,} VNĐ\n"
+        f"🏦 Ngân hàng: {bank_name}\n"
+        f"👤 Người nhận: {full_name}\n"
+        f"🔢 Số tài khoản: {account_number}\n"
+        f"⏰ Thời gian: {w_req['time']}\n"
+        "⚠️ Yêu cầu đang chờ xử lý."
+    ), parse_mode="Markdown")
+
     await message.answer(
-        f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được gửi đến admin và đang chờ xử lý.\n"
-        "Số dư của bạn đã bị trừ.",
+        f"✅ *Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được gửi.*\n"
+        f"⏰ *Thời gian:* {w_req['time']}\n"
+        "💸 Số dư đã bị trừ và đang chờ admin xử lý.",
+        parse_mode="Markdown",
         reply_markup=main_menu
     )
-    
+
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 # ======================================================================
 @router.message(Command("xacnhan"))
