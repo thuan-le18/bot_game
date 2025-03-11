@@ -950,21 +950,23 @@ async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.answer()
 
 @router.callback_query(F.data == "deposit_history")
-async def deposit_history(callback: types.CallbackQuery):
+async def show_history(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     history = deposit_records.get(user_id, [])
-
+    
     if not history:
-        await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
+        await callback.message.answer("📭 Bạn chưa có giao dịch nào!")
         return
-
-    # Kiểm tra nếu danh sách trống sau khi lấy dữ liệu
-    print(f"Lịch sử nạp tiền của {user_id}: {history}")
-
-    history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
-    await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
+    
+    response = ["📥 Lịch sử nạp tiền:"]
+    for idx, record in enumerate(history, 1):
+        response.append(
+            f"{idx}. [{record['time']}] +{record['amount']:,} VNĐ"
+        )
+    
+    await callback.message.answer("\n".join(response))
     await callback.answer()
-
+    
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
 async def deposit_photo_handler(message: types.Message):
