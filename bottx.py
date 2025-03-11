@@ -286,9 +286,10 @@ async def bet_history(message: types.Message):
         await message.answer("📜 Bạn chưa có lịch sử cược.", reply_markup=main_menu)
         return
 
+    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     history_list = user_history[user_id][-10:]
     text = "\n".join([
-        f"⏰ {r.get('time', '?')}: {r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
+        f"⏰ {datetime.fromtimestamp(r.get('timestamp', 0), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: {r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
         f"🔹 Kết quả: {r.get('result', '?')} | "
         f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
         for r in history_list
