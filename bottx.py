@@ -1067,7 +1067,7 @@ async def start_deposit(message: types.Message):
         "🏧 Số tài khoản:<pre>8894605025</pre>\n"
         "👤 Chủ tài khoản:LE PHUONG THAO\n"
         f"📌 Nội dung chuyển khoản:<pre>NAPTK {user_id}</pre>khi bạn bấm sẽ tự động sao chép lại\n\n"
-        "⚠️ Số tiền nạp tối thiểu: 20.000 VNĐ.\n"
+        "⚠️ Số tiền nạp tối thiểu: 50.000 VNĐ.\n"
         "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển"
     )
     from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -1659,7 +1659,7 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    delta = random.randint(-3, 3)
+                    delta = random.randint(-4, 4)
                     new_value = game_players[game] + delta
                     game_players[game] = max(20, min(200, new_value))
             elif player_fixed_value is not None:
