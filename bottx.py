@@ -16,7 +16,29 @@ from aiogram.types import (
 )
 
 from aiogram.filters import Command
+# File lưu trữ danh sách mời
+REFERRAL_FILE = "referrals.json"
 
+# Hàm tải danh sách từ file JSON
+def load_referrals():
+    if os.path.exists(REFERRAL_FILE):
+        with open(REFERRAL_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+# Hàm lưu danh sách vào file JSON
+def save_referrals():
+    with open(REFERRAL_FILE, "w", encoding="utf-8") as f:
+        json.dump(referrals, f, indent=4)
+
+# Load dữ liệu khi bot khởi động
+referrals = load_referrals()
+def add_referral(referrer_id, new_user_id):
+    if referrer_id not in referrals:
+        referrals[referrer_id] = []
+    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
+    save_json(REFERRAL_FILE, referrals)
+    
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -303,7 +325,7 @@ async def check_balance(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
-    kb.button(text="💸 Chuyển tiền", callback_data="transfer_money")
+    kb.button(text="👥 Chuyển tiền", callback_data="transfer_money")
     kb.adjust(1)
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
