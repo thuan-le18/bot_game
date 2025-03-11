@@ -360,7 +360,8 @@ from aiogram import Bot
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types, Router
-from aiogram.filters import F
+from aiogram.types import Message
+from aiogram.filters import CommandStart
 
 # Định nghĩa trạng thái FSM cho chuyển tiền
 class TransferState(StatesGroup):
