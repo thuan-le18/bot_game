@@ -1545,12 +1545,12 @@ async def process_daovang(uid):
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players = {
-    "🎲 Tài Xỉu": random.randint(40, 50),
-    "🎰 Jackpot": random.randint(40, 45),
-    "✈️ Máy Bay": random.randint(50, 100),
-    "🐉 Rồng Hổ": random.randint(35, 50),
-    "⛏️ Đào Vàng": random.randint(35, 50),
-    "🃏 Mini Poker": random.randint(30, 40)
+    "🎲 Tài Xỉu": random.randint(40, 60),
+    "🎰 Jackpot": random.randint(40, 60),
+    "✈️ Máy Bay": random.randint(40, 60),
+    "🐉 Rồng Hổ": random.randint(40, 60),
+    "⛏️ Đào Vàng": random.randint(40, 60),
+    "🃏 Mini Poker": random.randint(40, 60)
 }
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
@@ -1562,12 +1562,10 @@ async def update_players():
             for game in game_players:
                 if game not in player_fixed_values:
                     game_players[game] += random.randint(-3, 3)  # Biến động nhẹ
-                    game_players[game] = max(30, min(100, game_players[game]))  # Giữ trong khoảng 40-100
+                    game_players[game] = max(40, min(100, game_players[game]))  # Giữ trong khoảng 40-100
                 else:
                     game_players[game] = player_fixed_values[game]  # Giữ số cố định nếu có
         await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
-
-asyncio.create_task(update_players())
 
 # ===================== Xử lý nút số người đang chơi =====================
 @router.message(F.text == "👥 Số người đang chơi")
@@ -1607,36 +1605,33 @@ async def unlock_players(message: types.Message):
     player_fixed_values = {}
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
 
-
-# ===================== Cập nhật số người chơi tự động =====================
-async def update_players():
-    while True:
-        if player_lock:  # Chỉ cập nhật nếu đã đặt khoảng min-max
-            for game in game_players:
-                min_value = max(30, game_players[game] - 10)
-                max_value = min(100, game_players[game] + 10)
-                game_players[game] = random.randint(min_value, max_value)
-        await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
-    
 # ===================== Chạy bot =====================
 async def main():
-    asyncio.create_task(update_players())  # Chạy trong event loop
+    # Chạy update_players() trong background
+    asyncio.create_task(update_players())
+
+    # Thiết lập các lệnh cho bot
     await bot.set_my_commands([
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
-        BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
-        BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
+
+    # Bắt đầu bot với polling
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+
     try:
-        asyncio.run(main())  # Dùng asyncio.run() để chạy
+        # Khởi tạo event loop mới
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Chạy bot
+        loop.run_until_complete(main())
     except RuntimeError as e:
         print(f"Error: {e}")
