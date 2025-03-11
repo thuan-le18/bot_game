@@ -406,7 +406,7 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     user_balances[receiver_id] = user_balances.get(receiver_id, 0) + amount
     
     await message.answer(f"✅ Bạn đã chuyển thành công {amount} VNĐ cho ID {receiver_id}. (Phí: {fee} VNĐ)")
-    await bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
+    await message.bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
     
     await state.clear()
     
