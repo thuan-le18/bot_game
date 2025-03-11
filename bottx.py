@@ -356,6 +356,12 @@ async def support_handler(message: types.Message):
     await message.answer(support_text, reply_markup=main_menu)
 
 # ===================== Chuyển Tiền Handler =====================
+from aiogram.fsm.state import State, StatesGroup
+
+class TransferState(StatesGroup):
+    waiting_for_receiver = State()
+    waiting_for_amount = State()
+    
 @router.message(F.text == "💸 Chuyển tiền")
 async def transfer_money_handler(message: types.Message):
     await message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiể0,000 VNĐ.")
