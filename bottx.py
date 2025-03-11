@@ -355,18 +355,20 @@ async def support_handler(message: types.Message):
     )
     await message.answer(support_text, reply_markup=main_menu)
 
-# ===================== Chuyển Tiền Handler =====================
+from aiogram import Bot
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
+# Định nghĩa trạng thái FSM cho chuyển tiền
 class TransferState(StatesGroup):
     waiting_for_receiver = State()
     waiting_for_amount = State()
-    
+
+# ===================== Chuyển Tiền Handler =====================
 @router.message(F.text == "💸 Chuyển tiền")
-async def transfer_money_handler(message: types.Message):
-    await message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiể0,000 VNĐ.")
-    await TransferState.waiting_for_receiver.set()
+async def transfer_money_handler(message: types.Message, state: FSMContext):
+    await message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
+    await state.set_state(TransferState.waiting_for_receiver)
 
 @router.message(TransferState.waiting_for_receiver)
 async def enter_receiver_id(message: types.Message, state: FSMContext):
@@ -377,10 +379,10 @@ async def enter_receiver_id(message: types.Message, state: FSMContext):
     
     await state.update_data(receiver_id=receiver_id)
     await message.answer("💰 Nhập số tiền muốn chuyển:")
-    await TransferState.waiting_for_amount.set()
+    await state.set_state(TransferState.waiting_for_amount)
 
 @router.message(TransferState.waiting_for_amount)
-async def enter_transfer_amount(message: types.Message, state: FSMContext):
+async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: Bot):
     amount = message.text.strip()
     if not amount.isdigit() or int(amount) < 20000:
         await message.answer("❌ Số tiền không hợp lệ. Vui lòng nhập ít nhất 20,000 VNĐ:")
@@ -407,7 +409,7 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext):
     await bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
     
     await state.clear()
-
+    
 # ===================== GAME: Tài Xỉu =====================
 @router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
