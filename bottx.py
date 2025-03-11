@@ -278,6 +278,24 @@ async def check_balance(message: types.Message):
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
+import time
+import pytz
+from datetime import datetime
+from aiogram import Router, types, F
+from aiogram.filters import Command
+
+# Giả sử main_menu và user_history đã được định nghĩa ở nơi khác
+# Ví dụ:
+# main_menu = ReplyKeyboardMarkup(keyboard=[...], resize_keyboard=True)
+# user_history = {}  # Dictionary lưu lịch sử cược của người dùng
+
+def parse_timestamp(ts):
+    """Hàm chuyển đổi timestamp sang float; nếu không hợp lệ trả về thời gian hiện tại."""
+    try:
+        return float(ts)
+    except (TypeError, ValueError):
+        return time.time()
+
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
@@ -298,7 +316,6 @@ async def bet_history(message: types.Message):
     ])
 
     await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
-
 
 # ===================== Handler Hỗ trợ =====================
 @router.message(F.text == "💬 Hỗ trợ")
@@ -908,9 +925,6 @@ async def poker_back(callback: types.CallbackQuery):
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
 # ===================== Nạp tiền =====================
-import pytz
-from datetime import datetime
-
 deposit_states = {}
 deposit_records = {}
 user_balance = {}
