@@ -290,13 +290,13 @@ async def bet_history(message: types.Message):
     history_list = user_history[user_id][-10:]
     
     text = "\n".join([
-        f"⏰ {datetime.fromtimestamp(r.get('timestamp', time.time()), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
-        f"{r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
-        f"🔹 Kết quả: {r.get('result', '?')} | "
-        f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
-        for r in history_list
-        if r.get('timestamp')  # Bỏ qua nếu không có timestamp
-    ])
+    f"⏰ {datetime.fromtimestamp(r.get('timestamp', time.time()), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
+    f"{r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
+    f"🔹 Kết quả: {r.get('result', '?')} | "
+    f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
+    for r in history_list
+    if isinstance(r.get('timestamp'), (int, float)) and r.get('timestamp') > 0  # Kiểm tra timestamp hợp lệ
+])
 
     await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
 
