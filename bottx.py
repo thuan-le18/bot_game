@@ -278,6 +278,15 @@ async def check_balance(message: types.Message):
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
+# user_history = {}  # Dictionary lưu lịch sử cược của người dùng
+
+def parse_timestamp(ts):
+    """Hàm chuyển đổi timestamp sang float; nếu không hợp lệ trả về thời gian hiện tại."""
+    try:
+        return float(ts)
+    except (TypeError, ValueError):
+        return time.time()
+
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
@@ -290,15 +299,15 @@ async def bet_history(message: types.Message):
     history_list = user_history[user_id][-10:]
     
     text = "\n".join([
-    f"⏰ {datetime.fromtimestamp(r.get('timestamp', time.time()), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
-    f"{r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
-    f"🔹 Kết quả: {r.get('result', '?')} | "
-    f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
-    for r in history_list
-    if isinstance(r.get('timestamp'), (int, float)) and r.get('timestamp') > 0  # Kiểm tra timestamp hợp lệ
-])
+        f"⏰ {datetime.fromtimestamp(parse_timestamp(r.get('timestamp')), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
+        f"{r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
+        f"🔹 Kết quả: {r.get('result', '?')} | "
+        f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
+        for r in history_list
+    ])
 
     await message.answer(f"📜 *Lịch sử cược gần đây của bạn:*\n{text}", reply_markup=main_menu, parse_mode="Markdown")
+
 
 # ===================== Handler Hỗ trợ =====================
 @router.message(F.text == "💬 Hỗ trợ")
