@@ -1043,14 +1043,14 @@ async def admin_confirm_deposit(message: types.Message):
                 if user_id not in user_balance:
                     user_balance[user_id] = 0
                 user_balance[user_id] += amt
-                save_data(data)
+                add_deposit_record(user_id, amt)  # ✅ Lưu lịch sử nạp tiền
                 await bot.send_message(user_id, f"✅ Bạn đã được nạp {amt} VNĐ. Vui lòng kiểm tra số dư.")
                 await message.answer(f"✅ Đã xác nhận nạp {amt} VNĐ cho user {user_id}.")
                 return
         await message.answer("⚠️ Không có yêu cầu nạp tiền nào ở trạng thái chờ của user này.")
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xác nhận nạp tiền. Cú pháp: /naptien <user_id>")
-        logging.error(f"Error confirming deposit: {e}")
+        
 # ===================== Admin: Lệnh cộng tiền =====================
 @router.message(Command("congtien"))
 async def admin_add_money(message: types.Message):
