@@ -926,6 +926,7 @@ def add_deposit_record(user_id, amount):
         deposit_records[user_id] = []
     deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
 
+@router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
     deposit_states[user_id] = "awaiting_amount"
@@ -941,11 +942,12 @@ async def start_deposit(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(deposit_info, reply_markup=kb.as_markup())
-
+@router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
     await callback.answer()
 
+@router.callback_query(F.data == "deposit_history")
 async def deposit_history(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     history = deposit_records.get(user_id, [])
