@@ -1545,7 +1545,7 @@ async def process_daovang(uid):
 # ===================== Quản lý số người chơi ảo =====================
 game_players = {
     "🎲 Tài Xỉu": random.randint(30, 60),
-    "🎰 Jackpot": random.randint(20, 40),
+    "🎰 Jackpot": random.randint(30, 40),
     "✈️ Máy Bay": random.randint(40, 90),
     "🐉 Rồng Hổ": random.randint(30, 50),
     "⛏️ Đào Vàng": random.randint(30, 70),
@@ -1592,7 +1592,7 @@ async def set_players(message: types.Message):
     max_value = int(args[3])
 
     # Giới hạn hợp lệ
-    if min_value < 40 or max_value > 100 or min_value >= max_value:
+    if min_value < 30 or max_value > 100 or min_value >= max_value:
         await message.answer("⚠️ Số người chơi phải nằm trong khoảng từ 40 đến 100 và min phải nhỏ hơn max!", parse_mode="Markdown")
         return
 
