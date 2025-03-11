@@ -1561,7 +1561,7 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    delta = random.randint(-3, 4)
+                    delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
                     game_players[game] = max(20, min(200, new_value))
             elif player_fixed_value is not None:
