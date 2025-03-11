@@ -304,6 +304,7 @@ async def check_balance(message: types.Message):
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     kb.button(text="💸 Chuyển tiền", callback_data="transfer_money")
+    kb.adjust(1)
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
 import time
@@ -367,11 +368,12 @@ class TransferState(StatesGroup):
     waiting_for_amount = State()
 
 # ===================== Chuyển Tiền Handler =====================
-@router.message(F.text == "💸 Chuyển tiền")
-async def transfer_money_handler(message: types.Message, state: FSMContext):
-    await message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
+@router.callback_query(F.data == "transfer_money")
+async def transfer_money_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
     await state.set_state(TransferState.waiting_for_receiver)
-
+    await callback.answer()
+        
 @router.message(TransferState.waiting_for_receiver)
 async def enter_receiver_id(message: types.Message, state: FSMContext):
     receiver_id = message.text.strip()
