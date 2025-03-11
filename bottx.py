@@ -1486,9 +1486,9 @@ game_players = {
     "🎲 Tài Xỉu": random.randint(30, 60),
     "🎰 Jackpot": random.randint(20, 40),
     "✈️ Máy Bay": random.randint(40, 90),
-    "🐉 Rồng Hổ": random.randint(30, 60),
-    "⛏️ Đào Vàng": random.randint(30, 770),
-    "🃏 Mini Poker": random.randint(20, 50)
+    "🐉 Rồng Hổ": random.randint(30, 50),
+    "⛏️ Đào Vàng": random.randint(30, 70),
+    "🃏 Mini Poker": random.randint(30, 50)
 }
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
@@ -1499,8 +1499,8 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    game_players[game] += random.randint(-3, 3)
-                    game_players[game] = max(40, min(100, game_players[game]))
+                    game_players[game] += random.randint(-3, 4)
+                    game_players[game] = max(30, min(100, game_players[game]))
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
