@@ -905,16 +905,24 @@ async def poker_back(callback: types.CallbackQuery):
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
 # ===================== Nạp tiền =====================
+import pytz
+from datetime import datetime
+
 deposit_states = {}
 deposit_records = {}
 user_balance = {}
+
+# Hàm lấy thời gian theo giờ Việt Nam
+def get_vietnam_time():
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    return datetime.now(vn_tz).strftime('%Y-%m-%d %H:%M:%S')
 
 def add_deposit_record(user_id, amount):
     """ Lưu lịch sử nạp tiền của người dùng """
     user_id = str(user_id)
     if user_id not in deposit_records:
         deposit_records[user_id] = []
-    deposit_records[user_id].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "amount": amount})
+    deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
 
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
@@ -932,6 +940,7 @@ async def start_deposit(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(deposit_info, reply_markup=kb.as_markup())
+
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
@@ -949,6 +958,7 @@ async def deposit_history(callback: types.CallbackQuery):
     history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
     await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
     await callback.answer()
+
 # ===================== Xử lý ảnh biên lai nạp tiền =====================
 @router.message(F.photo)
 async def deposit_photo_handler(message: types.Message):
