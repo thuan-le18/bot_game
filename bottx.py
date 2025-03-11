@@ -1546,9 +1546,9 @@ async def process_daovang(uid):
 game_players = {
     "🎲 Tài Xỉu": random.randint(30, 60),
     "🎰 Jackpot": random.randint(30, 40),
-    "✈️ Máy Bay": random.randint(40, 90),
-    "🐉 Rồng Hổ": random.randint(30, 50),
-    "⛏️ Đào Vàng": random.randint(30, 70),
+    "✈️ Máy Bay": random.randint(50, 90),
+    "🐉 Rồng Hổ": random.randint(30, 40),
+    "⛏️ Đào Vàng": random.randint(30, 50),
     "🃏 Mini Poker": random.randint(30, 50)
 }
 
@@ -1630,7 +1630,7 @@ async def update_players():
     while True:
         if player_lock:  # Chỉ cập nhật nếu đã đặt khoảng min-max
             for game in game_players:
-                min_value = max(40, game_players[game] - 10)
+                min_value = max(30, game_players[game] - 10)
                 max_value = min(100, game_players[game] + 10)
                 game_players[game] = random.randint(min_value, max_value)
         await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
