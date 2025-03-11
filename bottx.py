@@ -401,14 +401,14 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     total_deduction = amount + fee
     
     # Kiểm tra số dư
-    if user_balances.get(user_id, 0) < total_deduction:
+    if user_balance.get(user_id, 0) < total_deduction:
         await message.answer("❌ Số dư không đủ để thực hiện giao dịch.")
         await state.clear()
         return
     
     # Thực hiện chuyển tiền
     user_balances[user_id] -= total_deduction
-    user_balances[receiver_id] = user_balances.get(receiver_id, 0) + amount
+    user_balance[receiver_id] = user_balance.get(receiver_id, 0) + amount
     
     await message.answer(f"✅ Bạn đã chuyển thành công {amount} VNĐ cho ID {receiver_id}. (Phí: {fee} VNĐ)")
     await message.bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
