@@ -1542,6 +1542,7 @@ async def process_daovang(uid):
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
 
+
 # ===================== Quản lý số người chơi ảo =====================
 game_players = {
     "🎲 Tài Xỉu": random.randint(30, 60),
@@ -1554,6 +1555,8 @@ game_players = {
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
 player_fixed_value = None  # Nếu không phải None, số người chơi cố định
+min_player_range = 30  # Giới hạn min mặc định
+max_player_range = 100  # Giới hạn max mặc định
 
 async def update_players():
     while True:
@@ -1561,7 +1564,7 @@ async def update_players():
             if not player_lock:
                 for game in game_players:
                     game_players[game] += random.randint(-3, 4)
-                    game_players[game] = max(30, min(100, game_players[game]))
+                    game_players[game] = max(min_player_range, min(max_player_range, game_players[game]))
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
@@ -1570,7 +1573,7 @@ async def update_players():
             print(f"🔥 Lỗi trong update_players(): {e}")
 
 # ===================== Xử lý nút số người đang chơi =====================
-@router.message(F.text == "👥 Số người đang chơi")
+@router.message(lambda message: message.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     for game, count in game_players.items():
@@ -1578,7 +1581,7 @@ async def show_players(message: types.Message):
     await message.answer(player_text)
 
 # ===================== Admin Tùy chỉnh số người chơi =====================
-@router.message(F.text.startswith("/setplayers "))
+@router.message(lambda message: message.text.startswith("/setplayers "))
 async def set_players(message: types.Message):
     global player_lock
     args = message.text.split()
@@ -1592,8 +1595,8 @@ async def set_players(message: types.Message):
     max_value = int(args[3])
 
     # Giới hạn hợp lệ
-    if min_value < 30 or max_value > 100 or min_value >= max_value:
-        await message.answer("⚠️ Số người chơi phải nằm trong khoảng từ 40 đến 100 và min phải nhỏ hơn max!", parse_mode="Markdown")
+    if min_value < min_player_range or max_value > max_player_range or min_value >= max_value:
+        await message.answer(f"⚠️ Số người chơi phải nằm trong khoảng từ {min_player_range} đến {max_player_range} và min phải nhỏ hơn max!", parse_mode="Markdown")
         return
 
     # Nếu chọn "all" thì cập nhật tất cả game
@@ -1619,7 +1622,7 @@ async def set_players(message: types.Message):
     # Kích hoạt chế độ thay đổi số người chơi trong khoảng min-max
     player_lock = True
 
-@router.message(F.text == "/unlockplayers")
+@router.message(lambda message: message.text == "/unlockplayers")
 async def unlock_players(message: types.Message):
     global player_lock
     player_lock = False
