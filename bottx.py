@@ -910,7 +910,6 @@ async def poker_back(callback: types.CallbackQuery):
 # ===================== Nạp tiền =====================
 import pytz
 import json
-from datetime import datetime
 
 deposit_states = {}
 deposit_records = {}
@@ -959,25 +958,6 @@ async def start_deposit(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
     await message.answer(deposit_info, reply_markup=kb.as_markup())
-
-@router.message()
-async def process_deposit(message: types.Message):
-    user_id = str(message.from_user.id)
-    
-    if user_id in deposit_states and deposit_states[user_id] == "awaiting_amount":
-        try:
-            amount = int(message.text.replace(",", ""))
-            if amount <= 0:
-                await message.answer("⚠️ Số tiền không hợp lệ. Vui lòng nhập lại!")
-                return
-            
-            add_deposit_record(user_id, amount)
-            user_balance[user_id] = user_balance.get(user_id, 0) + amount
-            del deposit_states[user_id]
-            
-            await message.answer(f"✅ Bạn đã nạp thành công {amount:,} VNĐ vào tài khoản!")
-        except ValueError:
-            await message.answer("⚠️ Vui lòng nhập số tiền hợp lệ!")
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
