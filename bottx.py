@@ -1111,7 +1111,7 @@ async def start_withdraw(message: types.Message):
         "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
         "⚠️ Lưu ý:\n"
         "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
-        "- Số tiền rút tối thiểu là 50k.\n"
+        "- Số tiền rút tối thiểu là 100k.\n"
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
@@ -1170,8 +1170,8 @@ async def process_withdraw_request(message: types.Message):
         await message.answer("⚠️ Số tiền không hợp lệ.", reply_markup=main_menu)
         return
 
-    if amount < 50000:
-        await message.answer("⚠️ Số tiền rút tối thiểu là 50.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
+    if amount < 100000:
+        await message.answer("⚠️ Số tiền rút tối thiểu là 100.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
         return
 
     if user_id not in user_balance:
@@ -1249,8 +1249,8 @@ async def admin_confirm_withdraw(message: types.Message):
         amount = int(parts[2])
         
         # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
-        if amount < 50000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 50.000 VNĐ. Vui lòng nhập lại.")
+        if amount < 100000:
+            await message.answer("⚠️ Số tiền rút tối thiểu là 100.000 VNĐ. Vui lòng nhập lại.")
             return
 
         # Tìm yêu cầu rút tiền của target_user_id với số tiền bằng amount và trạng thái "pending"
