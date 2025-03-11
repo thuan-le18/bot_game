@@ -958,6 +958,9 @@ async def deposit_history(callback: types.CallbackQuery):
         await callback.message.answer("📭 Bạn chưa có lịch sử nạp tiền nào.")
         return
 
+    # Kiểm tra nếu danh sách trống sau khi lấy dữ liệu
+    print(f"Lịch sử nạp tiền của {user_id}: {history}")
+
     history_text = "\n".join([f"📅 {h['time']}: +{h['amount']} VNĐ" for h in history])
     await callback.message.answer(f"📥 Lịch sử nạp tiền của bạn:\n{history_text}")
     await callback.answer()
