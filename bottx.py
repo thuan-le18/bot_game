@@ -956,9 +956,9 @@ async def start_deposit(message: types.Message):
         "🏦 Ngân hàng:BIDV\n"
         "🏧 Số tài khoản:<pre>8894605025</pre>\n"
         "👤 Chủ tài khoản:LE PHUONG THAO\n"
-        f"📌 Nội dung chuyển khoản:<pre>NAPTK {user_id}</pre>bạn bấm là sẽ tự động sao chép\n\n"
+        f"📌 Nội dung chuyển khoản:<pre>NAPTK {user_id}</pre>khi bấm là sẽ tự động sao chép nha\n\n"
         "⚠️ Số tiền nạp tối thiểu: 20.000 VNĐ.\n"
-        "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển."
+        "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển"
     )
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
