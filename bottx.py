@@ -946,26 +946,25 @@ def add_deposit_record(user_id, amount):
         deposit_records[user_id] = []
     deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
 
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
     deposit_states[user_id] = "awaiting_amount"
-    
-    bank_info = (
-        "💰 *Thông tin nạp tiền:*\n\n"
-        "🏦 *Ngân hàng:* [BIDV](tg://btn/copy?text=BIDV)\n"
-        "🏧 *Số tài khoản:* [8894605025](tg://btn/copy?text=8894605025)\n"
-        f"📌 *Nội dung chuyển khoản:* [`NAPTK {user_id}`](tg://btn/copy?text=NAPTK%20{user_id})\n\n"
-        "⚠️ *Lưu ý:* Số tiền nạp tối thiểu là *20.000 VNĐ*.\n"
+
+    deposit_info = (
+        "💰 Để nạp tiền, vui lòng chuyển khoản đến:\n\n"
+        "<pre>🏦 Ngân hàng: BIDV</pre>\n"
+        "<pre>📄 Số tài khoản: 8894605025</pre>\n"
+        "<pre>👤 Chủ tài khoản: LE PHUONG THAO</pre>\n"
+        f"<pre>📌 Nội dung chuyển khoản: NAPTK {user_id}</pre>\n\n"
+        "⚠️ Số tiền nạp tối thiểu: 20.000 VNĐ.\n"
         "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển."
     )
-
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
 
-    await message.answer(bank_info, parse_mode="Markdown", reply_markup=kb.as_markup())
+    await message.answer(deposit_info, parse_mode="HTML", reply_markup=kb.as_markup())
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
