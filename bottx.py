@@ -257,15 +257,30 @@ async def referral_handler(message: types.Message):
     current_month = now_vn.strftime("%Y-%m")
     month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
 
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
+    ])
+
     await message.answer(
          f"🌹 Link mời của bạn: {referral_link}\n"
          f"Tổng lượt mời: {len(records)}\n"
          f"Lượt mời hôm nay: {today_count}\n"
          f"Lượt mời tháng này: {month_count}\n\n"
          "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
-         reply_markup=main_menu
+         reply_markup=keyboard
     )
 
+@router.callback_query(F.data == "list_invited")
+async def list_invited_handler(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    records = referrals.get(user_id, [])
+
+    if not records:
+        await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
+        return
+
+    invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
+    await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
 
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
@@ -288,6 +303,7 @@ async def check_balance(message: types.Message):
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
+    kb.button(text="💸 Chuyển tiền", callback_data="transfer_money")
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
 import time
@@ -338,6 +354,52 @@ async def support_handler(message: types.Message):
         "- Liên hệ admin: @hoanganh11829\n\n"
     )
     await message.answer(support_text, reply_markup=main_menu)
+
+# ===================== Chuyển Tiền Handler =====================
+@router.message(F.text == "💸 Chuyển tiền")
+async def transfer_money_handler(message: types.Message):
+    await message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiể0,000 VNĐ.")
+    await TransferState.waiting_for_receiver.set()
+
+@router.message(TransferState.waiting_for_receiver)
+async def enter_receiver_id(message: types.Message, state: FSMContext):
+    receiver_id = message.text.strip()
+    if not receiver_id.isdigit():
+        await message.answer("❌ ID không hợp lệ. Vui lòng nhập lại:")
+        return
+    
+    await state.update_data(receiver_id=receiver_id)
+    await message.answer("💰 Nhập số tiền muốn chuyển:")
+    await TransferState.waiting_for_amount.set()
+
+@router.message(TransferState.waiting_for_amount)
+async def enter_transfer_amount(message: types.Message, state: FSMContext):
+    amount = message.text.strip()
+    if not amount.isdigit() or int(amount) < 20000:
+        await message.answer("❌ Số tiền không hợp lệ. Vui lòng nhập ít nhất 20,000 VNĐ:")
+        return
+    
+    user_id = str(message.from_user.id)
+    receiver_data = await state.get_data()
+    receiver_id = receiver_data["receiver_id"]
+    amount = int(amount)
+    fee = int(amount * 0.03)  # Phí 3%
+    total_deduction = amount + fee
+    
+    # Kiểm tra số dư
+    if user_balances.get(user_id, 0) < total_deduction:
+        await message.answer("❌ Số dư không đủ để thực hiện giao dịch.")
+        await state.clear()
+        return
+    
+    # Thực hiện chuyển tiền
+    user_balances[user_id] -= total_deduction
+    user_balances[receiver_id] = user_balances.get(receiver_id, 0) + amount
+    
+    await message.answer(f"✅ Bạn đã chuyển thành công {amount} VNĐ cho ID {receiver_id}. (Phí: {fee} VNĐ)")
+    await bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
+    
+    await state.clear()
 
 # ===================== GAME: Tài Xỉu =====================
 @router.message(F.text == "🎲 Tài Xỉu")
