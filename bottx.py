@@ -428,10 +428,10 @@ async def jackpot_bet(message: types.Message):
     await asyncio.sleep(2)
     win_amount = 0
     if random.randint(1, 100) <= 10:
-        win_amount = bet_amount * 10
+        win_amount = bet_amount * 14
         user_balance[user_id] += win_amount
         save_data(data)
-        await message.answer(f"🎉 Chúc mừng! Bạn trúng Jackpot x10! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
+        await message.answer(f"🎉 Chúc mừng! Bạn trúng Jackpot x14! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
         record_bet_history(user_id, "Jackpot", bet_amount, "win", win_amount)
     else:
         await message.answer("😢 Rất tiếc, bạn không trúng Jackpot. Mất hết tiền cược.", reply_markup=main_menu)
@@ -832,12 +832,12 @@ async def daovang_continue(message: types.Message):
 # ===================== GAME: Mini Poker =====================
 # Giảm hệ số thưởng để game "khó ăn tiền" hơn
 PRIZES = {
-    "Thùng Phá Sảnh": 8,
-    "Tứ Quý": 4.5,
-    "Cù Lũ": 2.4,
-    "Thùng": 1.7,
-    "Sảnh": 1.4,
-    "Đôi": 1.2,
+    "Thùng Phá Sảnh": 10,
+    "Tứ Quý": 5,
+    "Cù Lũ": 2.5,
+    "Thùng": 1.8,
+    "Sảnh": 1.5,
+    "Đôi": 1.3,
     "Mậu Thầu": 0
 }
 
