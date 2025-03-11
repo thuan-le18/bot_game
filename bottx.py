@@ -1545,35 +1545,32 @@ async def process_daovang(uid):
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players = {
-    "🎲 Tài Xỉu": random.randint(30, 60),
-    "🎰 Jackpot": random.randint(30, 40),
-    "✈️ Máy Bay": random.randint(50, 90),
-    "🐉 Rồng Hổ": random.randint(30, 40),
-    "⛏️ Đào Vàng": random.randint(30, 50),
-    "🃏 Mini Poker": random.randint(30, 50)
+    "🎲 Tài Xỉu": random.randint(40, 50),
+    "🎰 Jackpot": random.randint(40, 45),
+    "✈️ Máy Bay": random.randint(50, 100),
+    "🐉 Rồng Hổ": random.randint(35, 50),
+    "⛏️ Đào Vàng": random.randint(35, 50),
+    "🃏 Mini Poker": random.randint(30, 40)
 }
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
-player_fixed_value = None  # Nếu không phải None, số người chơi cố định
-min_player_range = 30  # Giới hạn min mặc định
-max_player_range = 100  # Giới hạn max mặc định
+player_fixed_values = {}  # Lưu số người cố định từng game
 
 async def update_players():
     while True:
-        try:
-            if not player_lock:
-                for game in game_players:
-                    game_players[game] += random.randint(-3, 4)
-                    game_players[game] = max(min_player_range, min(max_player_range, game_players[game]))
-            elif player_fixed_value is not None:
-                for game in game_players:
-                    game_players[game] = player_fixed_value
-            await asyncio.sleep(5)
-        except Exception as e:
-            print(f"🔥 Lỗi trong update_players(): {e}")
+        if not player_lock:  # Chỉ cập nhật nếu không bị khóa
+            for game in game_players:
+                if game not in player_fixed_values:
+                    game_players[game] += random.randint(-3, 3)  # Biến động nhẹ
+                    game_players[game] = max(30, min(100, game_players[game]))  # Giữ trong khoảng 40-100
+                else:
+                    game_players[game] = player_fixed_values[game]  # Giữ số cố định nếu có
+        await asyncio.sleep(5)  # Cập nhật mỗi 5 giây
+
+asyncio.create_task(update_players())
 
 # ===================== Xử lý nút số người đang chơi =====================
-@router.message(lambda message: message.text == "👥 Số người đang chơi")
+@router.message(F.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     for game, count in game_players.items():
@@ -1581,52 +1578,35 @@ async def show_players(message: types.Message):
     await message.answer(player_text)
 
 # ===================== Admin Tùy chỉnh số người chơi =====================
-@router.message(lambda message: message.text.startswith("/setplayers "))
+@router.message(F.text.startswith("/setplayers "))
 async def set_players(message: types.Message):
-    global player_lock
+    global player_lock, player_fixed_values
     args = message.text.split()
-
-    if len(args) != 4 or not args[2].isdigit() or not args[3].isdigit():
-        await message.answer("⚠️ Cách dùng: `/setplayers [all/tên game] [min] [max]`\n🔹 VD: `/setplayers tài 50 80` hoặc `/setplayers all 40 90`", parse_mode="Markdown")
+    if len(args) < 3 or not args[-1].isdigit():
+        await message.answer("⚠️ Sử dụng: /setplayers [tên game hoặc all] [số người]")
         return
-
-    game_name = args[1].lower()
-    min_value = int(args[2])
-    max_value = int(args[3])
-
-    # Giới hạn hợp lệ
-    if min_value < min_player_range or max_value > max_player_range or min_value >= max_value:
-        await message.answer(f"⚠️ Số người chơi phải nằm trong khoảng từ {min_player_range} đến {max_player_range} và min phải nhỏ hơn max!", parse_mode="Markdown")
-        return
-
-    # Nếu chọn "all" thì cập nhật tất cả game
-    if game_name == "all":
+    
+    game_name = " ".join(args[1:-1])  # Ghép lại tên game
+    player_count = int(args[-1])
+    
+    if game_name.lower() == "all":
         for game in game_players:
-            game_players[game] = random.randint(min_value, max_value)
-        await message.answer(f"🔒 Đã đặt số người chơi **tất cả game** trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
+            player_fixed_values[game] = player_count
+        player_lock = True
+        await message.answer(f"🔒 Đã cố định số người chơi **tất cả game** ở mức {player_count} người.")
+    elif game_name in game_players:
+        player_fixed_values[game_name] = player_count
+        await message.answer(f"🔒 Đã cố định số người chơi **{game_name}** ở mức {player_count} người.")
     else:
-        # Tìm game theo từ khóa (không cần emoji)
-        matched_games = [g for g in game_players if game_name in g.lower()]
-        
-        if not matched_games:
-            await message.answer("⚠️ Không tìm thấy game nào với tên đó. Hãy thử lại!", parse_mode="Markdown")
-            return
+        await message.answer("⚠️ Tên game không hợp lệ. Hãy nhập đúng tên game.")
 
-        # Cập nhật số người chơi cho tất cả game tìm thấy
-        for game in matched_games:
-            game_players[game] = random.randint(min_value, max_value)
-
-        game_list = "\n".join([f"🔹 {g}" for g in matched_games])
-        await message.answer(f"🔒 Đã đặt số người chơi cho các game:\n{game_list}\n👉 Trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
-
-    # Kích hoạt chế độ thay đổi số người chơi trong khoảng min-max
-    player_lock = True
-
-@router.message(lambda message: message.text == "/unlockplayers")
+@router.message(F.text == "/unlockplayers")
 async def unlock_players(message: types.Message):
-    global player_lock
+    global player_lock, player_fixed_values
     player_lock = False
+    player_fixed_values = {}
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
+
 
 # ===================== Cập nhật số người chơi tự động =====================
 async def update_players():
