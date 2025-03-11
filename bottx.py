@@ -429,7 +429,7 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
         return
     
     # Thực hiện chuyển tiền
-    user_balances[user_id] -= total_deduction
+    user_balance[user_id] -= total_deduction
     user_balance[receiver_id] = user_balance.get(receiver_id, 0) + amount
     
     await message.answer(f"✅ Bạn đã chuyển thành công {amount} VNĐ cho ID {receiver_id}. (Phí: {fee} VNĐ)")
