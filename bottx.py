@@ -946,22 +946,27 @@ def add_deposit_record(user_id, amount):
         deposit_records[user_id] = []
     deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
 
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 @router.message(F.text == "🔄 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
     deposit_states[user_id] = "awaiting_amount"
-    deposit_info = (
-        "💰 Để nạp tiền, vui lòng chuyển khoản đến:\n\n"
-        "🏦 Ngân hàng: BIDV\n"
-        "📄 Số tài khoản: 8894605025\n"
-        "👤 Chủ tài khoản: LE PHUONG THAO\n"
-        f"📌 Nội dung chuyển khoản: NAPTK {user_id}\n\n"
-        "Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển:"
+    
+    bank_info = (
+        "💰 *Thông tin nạp tiền:*\n\n"
+        "🏦 *Ngân hàng:* [BIDV](tg://btn/copy?text=BIDV)\n"
+        "🏧 *Số tài khoản:* [8894605025](tg://btn/copy?text=8894605025)\n"
+        f"📌 *Nội dung chuyển khoản:* [`NAPTK {user_id}`](tg://btn/copy?text=NAPTK%20{user_id})\n\n"
+        "⚠️ *Lưu ý:* Số tiền nạp tối thiểu là *20.000 VNĐ*.\n"
+        "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển."
     )
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
     kb = InlineKeyboardBuilder()
     kb.button(text="🔙 Quay lại", callback_data="back_to_menu")
-    await message.answer(deposit_info, reply_markup=kb.as_markup())
+
+    await message.answer(bank_info, parse_mode="Markdown", reply_markup=kb.as_markup())
+
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
@@ -1122,7 +1127,7 @@ async def withdraw_history_handler(callback: types.CallbackQuery):
         f"💸 Số tiền: {req.get('amount', 0):,} VNĐ\n"
         f"🏦 Ngân hàng: {req.get('bank_name', 'N/A')}\n"
         f"👤 Người nhận: {req.get('full_name', 'N/A')}\n"
-        f"🔢 Số tài khoản: {req.get('account_number', 'N/A')}\n"
+        f"🏧 Số tài khoản: {req.get('account_number', 'N/A')}\n"
         f"----------------------"
         for req in history_list
     ])
