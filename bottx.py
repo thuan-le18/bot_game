@@ -278,15 +278,6 @@ async def check_balance(message: types.Message):
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
 
-# user_history = {}  # Dictionary lưu lịch sử cược của người dùng
-
-def parse_timestamp(ts):
-    """Hàm chuyển đổi timestamp sang float; nếu không hợp lệ trả về thời gian hiện tại."""
-    try:
-        return float(ts)
-    except (TypeError, ValueError):
-        return time.time()
-
 @router.message(F.text == "📜 Lịch sử cược")
 async def bet_history(message: types.Message):
     user_id = str(message.from_user.id)
