@@ -1526,7 +1526,7 @@ async def set_players(message: types.Message):
         await message.answer("⚠️ Cách dùng: `/setplayers [all/tên game] [min] [max]`\n🔹 VD: `/setplayers tài 50 80` hoặc `/setplayers all 40 90`", parse_mode="Markdown")
         return
 
-    game_name = args[1]
+    game_name = args[1].lower()
     min_value = int(args[2])
     max_value = int(args[3])
 
@@ -1536,22 +1536,24 @@ async def set_players(message: types.Message):
         return
 
     # Nếu chọn "all" thì cập nhật tất cả game
-    if game_name.lower() == "all":
+    if game_name == "all":
         for game in game_players:
             game_players[game] = random.randint(min_value, max_value)
         await message.answer(f"🔒 Đã đặt số người chơi **tất cả game** trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
     else:
-        # Kiểm tra xem game có tồn tại không
-        matched_games = [g for g in game_players if g.lower().startswith(game_name.lower())]
+        # Tìm game theo từ khóa (không cần emoji)
+        matched_games = [g for g in game_players if game_name in g.lower()]
+        
         if not matched_games:
             await message.answer("⚠️ Không tìm thấy game nào với tên đó. Hãy thử lại!", parse_mode="Markdown")
             return
 
-        # Cập nhật số người chơi cho game được chỉ định
+        # Cập nhật số người chơi cho tất cả game tìm thấy
         for game in matched_games:
             game_players[game] = random.randint(min_value, max_value)
 
-        await message.answer(f"🔒 Đã đặt số người chơi **{matched_games[0]}** trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
+        game_list = "\n".join([f"🔹 {g}" for g in matched_games])
+        await message.answer(f"🔒 Đã đặt số người chơi cho các game:\n{game_list}\n👉 Trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
 
     # Kích hoạt chế độ thay đổi số người chơi trong khoảng min-max
     player_lock = True
