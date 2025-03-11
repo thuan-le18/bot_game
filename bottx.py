@@ -953,10 +953,10 @@ async def start_deposit(message: types.Message):
 
     deposit_info = (
         "💰 Để nạp tiền, vui lòng chuyển khoản đến:\n\n"
-        "🏦 Ngân hàng: <pre>BIDV</pre>\n"
-        "🏧 Số tài khoản: <pre> 8894605025</pre>\n"
-        "👤 Chủ tài khoản:<pre> LE PHUONG THAO</pre>\n"
-        f"📌 Nội dung chuyển khoản:<pre> NAPTK {user_id}</pre>\n\n"
+        "🏦 Ngân hàng:BIDV\n"
+        "🏧 Số tài khoản:<pre>8894605025</pre>\n"
+        "👤 Chủ tài khoản:LE PHUONG THAO\n"
+        f"📌 Nội dung chuyển khoản:<pre>NAPTK {user_id}</pre>bạn bấm là sẽ tự động sao chép\n\n"
         "⚠️ Số tiền nạp tối thiểu: 20.000 VNĐ.\n"
         "💰 Sau khi chuyển khoản, vui lòng nhập số tiền bạn đã chuyển."
     )
