@@ -1,4 +1,4 @@
-from aiogram import F, Router, types
+from aiogram import Router, types
 from aiogram.filters import Command
 import json
 import os
@@ -32,7 +32,10 @@ router = Router()
 async def block_banned_users(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id in banned_users:
-        await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+        try:
+            await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+        except:
+            pass  # Nếu bot không gửi được tin nhắn, bỏ qua lỗi
         return  # Chặn luôn, không xử lý tiếp
 
 # Lệnh ban người dùng
@@ -71,3 +74,4 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
+
