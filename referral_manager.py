@@ -25,9 +25,6 @@ def save_referrals(data):
     with open(REFERRAL_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
-# Load dữ liệu khi bot khởi động
-referrals = load_referrals()
-
 # Chuyển múi giờ Việt Nam
 vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
 
@@ -35,7 +32,7 @@ def add_referral(referrer_id, new_user_id):
     referrer_id = str(referrer_id)
     new_user_id = str(new_user_id)
     
-    referrals = load_referrals()
+    referrals = load_referrals()  # Load lại dữ liệu mới nhất
     
     if referrer_id not in referrals:
         referrals[referrer_id] = []
@@ -46,7 +43,7 @@ def add_referral(referrer_id, new_user_id):
     
     timestamp_vn = datetime.now(vietnam_tz).isoformat()
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": timestamp_vn})
-    save_referrals(referrals)
+    save_referrals(referrals)  # Đảm bảo sử dụng hàm đúng để lưu dữ liệu
 
 # ===================== Hoa Hồng Handler =====================
 @router.message(lambda message: message.text == "🌹 Hoa hồng")
@@ -88,3 +85,4 @@ async def list_invited_handler(callback: types.CallbackQuery):
 
     invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
+
