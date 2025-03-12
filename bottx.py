@@ -409,8 +409,10 @@ async def transfer_money_callback(callback: types.CallbackQuery, state: FSMConte
 @router.message(TransferState.waiting_for_receiver)
 async def enter_receiver_id(message: types.Message, state: FSMContext):
     receiver_id = message.text.strip()
+
+    # Kiểm tra xem user có nhập số hay không
     if not receiver_id.isdigit():
-        await message.answer("❌ ID không hợp lệ. Vui lòng nhập lại:")
+        await message.answer("❌ ID không hợp lệ")
         return
     
     await state.update_data(receiver_id=receiver_id)
