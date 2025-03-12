@@ -47,7 +47,7 @@ if not os.path.exists(BANNED_USERS_FILE):
         json.dump({}, f, indent=4)
         
 from ban_manager import router as ban_router   
-from ban_manager import IsBanned
+from ban_manager import IsBanned, router as ban_router
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
