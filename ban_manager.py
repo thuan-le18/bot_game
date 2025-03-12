@@ -1,33 +1,44 @@
 from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram.filters import Command, Filter
+import json
+import os
 
 # ID của admin
 ADMIN_ID = "1985817060"
 
-# Danh sách người bị ban
+# File lưu danh sách bị ban
 BANNED_USERS_FILE = "banned_users.json"
-banned_users = {}
 
-# Hàm lưu danh sách vào file JSON
-import json
-import os
-
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
-
+# Load danh sách bị ban từ file
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-# Load danh sách banned từ file khi khởi động
+# Lưu danh sách bị ban vào file
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+# Danh sách người bị ban
 banned_users = load_json(BANNED_USERS_FILE)
 
-# Tạo router cho phần ban
+# Tạo router
 router = Router()
 
+# Lớp kiểm tra người dùng bị ban
+class IsBanned(Filter):
+    async def __call__(self, message: types.Message) -> bool:
+        return str(message.from_user.id) in banned_users
+
+# Kiểm tra và chặn người bị ban trước khi họ có thể làm gì
+@router.message(IsBanned())
+async def check_banned_users(message: types.Message):
+    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+    return  # Chặn tin nhắn, không cho xử lý tiếp
+
+# Lệnh ban người dùng
 @router.message(Command("ban"))
 async def ban_user(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID:
@@ -44,6 +55,7 @@ async def ban_user(message: types.Message):
     save_json(BANNED_USERS_FILE, banned_users)
     await message.answer(f"✅ Đã khóa tài khoản {user_id}.")
 
+# Lệnh mở khóa người dùng
 @router.message(Command("unban"))
 async def unban_user(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID:
@@ -62,9 +74,3 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
-
-@router.message()
-async def check_banned_users(message: types.Message):
-    if str(message.from_user.id) in banned_users:
-        await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-        return
