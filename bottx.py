@@ -262,12 +262,9 @@ async def vip_info(message: types.Message):
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
 
-# Cấu hình múi giờ Việt Nam
-vn_timezone = timezone(timedelta(hours=7))
-now_vn = datetime.now(vn_timezone)
-
+from datetime import datetime, timedelta
 import pytz
-from datetime import datetime, timezone, timedelta
+
 # ===================== Hoa Hồng Handler =====================
 @router.message(F.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
