@@ -39,6 +39,13 @@ def add_referral(referrer_id, new_user_id):
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
     save_json(REFERRAL_FILE, referrals)
 
+BANNED_USERS_FILE = "banned_users.json"
+
+# Kiểm tra nếu file chưa tồn tại thì tạo file trống
+if not os.path.exists(BANNED_USERS_FILE):
+    with open(BANNED_USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f, indent=4)
+        
 from ban_manager import router as ban_router    
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
