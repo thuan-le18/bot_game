@@ -79,6 +79,3 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
-        
-# Cấu hình logging nếu cần
-logging.basicConfig(level=logging.INFO)
