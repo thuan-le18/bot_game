@@ -6,9 +6,9 @@ import os
 # ID của admin
 ADMIN_ID = "1985817060"
 
-# File lưu danh sách bị ban & số dư user
+# File lưu danh sách bị ban & dữ liệu chính
 BANNED_USERS_FILE = "banned_users.json"
-BALANCE_FILE = "balance.json"  # Sửa đúng tên file
+DATA_FILE = "user_data.json"  # Đây mới là file chính
 
 # Load dữ liệu từ file
 def load_json(filename):
@@ -22,9 +22,10 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
-# Danh sách người bị ban & số dư
+# Danh sách bị ban
 banned_users = load_json(BANNED_USERS_FILE)
-balances = load_json(BALANCE_FILE)
+data = load_json(DATA_FILE)  # Tải dữ liệu chính
+balances = data.get("balances", {})  # Lấy số dư từ user_data.json
 
 # Tạo router
 router = Router()
@@ -34,16 +35,17 @@ class IsBanned(BaseFilter):
     async def __call__(self, obj) -> bool:
         return str(obj.from_user.id) in banned_users
 
-# **Chặn toàn bộ tin nhắn và nút bấm của user bị ban**
+# **Chặn tin nhắn của user bị ban**
 @router.message(IsBanned())
 async def block_banned_users(message: types.Message):
     await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nVui lòng nhắn tin @hoanganh11829 để biết lý do.")
-    return  # Dừng lại, không xử lý tiếp
+    return
 
+# **Chặn nút bấm của user bị ban**
 @router.callback_query(IsBanned())
 async def block_banned_callback(callback: types.CallbackQuery):
     await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nNhắn tin @hoanganh11829 để biết lý do.", show_alert=True)
-    return  # Dừng lại, không xử lý tiếp
+    return
 
 # **Lệnh ban người dùng**
 @router.message(Command("ban"))
@@ -58,16 +60,18 @@ async def ban_user(message: types.Message):
         return
     
     user_id = args[1]
-    
+
     # Cập nhật danh sách bị ban
     banned_users[user_id] = True
     save_json(BANNED_USERS_FILE, banned_users)
 
-    # Trừ hết số dư user về 0
-    balances[user_id] = 0
-    save_json(BALANCE_FILE, balances)
+    # Trừ hết số dư về 0
+    if user_id in balances:
+        balances[user_id] = 0
+        data["balances"] = balances  # Cập nhật lại file dữ liệu
+        save_json(DATA_FILE, data)
 
-    await message.answer(f"✅ Đã khóa tài khoản {user_id} và trừ hết số dư.")
+    await message.answer(f"✅ Đã khóa tài khoản {user_id}, trừ hết số dư.")
 
 # **Lệnh mở khóa người dùng**
 @router.message(Command("unban"))
@@ -88,5 +92,4 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
-
 
