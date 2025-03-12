@@ -46,7 +46,9 @@ if not os.path.exists(BANNED_USERS_FILE):
     with open(BANNED_USERS_FILE, "w", encoding="utf-8") as f:
         json.dump({}, f, indent=4)
         
-from ban_manager import router as ban_router    
+from ban_manager import router as ban_router   
+from ban_manager import IsBanned
+
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
