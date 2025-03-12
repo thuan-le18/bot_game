@@ -6,6 +6,7 @@ from datetime import datetime
 from aiogram import types, Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import datetime, timedelta
 
 # File lưu trữ danh sách mời
 REFERRAL_FILE = "referrals.json"
@@ -58,7 +59,7 @@ async def referral_handler(message: types.Message):
     today = now_vn.strftime("%Y-%m-%d")
     current_month = now_vn.strftime("%Y-%m")
     
-    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[1] == today)
     month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -84,6 +85,6 @@ async def list_invited_handler(callback: types.CallbackQuery):
         await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
         return
 
-    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
+    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[1]})" for ref in records)
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
 
