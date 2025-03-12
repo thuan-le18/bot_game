@@ -17,7 +17,7 @@ from aiogram.types import (
 
 from ban_manager import router as ban_router
 import referral_manager
-referral_manager.bot = bot 
+referral_manager.bot = Bot 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
