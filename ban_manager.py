@@ -2,21 +2,20 @@ import json
 import os
 from aiogram import Router, types
 from aiogram.filters import Command, BaseFilter
+from aiogram.utils.keyboard import InlineKeyboardMarkup
 
 # ID của admin
-ADMIN_ID = 1985817060  # Đảm bảo là số nguyên
+ADMIN_ID = 1985817060
 
 # File lưu danh sách bị ban
 BANNED_USERS_FILE = "banned_users.json"
 
-# Load danh sách bị ban từ file
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-# Lưu danh sách bị ban vào file
 def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
@@ -27,21 +26,18 @@ router = Router()
 # Lớp kiểm tra người dùng bị ban
 class IsBanned(BaseFilter):
     async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
-        banned_users = load_json(BANNED_USERS_FILE)  # Load danh sách mới nhất
-        is_banned = str(event.from_user.id) in banned_users
-        if is_banned:
-            print(f"Người dùng {event.from_user.id} bị chặn.")
-        return is_banned
+        banned_users = load_json(BANNED_USERS_FILE)
+        return str(event.from_user.id) in banned_users
 
-# Kiểm tra và chặn người bị ban trước khi họ có thể làm gì
+# Chặn tin nhắn và xóa tất cả nút nếu bị ban
 @router.message(IsBanned())
 async def check_banned_users(message: types.Message):
-    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", reply_markup=types.ReplyKeyboardRemove())
 
 @router.callback_query(IsBanned())
 async def check_banned_callbacks(callback: types.CallbackQuery):
     await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
-    return  # Ngăn người dùng thực hiện hành động tiếp theo
+    await callback.message.edit_reply_markup(reply_markup=None)
 
 @router.inline_query(IsBanned())
 async def check_banned_inline(inline_query: types.InlineQuery):
@@ -100,4 +96,5 @@ async def banned_list(message: types.Message):
     else:
         banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
         await message.answer(banned_list_text)
+
 
