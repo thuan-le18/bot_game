@@ -1218,7 +1218,7 @@ async def start_withdraw(message: types.Message):
         "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
         "⚠️ Lưu ý:\n"
         "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
-        "- Số tiền rút tối thiểu là 2200k.\n"
+        "- Số tiền rút tối thiểu là 200k.\n"
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
