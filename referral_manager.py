@@ -7,7 +7,7 @@ from aiogram import types, Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
-
+from aiogram import Bot, Dispatcher, types, Router, F
 # File lưu trữ danh sách mời
 REFERRAL_FILE = "referrals.json"
 
