@@ -14,34 +14,10 @@ from aiogram.types import (
     InlineKeyboardMarkup,   # Dòng này
     InlineKeyboardButton    # và dòng này
 )
-import os
-from aiogram.filters import Command
-# File lưu trữ danh sách mời
-REFERRAL_FILE = "referrals.json"
 
-# Hàm tải danh sách từ file JSON
-def load_referrals():
-    if os.path.exists(REFERRAL_FILE):
-        with open(REFERRAL_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-# Hàm lưu danh sách vào file JSON
-def save_referrals():
-    with open(REFERRAL_FILE, "w", encoding="utf-8") as f:
-        json.dump(referrals, f, indent=4)
-
-# Load dữ liệu khi bot khởi động
-referrals = load_referrals()
-def add_referral(referrer_id, new_user_id):
-    if referrer_id not in referrals:
-        referrals[referrer_id] = []
-    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
-    save_json(REFERRAL_FILE, referrals)
-  
-    
 from ban_manager import router as ban_router
-
+import referral_manager
+referral_manager.bot = bot 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -52,8 +28,8 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
-dp.include_router(ban_router)
-
+dp.include_router(ban_router) 
+dp.include_router(referral_manager.router) 
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
@@ -107,24 +83,6 @@ def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     user_history[user_id].append(record)
     save_data(data)
 
-# ===================== Hàm tính hoa hồng 2% =====================
-async def add_commission(user_id: str, bet_amount: int):
-    """
-    Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
-    """
-    referrer_id = None
-    for ref_id, referred_list in referrals.items():
-        if user_id in referred_list:
-            referrer_id = ref_id
-            break
-    if referrer_id:
-        commission = int(bet_amount * 0.02)
-        user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
-        save_data(data)
-        try:
-            await bot.send_message(referrer_id, f"🎉 Hoa hồng 2% từ cược của người chơi {user_id}: {commission} VNĐ!")
-        except Exception as e:
-            logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
 
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
