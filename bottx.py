@@ -16,7 +16,7 @@ from aiogram.types import (
 )
 
 from ban_manager import router as ban_router
-import referral_manager
+
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -28,7 +28,6 @@ dp = Dispatcher()
 router = Router()
 dp.include_router(router)
 dp.include_router(ban_router) 
-dp.include_router(referral_manager.router) 
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
