@@ -159,7 +159,7 @@ def calculate_multiplier(safe_count, bomb_count):
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎮 Danh sách game"), KeyboardButton(text="💰 Xem số dư")],
-        [KeyboardButton(text="📜 Lịch sử cược"), KeyboardButton(text="🔄 Nạp tiền")],
+        [KeyboardButton(text="📜 Lịch sử cược"), KeyboardButton(text="🏧 Nạp tiền")],
         [KeyboardButton(text="💸 Rút tiền"), KeyboardButton(text="🌹 Hoa hồng")],
         [KeyboardButton(text="🏆 VIP"), KeyboardButton(text="💬 Hỗ trợ")]
     ],
@@ -1067,7 +1067,7 @@ def add_deposit_record(user_id, amount):
         deposit_records[user_id] = []
     deposit_records[user_id].append({"time": get_vietnam_time(), "amount": amount})
 
-@router.message(F.text == "🔄 Nạp tiền")
+@router.message(F.text == "🏧 Nạp tiền")
 async def start_deposit(message: types.Message):
     user_id = str(message.from_user.id)
     deposit_states[user_id] = "awaiting_amount"
@@ -1269,8 +1269,6 @@ def get_vietnam_time():
                           and len(msg.text.split()) >= 4 
                           and msg.text.split()[0].isdigit())
 async def process_withdraw_request(message: types.Message):
-    global deposit_history  # Đảm bảo biến này được dùng ở phạm vi toàn cục
-
     user_id = str(message.from_user.id)
     logging.info(f"[Yêu cầu Rút tiền] Nhận từ user {user_id}: {message.text}")
 
@@ -1287,15 +1285,6 @@ async def process_withdraw_request(message: types.Message):
 
     if user_id not in user_balance:
         await message.answer("⚠️ Bạn chưa có tài khoản. Vui lòng dùng /start để tạo tài khoản.", reply_markup=main_menu)
-        return
-
-    # Đảm bảo deposit_history là dictionary hợp lệ
-    if 'deposit_history' not in globals():
-        deposit_history = {}
-
-    # Kiểm tra nếu user chưa nạp tiền lần nào
-    if not deposit_history.get(user_id, []):
-        await message.answer("⚠️ Bạn cần nạp ít nhất 1 lần để có thể rút tiền.", reply_markup=main_menu)
         return
 
     if user_balance.get(user_id, 0) < amount:
@@ -1344,7 +1333,7 @@ async def process_withdraw_request(message: types.Message):
         reply_markup=main_menu
     )
 
-    await message.answer("🔔 *Lưu ý:* Tài khoản của bạn cần nạp ít nhất 1 lần để hệ thống ghi nhận và rút tiền.", parse_mode="Markdown")
+    await message.answer("💬 Bạn vui lòng nhắn tin cho hỗ trợ để được rút tiền.", parse_mode="Markdown")
 
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 # ======================================================================
