@@ -31,7 +31,12 @@ referrals = load_referrals()
 def add_referral(referrer_id, new_user_id):
     if referrer_id not in referrals:
         referrals[referrer_id] = []
-    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.utcnow().isoformat()})
+
+    # Chuyển timestamp sang múi giờ Việt Nam
+    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    timestamp_vn = datetime.now(vietnam_tz).isoformat()
+
+    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": timestamp_vn})
     save_referrals()
 
 # ===================== Hoa Hồng Handler =====================
@@ -46,10 +51,10 @@ async def referral_handler(message: types.Message):
     now_vn = datetime.now(vietnam_tz)
     
     today = now_vn.strftime("%Y-%m-%d")
-    today_count = sum(1 for ref in records if datetime.fromisoformat(ref.get("timestamp", "")).astimezone(vietnam_tz).strftime("%Y-%m-%d") == today)
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
     
     current_month = now_vn.strftime("%Y-%m")
-    month_count = sum(1 for ref in records if datetime.fromisoformat(ref.get("timestamp", "")).astimezone(vietnam_tz).strftime("%Y-%m") == current_month)
+    month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
