@@ -28,11 +28,10 @@ def save_referrals():
 # Load dữ liệu khi bot khởi động
 referrals = load_referrals()
 
-# Hàm thêm lượt giới thiệu
 def add_referral(referrer_id, new_user_id):
     if referrer_id not in referrals:
         referrals[referrer_id] = []
-    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
+    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.utcnow().isoformat()})
     save_referrals()
 
 # ===================== Hoa Hồng Handler =====================
@@ -47,22 +46,22 @@ async def referral_handler(message: types.Message):
     now_vn = datetime.now(vietnam_tz)
     
     today = now_vn.strftime("%Y-%m-%d")
-    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
+    today_count = sum(1 for ref in records if datetime.fromisoformat(ref.get("timestamp", "")).astimezone(vietnam_tz).strftime("%Y-%m-%d") == today)
     
     current_month = now_vn.strftime("%Y-%m")
-    month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
+    month_count = sum(1 for ref in records if datetime.fromisoformat(ref.get("timestamp", "")).astimezone(vietnam_tz).strftime("%Y-%m") == current_month)
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
     ])
 
     await message.answer(
-        f"🌹 Link mời của bạn: {referral_link}\n"
-        f"Tổng lượt mời: {len(records)}\n"
-        f"Lượt mời hôm nay: {today_count}\n"
-        f"Lượt mời tháng này: {month_count}\n\n"
-        "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
-        reply_markup=keyboard
+         f"🌹 Link mời của bạn: {referral_link}\n"
+         f"Tổng lượt mời: {len(records)}\n"
+         f"Lượt mời hôm nay: {today_count}\n"
+         f"Lượt mời tháng này: {month_count}\n\n"
+         "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
+         reply_markup=keyboard
     )
 
 @router.callback_query(lambda callback: callback.data == "list_invited")
@@ -76,23 +75,3 @@ async def list_invited_handler(callback: types.CallbackQuery):
 
     invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
-
-# ===================== Hàm tính hoa hồng 2% =====================
-async def add_commission(user_id: str, bet_amount: int):
-    """
-    Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
-    """
-    referrer_id = None
-    for ref_id, referred_list in referrals.items():
-        if any(ref["user_id"] == user_id for ref in referred_list):
-            referrer_id = ref_id
-            break
-    if referrer_id:
-        commission = int(bet_amount * 0.02)
-        user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
-        save_data(data)
-        try:
-            await bot.send_message(referrer_id, f"🎉 Hoa hồng 2% từ cược của người chơi {user_id}: {commission} VNĐ!")
-        except Exception as e:
-            logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
-
