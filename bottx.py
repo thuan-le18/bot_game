@@ -263,7 +263,7 @@ async def vip_info(message: types.Message):
 
     await message.answer(
         f"🏆 VIP của bạn: {current_vip}\n"
-        f"🆔 ID tài khoản: {user_id}\n"
+        f"👥 ID tài khoản bạn: {user_id}\n"
         f"💰 Tổng nạp: {total_deposit} VNĐ",
         reply_markup=main_menu
     )
