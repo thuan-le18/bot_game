@@ -272,9 +272,12 @@ def load_referrals():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-from datetime import datetime, timedelta
 import pytz
+from datetime import datetime, timezone, timedelta
 
+# Cấu hình múi giờ Việt Nam
+vn_timezone = timezone(timedelta(hours=7))
+now_vn = datetime.now(vn_timezone)
 # ===================== Hoa Hồng Handler =====================
 @router.message(F.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
