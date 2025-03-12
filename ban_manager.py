@@ -29,18 +29,22 @@ router = Router()
 
 # Lớp kiểm tra người dùng bị ban
 class IsBanned(Filter):
-    async def __call__(self, event: types.Message | types.CallbackQuery) -> bool:
+    async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
         return str(event.from_user.id) in banned_users
 
 # Kiểm tra và chặn người bị ban trước khi họ có thể làm gì
 @router.message(IsBanned())
 async def check_banned_users(message: types.Message):
-    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nVui lòng nhắn tin admin @hoanganh11829 để biết lý do.")
+    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
     return
 
 @router.callback_query(IsBanned())
 async def check_banned_callbacks(callback: types.CallbackQuery):
     await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
+
+@router.inline_query(IsBanned())
+async def check_banned_inline(inline_query: types.InlineQuery):
+    await inline_query.answer([], cache_time=1, switch_pm_text="🚫 Bạn đã bị khóa.", switch_pm_parameter="banned")
 
 # Lệnh ban người dùng
 @router.message(Command("ban"))
