@@ -1,5 +1,5 @@
-from aiogram import Router, types
-from aiogram.filters import Command, BaseFilter
+from aiogram import F, Router, types
+from aiogram.filters import Command
 import json
 import os
 
@@ -9,17 +9,14 @@ ADMIN_ID = "1985817060"
 # File lưu danh sách bị ban
 BANNED_USERS_FILE = "banned_users.json"
 
-# Hàm load dữ liệu từ JSON
+# Load danh sách bị ban từ file
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return {}
+            return json.load(f)
     return {}
 
-# Hàm lưu dữ liệu vào JSON
+# Lưu danh sách bị ban vào file
 def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
@@ -30,16 +27,13 @@ banned_users = load_json(BANNED_USERS_FILE)
 # Tạo router
 router = Router()
 
-# Bộ lọc kiểm tra người dùng bị ban
-class IsBanned(BaseFilter):
-    async def __call__(self, message: types.Message) -> bool:
-        return str(message.from_user.id) in banned_users
-
-# Middleware chặn người dùng bị ban
-@router.message(IsBanned())
-async def check_banned_users(message: types.Message):
-    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-    return  # Chặn xử lý tiếp theo
+# 🔥 CHẶN TOÀN BỘ NGƯỜI BỊ BAN 🔥
+@router.message()
+async def block_banned_users(message: types.Message):
+    user_id = str(message.from_user.id)
+    if user_id in banned_users:
+        await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+        return  # Chặn luôn, không xử lý tiếp
 
 # Lệnh ban người dùng
 @router.message(Command("ban"))
@@ -54,10 +48,6 @@ async def ban_user(message: types.Message):
         return
     
     user_id = args[1]
-    if user_id in banned_users:
-        await message.answer(f"⚠️ Người dùng {user_id} đã bị khóa trước đó.")
-        return
-    
     banned_users[user_id] = True
     save_json(BANNED_USERS_FILE, banned_users)
     await message.answer(f"✅ Đã khóa tài khoản {user_id}.")
@@ -80,5 +70,4 @@ async def unban_user(message: types.Message):
         save_json(BANNED_USERS_FILE, banned_users)
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
-        await message.answer("⚠️ Người dùng này không bị khóa.")
-
+        await message.answer("❌ Tài khoản này không bị khóa.")
