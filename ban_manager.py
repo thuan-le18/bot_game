@@ -1,7 +1,8 @@
 import json
 import os
-from aiogram import Router, types
+from aiogram import Router, types, BaseMiddleware
 from aiogram.filters import Command, Filter
+from typing import Any, Awaitable, Callable, Dict, Union
 
 # ID của admin
 ADMIN_ID = "1985817060"
@@ -24,34 +25,24 @@ def save_json(filename, data):
 # Tạo router
 router = Router()
 
-# Lớp kiểm tra người dùng bị ban
-class IsBanned(Filter):
-    async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
-        banned_users = load_json(BANNED_USERS_FILE)  # Load danh sách mới nhất
-        return str(event.from_user.id) in banned_users
+# Middleware kiểm tra người dùng bị ban
+class BanMiddleware(BaseMiddleware):
+    async def __call__(
+        self, handler: Callable[[types.TelegramObject, Dict[str, Any]], Awaitable[Any]], event: types.TelegramObject, data: Dict[str, Any]
+    ) -> Any:
+        banned_users = load_json(BANNED_USERS_FILE)
+        user_id = str(getattr(event, "from_user", {}).get("id", ""))
+        if user_id in banned_users:
+            if isinstance(event, types.Message):
+                await event.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+            elif isinstance(event, types.CallbackQuery):
+                await event.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
+            return
+        return await handler(event, data)
 
-# Kiểm tra và chặn người bị ban trước khi họ có thể làm gì
-@router.message(IsBanned())
-async def check_banned_users(message: types.Message):
-    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-    return
-
-@router.callback_query(IsBanned())
-async def check_banned_callbacks(callback: types.CallbackQuery):
-    await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
-
-@router.inline_query(IsBanned())
-async def check_banned_inline(inline_query: types.InlineQuery):
-    await inline_query.answer([], cache_time=1, switch_pm_text="🚫 Bạn đã bị khóa.", switch_pm_parameter="banned")
-
-# Kiểm tra các lệnh và hành động khác
-@router.edited_message(IsBanned())
-async def check_banned_edited_message(message: types.Message):
-    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-
-@router.chat_member(IsBanned())
-async def check_banned_chat_member(update: types.ChatMemberUpdated):
-    pass  # Có thể xử lý theo nhu cầu
+router.message.middleware(BanMiddleware())
+router.callback_query.middleware(BanMiddleware())
+router.inline_query.middleware(BanMiddleware())
 
 # Lệnh ban người dùng
 @router.message(Command("ban"))
@@ -92,4 +83,3 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
-
