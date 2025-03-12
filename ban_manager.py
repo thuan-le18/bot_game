@@ -1,5 +1,5 @@
 from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram.filters import Command, BaseFilter
 import json
 import os
 
@@ -11,14 +11,14 @@ BANNED_USERS_FILE = "banned_users.json"
 
 # Load danh sách bị ban từ file
 def load_json(filename):
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
+    if os.path.exists(BANNED_USERS_FILE):
+        with open(BANNED_USERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 # Lưu danh sách bị ban vào file
 def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(BANNED_USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
 # Danh sách người bị ban
@@ -27,16 +27,22 @@ banned_users = load_json(BANNED_USERS_FILE)
 # Tạo router
 router = Router()
 
-# 🔥 CHẶN TOÀN BỘ NGƯỜI BỊ BAN 🔥
-@router.message()
-async def block_banned_users(message: types.Message):
-    user_id = str(message.from_user.id)
-    if user_id in banned_users:
-        try:
-            await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-        except:
-            pass  # Nếu bot không gửi được tin nhắn, bỏ qua lỗi
-        return  # Chặn luôn, không xử lý tiếp
+# Middleware kiểm tra user có bị ban không
+class IsBanned(BaseFilter):
+    async def __call__(self, message: types.Message) -> bool:
+        user_id = str(message.from_user.id)
+        if user_id in banned_users:
+            try:
+                await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+            except:
+                pass  # Nếu bot không gửi được tin nhắn, bỏ qua lỗi
+            return True
+        return False
+
+# 🔥 Chặn tất cả tin nhắn từ người bị ban
+@router.message(IsBanned())
+async def blocked_user_message(message: types.Message):
+    return  # Không xử lý gì thêm nếu user bị ban
 
 # Lệnh ban người dùng
 @router.message(Command("ban"))
@@ -74,4 +80,3 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
-
