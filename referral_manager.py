@@ -28,14 +28,21 @@ def save_referrals():
 # Load dữ liệu khi bot khởi động
 referrals = load_referrals()
 
+# Chuyển múi giờ Việt Nam
+vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+
 def add_referral(referrer_id, new_user_id):
+    referrer_id = str(referrer_id)
+    new_user_id = str(new_user_id)
+    
     if referrer_id not in referrals:
         referrals[referrer_id] = []
-
-    # Chuyển timestamp sang múi giờ Việt Nam
-    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    
+    # Kiểm tra nếu user đã tồn tại trong danh sách tránh trùng lặp
+    if any(ref["user_id"] == new_user_id for ref in referrals[referrer_id]):
+        return
+    
     timestamp_vn = datetime.now(vietnam_tz).isoformat()
-
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": timestamp_vn})
     save_referrals()
 
@@ -45,21 +52,18 @@ async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
     records = referrals.get(user_id, [])
-
-    # Chuyển sang múi giờ Việt Nam (GMT+7)
-    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    
     now_vn = datetime.now(vietnam_tz)
-    
     today = now_vn.strftime("%Y-%m-%d")
-    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
-    
     current_month = now_vn.strftime("%Y-%m")
+    
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
     month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
-
+    
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
     ])
-
+    
     await message.answer(
          f"🌹 Link mời của bạn: {referral_link}\n"
          f"Tổng lượt mời: {len(records)}\n"
@@ -78,5 +82,5 @@ async def list_invited_handler(callback: types.CallbackQuery):
         await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
         return
 
-    invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
+    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
