@@ -3,7 +3,7 @@ import asyncio
 import random
 import json
 from datetime import datetime, timedelta
-
+from aiogram.filters.command import Command
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
     ReplyKeyboardMarkup,
