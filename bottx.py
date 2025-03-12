@@ -261,8 +261,16 @@ async def vip_info(message: types.Message):
             current_vip = vip
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
-from datetime import datetime, timedelta
-import pytz
+vn_timezone = timezone(timedelta(hours=7))
+now_vn = datetime.now(vn_timezone)
+
+# Hàm load dữ liệu referral từ file
+def load_referrals():
+    try:
+        with open("referrals.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 # ===================== Hoa Hồng Handler =====================
 @router.message(lambda message: message.text == "🌹 Hoa hồng")
@@ -271,26 +279,27 @@ async def referral_handler(message: types.Message):
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
     referrals = load_referrals()  # Load lại dữ liệu mới nhất
     records = referrals.get(user_id, [])
-    
+
     today = now_vn.strftime("%Y-%m-%d")
     current_month = now_vn.strftime("%Y-%m")
-    
+
     today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
     month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
-    
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
     ])
-    
+
     await message.answer(
-         f"🌹 Link mời của bạn: {referral_link}\n"
-         f"Tổng lượt mời: {len(records)}\n"
-         f"Lượt mời hôm nay: {today_count}\n"
-         f"Lượt mời tháng này: {month_count}\n\n"
-         "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
-         reply_markup=keyboard
+        f"🌹 **Link mời của bạn:** {referral_link}\n\n"
+        f"👥 **Tổng lượt mời:** {len(records)}\n"
+        f"📅 **Lượt mời hôm nay:** {today_count}\n"
+        f"📆 **Lượt mời tháng này:** {month_count}\n\n"
+        "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
+        reply_markup=keyboard
     )
 
+# ===================== Danh sách đã mời =====================
 @router.callback_query(lambda callback: callback.data == "list_invited")
 async def list_invited_handler(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
@@ -301,7 +310,11 @@ async def list_invited_handler(callback: types.CallbackQuery):
         await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
         return
 
-    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
+    invited_list = "\n".join(f"- **{ref['user_id']}** ({ref['timestamp'].split('T')[0]})" for ref in records[:10])  # Hiển thị 10 người đầu tiên
+
+    if len(records) > 10:
+        invited_list += f"\n\n...và {len(records) - 10} người nữa."
+
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
     
 # ===================== Danh sách game Handler =====================
