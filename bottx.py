@@ -261,23 +261,13 @@ async def vip_info(message: types.Message):
             current_vip = vip
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
-vn_timezone = timezone(timedelta(hours=7))
-now_vn = datetime.now(vn_timezone)
-
-# Hàm load dữ liệu referral từ file
-def load_referrals():
-    try:
-        with open("referrals.json", "r", encoding="utf-8") as file:
-            return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-import pytz
-from datetime import datetime, timezone, timedelta
 
 # Cấu hình múi giờ Việt Nam
 vn_timezone = timezone(timedelta(hours=7))
 now_vn = datetime.now(vn_timezone)
+
+import pytz
+from datetime import datetime, timezone, timedelta
 # ===================== Hoa Hồng Handler =====================
 @router.message(F.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
