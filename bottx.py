@@ -1286,6 +1286,12 @@ async def process_withdraw_request(message: types.Message):
     if user_id not in user_balance:
         await message.answer("⚠️ Bạn chưa có tài khoản. Vui lòng dùng /start để tạo tài khoản.", reply_markup=main_menu)
         return
+
+    # Kiểm tra nếu người dùng đã nạp tiền ít nhất 1 lần
+    if user_id not in deposit_history or len(deposit_history[user_id]) == 0:
+        await message.answer("⚠️ Bạn cần nạp ít nhất 1 lần để có thể rút tiền. Nếu có thắc mắc, vui lòng liên hệ hỗ trợ.", reply_markup=main_menu)
+        return
+
     if user_balance.get(user_id, 0) < amount:
         await message.answer("⚠️ Số dư của bạn không đủ để rút tiền.", reply_markup=main_menu)
         return
@@ -1331,6 +1337,9 @@ async def process_withdraw_request(message: types.Message):
         parse_mode="Markdown",
         reply_markup=main_menu
     )
+
+    # Thêm tin nhắn nhắc nhở nạp tiền sau khi gửi yêu cầu rút
+    await message.answer("🔔 *Lưu ý:* Tài khoản của bạn cần nạp ít nhất 1 lần để hệ thống ghi nhận và rút tiền.", parse_mode="Markdown")
 
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 # ======================================================================
