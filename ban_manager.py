@@ -27,9 +27,10 @@ router = Router()
 # Lớp kiểm tra người dùng bị ban
 class IsBanned(BaseFilter):
     async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
-        banned_users = load_json(BANNED_USERS_FILE)
+        banned_users = load_json(BANNED_USERS_FILE)  # Load danh sách mới nhất
         is_banned = str(event.from_user.id) in banned_users
-        print(f"Kiểm tra ban: {event.from_user.id} - Bị ban: {is_banned}")  # Debug
+        if is_banned:
+            print(f"Người dùng {event.from_user.id} bị chặn.")
         return is_banned
 
 # Kiểm tra và chặn người bị ban trước khi họ có thể làm gì
@@ -40,6 +41,7 @@ async def check_banned_users(message: types.Message):
 @router.callback_query(IsBanned())
 async def check_banned_callbacks(callback: types.CallbackQuery):
     await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
+    return  # Ngăn người dùng thực hiện hành động tiếp theo
 
 @router.inline_query(IsBanned())
 async def check_banned_inline(inline_query: types.InlineQuery):
@@ -98,3 +100,4 @@ async def banned_list(message: types.Message):
     else:
         banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
         await message.answer(banned_list_text)
+
