@@ -44,6 +44,15 @@ async def check_banned_callbacks(callback: types.CallbackQuery):
 async def check_banned_inline(inline_query: types.InlineQuery):
     await inline_query.answer([], cache_time=1, switch_pm_text="🚫 Bạn đã bị khóa.", switch_pm_parameter="banned")
 
+# Kiểm tra các lệnh và hành động khác
+@router.edited_message(IsBanned())
+async def check_banned_edited_message(message: types.Message):
+    await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
+
+@router.chat_member(IsBanned())
+async def check_banned_chat_member(update: types.ChatMemberUpdated):
+    pass  # Có thể xử lý theo nhu cầu
+
 # Lệnh ban người dùng
 @router.message(Command("ban"))
 async def ban_user(message: types.Message):
@@ -61,7 +70,7 @@ async def ban_user(message: types.Message):
     banned_users[user_id] = True
     save_json(BANNED_USERS_FILE, banned_users)
     
-    await message.answer(f"✅ Đã khóa tài khoản {user_id}, người này sẽ không thể sử dụng nút bấm.")
+    await message.answer(f"✅ Đã khóa tài khoản {user_id}, người này sẽ không thể sử dụng bot.")
 
 # Lệnh mở khóa người dùng
 @router.message(Command("unban"))
@@ -83,3 +92,4 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
+
