@@ -6,8 +6,7 @@ from datetime import datetime
 from aiogram import types, Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from datetime import datetime, timedelta
-from aiogram import Bot, Dispatcher, types, Router, F
+
 # File lưu trữ danh sách mời
 REFERRAL_FILE = "referrals.json"
 
@@ -22,9 +21,9 @@ def load_referrals():
     return {}
 
 # Hàm lưu danh sách vào file JSON
-def save_referrals():
+def save_referrals(data):
     with open(REFERRAL_FILE, "w", encoding="utf-8") as f:
-        json.dump(referrals, f, indent=4)
+        json.dump(data, f, indent=4)
 
 # Load dữ liệu khi bot khởi động
 referrals = load_referrals()
@@ -36,6 +35,8 @@ def add_referral(referrer_id, new_user_id):
     referrer_id = str(referrer_id)
     new_user_id = str(new_user_id)
     
+    referrals = load_referrals()
+    
     if referrer_id not in referrals:
         referrals[referrer_id] = []
     
@@ -45,29 +46,27 @@ def add_referral(referrer_id, new_user_id):
     
     timestamp_vn = datetime.now(vietnam_tz).isoformat()
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": timestamp_vn})
-    save_referrals()
+    save_referrals(referrals)
 
 # ===================== Hoa Hồng Handler =====================
 @router.message(lambda message: message.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
-    records = referrals.get(user_id, [])
-
-    # Chuyển sang múi giờ Việt Nam (GMT+7)
-    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    current_referrals = load_referrals()  # Load lại dữ liệu mới nhất
+    records = current_referrals.get(user_id, [])
+    
     now_vn = datetime.now(vietnam_tz)
-    
     today = now_vn.strftime("%Y-%m-%d")
-    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
-    
     current_month = now_vn.strftime("%Y-%m")
+    
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
     month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
-
+    
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
     ])
-
+    
     await message.answer(
          f"🌹 Link mời của bạn: {referral_link}\n"
          f"Tổng lượt mời: {len(records)}\n"
@@ -77,14 +76,15 @@ async def referral_handler(message: types.Message):
          reply_markup=keyboard
     )
 
-@router.callback_query(F.data == "list_invited")
+@router.callback_query(lambda callback: callback.data == "list_invited")
 async def list_invited_handler(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
-    records = referrals.get(user_id, [])
+    current_referrals = load_referrals()  # Load lại dữ liệu mới nhất
+    records = current_referrals.get(user_id, [])
 
     if not records:
         await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
         return
 
-    invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
+    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
