@@ -39,15 +39,7 @@ def add_referral(referrer_id, new_user_id):
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
     save_json(REFERRAL_FILE, referrals)
 
-BANNED_USERS_FILE = "banned_users.json"
 
-# Kiểm tra nếu file chưa tồn tại thì tạo file trống
-if not os.path.exists(BANNED_USERS_FILE):
-    with open(BANNED_USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f, indent=4)
-        
-from ban_manager import router as ban_router   
-from ban_manager import IsBanned, router as ban_router
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
@@ -59,7 +51,6 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
-dp.include_router(ban_router)
 
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
@@ -265,11 +256,17 @@ async def vip_info(message: types.Message):
     user_id = str(message.from_user.id)
     total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
     current_vip = "Chưa đạt VIP nào"
+    
     for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
         if total_deposit >= req_amount:
             current_vip = vip
-    await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
+    await message.answer(
+        f"🏆 VIP của bạn: {current_vip}\n"
+        f"🆔 ID tài khoản: {user_id}\n"
+        f"💰 Tổng nạp: {total_deposit} VNĐ",
+        reply_markup=main_menu
+    )
 
 from datetime import datetime, timedelta
 import pytz
@@ -405,7 +402,7 @@ class TransferState(StatesGroup):
 # ===================== Chuyển Tiền Handler =====================
 @router.callback_query(F.data == "transfer_money")
 async def transfer_money_callback(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.answer("🔹 Nhập ID người nhận:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
+    await callback.message.answer("🔹Nhập ID người nhận trước:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
     await state.set_state(TransferState.waiting_for_receiver)
     await callback.answer()
         
@@ -634,11 +631,11 @@ async def initiate_crash_game(message: types.Message):
             current_multiplier = crash_games[user_id]["current_multiplier"]
 
             if current_multiplier < 2.0:
-                increment = round(random.uniform(0.1, 0.3), 2)
+                increment = round(random.uniform(0.1, 0.2), 2)
             elif current_multiplier < 5.0:
-                increment = round(random.uniform(0.3, 0.6), 2)
+                increment = round(random.uniform(0.3, 0.4), 2)
             else:
-                increment = round(random.uniform(0.5, 1.0), 2)
+                increment = round(random.uniform(0.5, 0.7), 2)
 
             new_multiplier = round(current_multiplier + increment, 2)
             if new_multiplier > 20.0:
@@ -1221,7 +1218,7 @@ async def start_withdraw(message: types.Message):
         "📝 Ví dụ: 1000000 NguyenVanA BIDV 1234567890\n\n"
         "⚠️ Lưu ý:\n"
         "- Số tiền phải nhỏ hơn hoặc bằng số dư hiện tại.\n"
-        "- Số tiền rút tối thiểu là 100k.\n"
+        "- Số tiền rút tối thiểu là 2200k.\n"
         "- Họ tên phải khớp với tên chủ tài khoản ngân hàng.\n"
         "- Sau khi kiểm tra, admin sẽ xử lý giao dịch."
     )
@@ -1280,8 +1277,8 @@ async def process_withdraw_request(message: types.Message):
         await message.answer("⚠️ Số tiền không hợp lệ.", reply_markup=main_menu)
         return
 
-    if amount < 100000:
-        await message.answer("⚠️ Số tiền rút tối thiểu là 100.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
+    if amount < 200000:
+        await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
         return
 
     if user_id not in user_balance:
@@ -1359,8 +1356,8 @@ async def admin_confirm_withdraw(message: types.Message):
         amount = int(parts[2])
         
         # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
-        if amount < 100000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 100.000 VNĐ. Vui lòng nhập lại.")
+        if amount < 200000:
+            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại.")
             return
 
         # Tìm yêu cầu rút tiền của target_user_id với số tiền bằng amount và trạng thái "pending"
