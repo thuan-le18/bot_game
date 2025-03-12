@@ -1275,25 +1275,29 @@ async def process_withdraw_request(message: types.Message):
     parts = message.text.strip().split()
     try:
         amount = int(parts[0])
-    except Exception as e:
+    except ValueError:
         await message.answer("⚠️ Số tiền không hợp lệ.", reply_markup=main_menu)
         return
 
     if amount < 200000:
-        await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại theo mẫu.", reply_markup=main_menu)
+        await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại.", reply_markup=main_menu)
         return
 
     if user_id not in user_balance:
         await message.answer("⚠️ Bạn chưa có tài khoản. Vui lòng dùng /start để tạo tài khoản.", reply_markup=main_menu)
         return
 
-    # Kiểm tra nếu người dùng đã nạp tiền ít nhất 1 lần
-    if user_id not in deposit_history or len(deposit_history[user_id]) == 0:
-        await message.answer("⚠️ Bạn cần nạp ít nhất 1 lần để có thể rút tiền. Nếu có thắc mắc, vui lòng liên hệ hỗ trợ.", reply_markup=main_menu)
+    # Đảm bảo deposit_history là dictionary hợp lệ
+    if 'deposit_history' not in globals():
+        deposit_history = {}
+
+    # Kiểm tra nếu user chưa nạp tiền lần nào
+    if not deposit_history.get(user_id, []):
+        await message.answer("⚠️ Bạn cần nạp ít nhất 1 lần để có thể rút tiền.", reply_markup=main_menu)
         return
 
     if user_balance.get(user_id, 0) < amount:
-        await message.answer("⚠️ Số dư của bạn không đủ để rút tiền.", reply_markup=main_menu)
+        await message.answer("⚠️ Số dư không đủ để rút tiền.", reply_markup=main_menu)
         return
 
     full_name = parts[1]
