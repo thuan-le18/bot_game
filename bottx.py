@@ -1269,6 +1269,8 @@ def get_vietnam_time():
                           and len(msg.text.split()) >= 4 
                           and msg.text.split()[0].isdigit())
 async def process_withdraw_request(message: types.Message):
+    global deposit_history  # Đảm bảo biến này được dùng ở phạm vi toàn cục
+
     user_id = str(message.from_user.id)
     logging.info(f"[Yêu cầu Rút tiền] Nhận từ user {user_id}: {message.text}")
 
@@ -1308,7 +1310,7 @@ async def process_withdraw_request(message: types.Message):
     user_balance[user_id] -= amount
     save_data(data)
 
-    # Lưu thông tin yêu cầu rút tiền
+    # Lưu thông tin rút tiền
     w_req = {
         "user_id": user_id,
         "amount": amount,
@@ -1316,7 +1318,7 @@ async def process_withdraw_request(message: types.Message):
         "bank_name": bank_name,
         "account_number": account_number,
         "status": "pending",
-        "time": get_vietnam_time()  # Lấy thời gian theo giờ Việt Nam
+        "time": get_vietnam_time()
     }
     
     if user_id not in withdrawals or not isinstance(withdrawals[user_id], list):
@@ -1335,14 +1337,13 @@ async def process_withdraw_request(message: types.Message):
     ), parse_mode="Markdown")
 
     await message.answer(
-        f"✅ *Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được gửi.*\n"
+        f"✅ *Yêu cầu rút tiền {amount:,} VNĐ đã được gửi.*\n"
         f"⏰ *Thời gian:* {w_req['time']}\n"
         "💸 Số dư đã bị trừ và đang chờ admin xử lý.",
         parse_mode="Markdown",
         reply_markup=main_menu
     )
 
-    # Thêm tin nhắn nhắc nhở nạp tiền sau khi gửi yêu cầu rút
     await message.answer("🔔 *Lưu ý:* Tài khoản của bạn cần nạp ít nhất 1 lần để hệ thống ghi nhận và rút tiền.", parse_mode="Markdown")
 
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
