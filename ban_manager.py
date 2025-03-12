@@ -34,24 +34,16 @@ class IsBanned(BaseFilter):
     async def __call__(self, obj) -> bool:
         return str(obj.from_user.id) in banned_users
 
-# **Chặn toàn bộ tin nhắn của user bị ban**
+# **Chặn toàn bộ tin nhắn và nút bấm của user bị ban**
 @router.message(IsBanned())
 async def block_banned_users(message: types.Message):
     await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nVui lòng nhắn tin @hoanganh11829 để biết lý do.")
     return  # Dừng lại, không xử lý tiếp
 
-# **Chặn cả callback query của user bị ban (nút bấm)**
 @router.callback_query(IsBanned())
 async def block_banned_callback(callback: types.CallbackQuery):
     await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nNhắn tin @hoanganh11829 để biết lý do.", show_alert=True)
     return  # Dừng lại, không xử lý tiếp
-
-# **Chặn user bị ban gửi lệnh**
-@router.message(Command())
-async def block_banned_commands(message: types.Message):
-    if str(message.from_user.id) in banned_users:
-        await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.\nVui lòng nhắn tin @hoanganh11829 để biết lý do.")
-        return  # Chặn mọi lệnh
 
 # **Lệnh ban người dùng**
 @router.message(Command("ban"))
@@ -96,4 +88,5 @@ async def unban_user(message: types.Message):
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
         await message.answer("❌ Tài khoản này không bị khóa.")
+
 
