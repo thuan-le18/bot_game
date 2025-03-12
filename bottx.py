@@ -3,7 +3,7 @@ import asyncio
 import random
 import json
 from datetime import datetime, timedelta
-from aiogram.filters.command import Command
+
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
     ReplyKeyboardMarkup,
@@ -14,10 +14,32 @@ from aiogram.types import (
     InlineKeyboardMarkup,   # Dòng này
     InlineKeyboardButton    # và dòng này
 )
+import os
+from aiogram.filters import Command
+# File lưu trữ danh sách mời
+REFERRAL_FILE = "referrals.json"
 
-from ban_manager import router as ban_router
-from referral_manager import router as referral_router
+# Hàm tải danh sách từ file JSON
+def load_referrals():
+    if os.path.exists(REFERRAL_FILE):
+        with open(REFERRAL_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
+# Hàm lưu danh sách vào file JSON
+def save_referrals():
+    with open(REFERRAL_FILE, "w", encoding="utf-8") as f:
+        json.dump(referrals, f, indent=4)
+
+# Load dữ liệu khi bot khởi động
+referrals = load_referrals()
+def add_referral(referrer_id, new_user_id):
+    if referrer_id not in referrals:
+        referrals[referrer_id] = []
+    referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
+    save_json(REFERRAL_FILE, referrals)
+
+from ban_manager import router as ban_router    
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -29,7 +51,7 @@ dp = Dispatcher()
 router = Router()
 dp.include_router(router)
 dp.include_router(ban_router)
-dp.include_router(referral_router)
+
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
@@ -239,7 +261,50 @@ async def vip_info(message: types.Message):
             current_vip = vip
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
 
+from datetime import datetime, timedelta
+import pytz
 
+# ===================== Hoa Hồng Handler =====================
+@router.message(lambda message: message.text == "🌹 Hoa hồng")
+async def referral_handler(message: types.Message):
+    user_id = str(message.from_user.id)
+    referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
+    referrals = load_referrals()  # Load lại dữ liệu mới nhất
+    records = referrals.get(user_id, [])
+    
+    now_vn = datetime.now(vietnam_tz)
+    today = now_vn.strftime("%Y-%m-%d")
+    current_month = now_vn.strftime("%Y-%m")
+    
+    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
+    month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
+    ])
+    
+    await message.answer(
+         f"🌹 Link mời của bạn: {referral_link}\n"
+         f"Tổng lượt mời: {len(records)}\n"
+         f"Lượt mời hôm nay: {today_count}\n"
+         f"Lượt mời tháng này: {month_count}\n\n"
+         "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
+         reply_markup=keyboard
+    )
+
+@router.callback_query(lambda callback: callback.data == "list_invited")
+async def list_invited_handler(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    referrals = load_referrals()  # Load lại dữ liệu mới nhất
+    records = referrals.get(user_id, [])
+
+    if not records:
+        await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
+        return
+
+    invited_list = "\n".join(f"- {ref['user_id']} ({ref['timestamp'].split('T')[0]})" for ref in records)
+    await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
+    
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
