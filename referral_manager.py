@@ -48,7 +48,7 @@ def add_referral(referrer_id, new_user_id):
     save_referrals()
 
 # ===================== Hoa Hồng Handler =====================
-@router.message(F.text == "🌹 Hoa hồng")
+@router.message(lambda message: message.text == "🌹 Hoa hồng")
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
