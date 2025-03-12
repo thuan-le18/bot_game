@@ -16,7 +16,7 @@ from aiogram.types import (
 )
 
 from ban_manager import router as ban_router
-import referral_manager
+from referral_manager import router as referral_router
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
@@ -28,8 +28,8 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
-dp.include_router(ban_router) 
-dp.include_router(referral_manager.router)
+dp.include_router(ban_router)
+dp.include_router(referral_router)
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
@@ -83,6 +83,24 @@ def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     user_history[user_id].append(record)
     save_data(data)
 
+# ===================== Hàm tính hoa hồng 2% =====================
+async def add_commission(user_id: str, bet_amount: int):
+    """
+    Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
+    """
+    referrer_id = None
+    for ref_id, referred_list in referrals.items():
+        if user_id in referred_list:
+            referrer_id = ref_id
+            break
+    if referrer_id:
+        commission = int(bet_amount * 0.02)
+        user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
+        save_data(data)
+        try:
+            await bot.send_message(referrer_id, f"🎉 Hoa hồng 2% từ cược của người chơi {user_id}: {commission} VNĐ!")
+        except Exception as e:
+            logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
 
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
@@ -220,6 +238,7 @@ async def vip_info(message: types.Message):
         if total_deposit >= req_amount:
             current_vip = vip
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
+
 
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
@@ -1637,7 +1656,7 @@ async def unlock_players(message: types.Message):
     global player_lock
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
-
+    
 # ===================== Chạy bot =====================
 async def main():
     # Chạy update_players() trong background
