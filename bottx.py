@@ -16,6 +16,7 @@ from aiogram.types import (
 )
 
 from ban_manager import router as ban_router
+import referral_manager
 
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
@@ -28,6 +29,7 @@ dp = Dispatcher()
 router = Router()
 dp.include_router(router)
 dp.include_router(ban_router) 
+dp.include_router(referral_manager.router)
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
@@ -218,51 +220,6 @@ async def vip_info(message: types.Message):
         if total_deposit >= req_amount:
             current_vip = vip
     await message.answer(f"🏆 VIP của bạn: {current_vip}\nTổng nạp: {total_deposit} VNĐ", reply_markup=main_menu)
-
-from datetime import datetime, timedelta
-import pytz
-
-# ===================== Hoa Hồng Handler =====================
-@router.message(F.text == "🌹 Hoa hồng")
-async def referral_handler(message: types.Message):
-    user_id = str(message.from_user.id)
-    referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
-    records = referrals.get(user_id, [])
-
-    # Chuyển sang múi giờ Việt Nam (GMT+7)
-    vietnam_tz = pytz.timezone("Asia/Ho_Chi_Minh")
-    now_vn = datetime.now(vietnam_tz)
-    
-    today = now_vn.strftime("%Y-%m-%d")
-    today_count = sum(1 for ref in records if ref.get("timestamp", "").split("T")[0] == today)
-    
-    current_month = now_vn.strftime("%Y-%m")
-    month_count = sum(1 for ref in records if ref.get("timestamp", "").startswith(current_month))
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📋 Danh sách đã mời", callback_data="list_invited")]
-    ])
-
-    await message.answer(
-         f"🌹 Link mời của bạn: {referral_link}\n"
-         f"Tổng lượt mời: {len(records)}\n"
-         f"Lượt mời hôm nay: {today_count}\n"
-         f"Lượt mời tháng này: {month_count}\n\n"
-         "💰 Bạn nhận **2000 VNĐ** và **2% hoa hồng** từ số tiền cược của người được mời.",
-         reply_markup=keyboard
-    )
-
-@router.callback_query(F.data == "list_invited")
-async def list_invited_handler(callback: types.CallbackQuery):
-    user_id = str(callback.from_user.id)
-    records = referrals.get(user_id, [])
-
-    if not records:
-        await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
-        return
-
-    invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
-    await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
 
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
