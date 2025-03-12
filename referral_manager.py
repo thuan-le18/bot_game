@@ -51,6 +51,7 @@ def add_referral(referrer_id, new_user_id):
 async def referral_handler(message: types.Message):
     user_id = str(message.from_user.id)
     referral_link = f"https://t.me/@Bottx_Online_bot?start={user_id}"
+    referrals = load_referrals()  # Load lại dữ liệu mới nhất
     records = referrals.get(user_id, [])
     
     now_vn = datetime.now(vietnam_tz)
@@ -76,6 +77,7 @@ async def referral_handler(message: types.Message):
 @router.callback_query(lambda callback: callback.data == "list_invited")
 async def list_invited_handler(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
+    referrals = load_referrals()  # Load lại dữ liệu mới nhất
     records = referrals.get(user_id, [])
 
     if not records:
