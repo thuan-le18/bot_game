@@ -38,10 +38,10 @@ def add_referral(referrer_id, new_user_id):
         referrals[referrer_id] = []
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
     save_json(REFERRAL_FILE, referrals)
-   
-    BANNED_USERS_FILE = "banned_users.json"
-    banned_users = load_json(BANNED_USERS_FILE)
+  
     
+from ban_manager import router as ban_router
+
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -52,6 +52,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
+dp.include_router(ban_router)
 
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
@@ -1723,48 +1724,6 @@ async def unlock_players(message: types.Message):
     global player_lock
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
-
-# ===================== Quản lý Khoá tài khoản =====================
-@router.message(Command("ban"))
-async def ban_user(message: types.Message):
-    if str(message.from_user.id) != "ADMIN_ID":  # Thay ADMIN_ID bằng ID admin
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-    
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        await message.answer("❌ Sử dụng: /ban <user_id>")
-        return
-    
-    user_id = args[1]
-    banned_users[user_id] = True
-    save_json(BANNED_USERS_FILE, banned_users)
-    await message.answer(f"✅ Đã khóa tài khoản {user_id}.")
-
-@router.message(Command("unban"))
-async def unban_user(message: types.Message):
-    if str(message.from_user.id) != "ADMIN_ID":  # Thay ADMIN_ID bằng ID admin
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-    
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        await message.answer("❌ Sử dụng: /unban <user_id>")
-        return
-    
-    user_id = args[1]
-    if user_id in banned_users:
-        del banned_users[user_id]
-        save_json(BANNED_USERS_FILE, banned_users)
-        await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
-    else:
-        await message.answer("❌ Tài khoản này không bị khóa.")
-
-@router.message()
-async def check_banned_users(message: types.Message):
-    if str(message.from_user.id) in banned_users:
-        await message.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.")
-        return
 
 # ===================== Chạy bot =====================
 async def main():
