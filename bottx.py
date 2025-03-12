@@ -272,7 +272,6 @@ async def referral_handler(message: types.Message):
     referrals = load_referrals()  # Load lại dữ liệu mới nhất
     records = referrals.get(user_id, [])
     
-    now_vn = datetime.now(vietnam_tz)
     today = now_vn.strftime("%Y-%m-%d")
     current_month = now_vn.strftime("%Y-%m")
     
