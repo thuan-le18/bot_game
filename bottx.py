@@ -1555,8 +1555,9 @@ async def force_all_games(message: types.Message):
         async def process_crash(uid):
             game = crash_games.get(uid)
             if not game:
+                # Thêm log để kiểm tra danh sách crash_games
+                logging.warning(f"Không tìm thấy game 'Máy Bay' cho user {uid}. Danh sách crash_games: {crash_games}")
                 await message.answer(f"Máy Bay - User {uid}: Không có game đang chạy.")
-                logging.info(f"User {uid} does not have an active crash game.")
                 return
             bet = game.get("bet", 0)
             crash_point = game.get("crash_point", 1.0)  # Lấy hệ số hiện tại hoặc custom_x
@@ -1574,41 +1575,31 @@ async def force_all_games(message: types.Message):
             crash_games[uid]["running"] = False
             del crash_games[uid]
 
-        await process_crash(target_user)
+        # --- Force outcome cho game Đào Vàng ---
+        async def process_daovang(uid):
+            state = daovang_states.get(uid)
+            if not state:
+                # Thêm log để kiểm tra danh sách daovang_states
+                logging.warning(f"Không tìm thấy game 'Đào Vàng' cho user {uid}. Danh sách daovang_states: {daovang_states}")
+                await message.answer(f"Đào Vàng - User {uid}: Không có game đang chạy.")
+                return
+            bet = state.get("bet", 0)
+            bomb_count = state.get("bomb_count", 3)
+            total_safe = 25 - bomb_count
+            logging.info(f"User {uid} is playing Daovang with a bet of {bet} VNĐ and {bomb_count} bombs remaining.")
 
-    # Xử lý game "Đào Vàng"
-    elif game_name == "daovang":
-        if len(args) < 3:
-            await message.answer("Usage for Đào Vàng: /forceall lose <user_id>")
-            logging.warning(f"Invalid /forceall usage by user {message.from_user.id} for Đào Vàng.")
-            return
+            bomb_count += 1  # Tăng số BOM
+            state["bomb_count"] = bomb_count
+            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ), ô tiếp theo sẽ nổ.")
+            logging.info(f"User {uid} forced LOSE in Daovang game. Bomb count increased to {bomb_count}.")
+            try:
+                await bot.send_message(uid, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ.", reply_markup=main_menu)
+            except Exception as e:
+                logging.error(f"Failed to send message to user {uid}: {e}")
 
-        if args[2].lower() == "lose":
-            target_user = int(args[3])  # Lấy user_id từ lệnh
-            # --- Force outcome cho game Đào Vàng ---
-            async def process_daovang(uid):
-                state = daovang_states.get(uid)
-                if not state:
-                    await message.answer(f"Đào Vàng - User {uid}: Không có game đang chạy.")
-                    logging.info(f"User {uid} does not have an active Daovang game.")
-                    return
-                bet = state.get("bet", 0)
-                bomb_count = state.get("bomb_count", 3)
-                total_safe = 25 - bomb_count
-                logging.info(f"User {uid} is playing Daovang with a bet of {bet} VNĐ and {bomb_count} bombs remaining.")
+            del daovang_states[uid]
 
-                bomb_count += 1  # Tăng số BOM
-                state["bomb_count"] = bomb_count
-                results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ), ô tiếp theo sẽ nổ.")
-                logging.info(f"User {uid} forced LOSE in Daovang game. Bomb count increased to {bomb_count}.")
-                try:
-                    await bot.send_message(uid, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ.", reply_markup=main_menu)
-                except Exception as e:
-                    logging.error(f"Failed to send message to user {uid}: {e}")
-
-                del daovang_states[uid]
-
-            await process_daovang(target_user)
+        await process_daovang(target_user)
 
     save_data(data)
     if results:
@@ -1617,7 +1608,6 @@ async def force_all_games(message: types.Message):
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
         logging.info(f"No active games for /forceall command from user {message.from_user.id}.")
-
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
