@@ -554,6 +554,9 @@ async def jackpot_bet(message: types.Message):
         record_bet_history(user_id, "Jackpot", bet_amount, "lose", 0)
     jackpot_states[user_id] = False
 
+import random
+import asyncio
+
 # --- GAME: Máy Bay (Crash Game) ---
 
 # Giả sử các biến toàn cục được khởi tạo từ trước
@@ -605,6 +608,9 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
+    await message.answer("⏳ Máy bay sẽ cất cánh trong giây lát...")
+    await asyncio.sleep(random.choice([10,12,14,15]))  # Chờ ngẫu nhiên 10s hoặc 15s trước khi máy bay cất cánh
+
     # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -651,11 +657,9 @@ async def initiate_crash_game(message: types.Message):
                 new_multiplier = 15.0
             crash_games[user_id]["current_multiplier"] = new_multiplier
 
-            # Nếu hệ số nhân đạt crash_point, người chơi thua toàn bộ số tiền cược
             if new_multiplier >= crash_games[user_id]["crash_point"]:
-                loss_amount = bet  # Bạn thua toàn bộ số tiền cược
+                loss_amount = bet
                 try:
-                    # Sử dụng parse_mode HTML nếu cần định dạng, và không kèm bàn phím inline
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
@@ -681,7 +685,6 @@ async def initiate_crash_game(message: types.Message):
 
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
-    # Sau khi game kết thúc, gửi tin nhắn tự động về menu chính
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
     
 @router.callback_query(lambda c: c.data == "withdraw_crash")
