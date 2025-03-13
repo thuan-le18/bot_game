@@ -1527,94 +1527,70 @@ async def force_all_games(message: types.Message):
         await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
         return
 
-    # Sử dụng split(maxsplit=3) để giữ nguyên phần còn lại của lệnh
-    args = message.text.strip().split(maxsplit=3)
+    # Tách lệnh thành từng phần
+    args = message.text.strip().split()
     logging.info(f"Parsed arguments: {args}")
 
-    if len(args) < 3:
-        await message.answer("❌ Usage: /forceall <game_name> <parameters> [user_id]")
+    # Yêu cầu tối thiểu 5 phần: [/forceall, 'máy', 'bay', user_id, xValue]
+    if len(args) < 5:
+        await message.answer("❌ Usage: /forceall máy bay <user_id> x<value>")
         return
 
-    # Xử lý gộp tên game cho "máy bay"
-    # Nếu lệnh được nhập là: /forceall máy bay 7775002038 x3.55
-    # thì args sẽ là: ['/forceall', 'máy', 'bay 7775002038 x3.55']
-    if args[1].lower() == "máy" and "bay" in args[2].lower():
-        parts = args[2].split()
-        if len(parts) < 3:
-            await message.answer("❌ Usage for Máy Bay: /forceall máy bay <user_id> x<value>")
-            return
+    # Kiểm tra xem có đúng 'máy' 'bay' không
+    if args[1].lower() == "máy" and args[2].lower() == "bay":
         game_name = "máy bay"
-        target_user = parts[0].strip()     # lấy user_id
-        x_value_str = parts[1].strip()       # lấy x_value (ví dụ: x3.55)
-    elif args[1].lower() == "đào" and args[2].lower().startswith("vàng"):
-        game_name = "đào vàng"
-        # Với lệnh: /forceall đào vàng <user_id>
-        if len(args) < 4:
-            await message.answer("❌ Usage for Đào Vàng: /forceall đào vàng <user_id>")
-            return
-        target_user = args[3].strip()
-        x_value_str = None
+        target_user = args[3]  # user_id
+        x_value_str = args[4]  # x<value>
     else:
-        await message.answer("❌ Game không hợp lệ! Hiện hỗ trợ: Máy Bay, Đào Vàng.")
+        await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
         return
 
-    logging.info(f"Game name detected: {game_name}")
-    logging.info(f"Target user: {target_user}")
-    if x_value_str:
-        logging.info(f"x_value string: {x_value_str}")
+    logging.info(f"Game name: {game_name}, target_user: {target_user}, x_value_str: {x_value_str}")
 
+    # Xử lý game Máy Bay
     if game_name == "máy bay":
-        if not x_value_str:
-            await message.answer("❌ Usage for Máy Bay: /forceall máy bay <user_id> x<value>")
-            return
         try:
             custom_x = float(x_value_str.replace('x', ''))
         except ValueError:
-            await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x2.89).")
+            await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             return
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
-        logging.info(f"Current crash_games: {crash_games}")
 
+        # Kiểm tra xem user có game Máy Bay đang chạy không
         if target_user not in crash_games:
             await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
             return
 
         game = crash_games[target_user]
         bet = game.get("bet", 0)
-        # Cập nhật trạng thái game với forced multiplier
-        game["forced_multiplier"] = round(custom_x, 2)
-        game["force_pending"] = True
-        game["crash_point"] = custom_x  # Để hiển thị trong tin nhắn
 
-        # Giả sử người chơi không rút kịp: họ mất toàn bộ tiền cược
+        # Máy bay rơi ngay, người chơi mất toàn bộ tiền cược
+        crash_point = round(custom_x, 2)
         loss_amount = bet
-        user_balance[target_user] = user_balance.get(target_user, 0) - bet
+        user_balance[target_user] = user_balance.get(target_user, 0) - loss_amount
 
-        await bot.send_message(target_user, 
-            f"💥 <b>Máy bay rơi tại</b> x{custom_x}!\\n❌ Bạn đã mất {loss_amount:,} VNĐ!")
-        crash_games[target_user]["running"] = False  # Đánh dấu game kết thúc
+        # Cập nhật trạng thái game
+        game["running"] = False
+        game["forced_multiplier"] = crash_point
+        game["crash_point"] = crash_point
 
         save_data(crash_games)
-        await message.answer(f"✅ Máy Bay - User {target_user} đã bị ép THUA (máy bay rơi tại x{custom_x}).")
 
-    elif game_name == "đào vàng":
-        if target_user not in daovang_states:
-            await message.answer(f"⚠️ User {target_user} không có game Đào Vàng đang chạy.")
-            return
+        # Gửi tin nhắn cho người chơi
+        await bot.send_message(
+            target_user,
+            f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!"
+        )
 
-        state = daovang_states[target_user]
-        bet = state.get("bet", 0)
-        state["bomb_count"] += 1
-
-        await bot.send_message(target_user, 
-            f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet:,} VNĐ và quay về menu.")
-        save_data(daovang_states)
-
-        await message.answer(f"✅ Đào Vàng - User {target_user} đã bị ép THUA.")
+        # Thông báo cho admin
+        await message.answer(
+            f"✅ Máy Bay - User {target_user} đã bị ép THUA (máy bay rơi tại x{crash_point})."
+        )
 
     else:
-        await message.answer("❌ Game không hợp lệ! Hiện hỗ trợ: Máy Bay, Đào Vàng.")
+        # Ở đây bạn có thể thêm logic cho game khác nếu cần
+        await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
