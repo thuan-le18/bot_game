@@ -1750,95 +1750,126 @@ async def unlock_players(message: types.Message):
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
 
-import json
 import os
-from aiogram import types, Router
-from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardRemove
+import json
+from aiogram import Router, types
+from aiogram.filters import Command, BaseFilter
+from aiogram.utils.keyboard import InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
-BAN_LIST_FILE = "ban_list.json"
-ADMIN_ID = 1985817060  # Thay bằng ID admin của bạn
+# ID của admin
+ADMIN_ID = 1985817060
 
-# Load ban list
-def load_ban_list():
-    if os.path.exists(BAN_LIST_FILE):
-        with open(BAN_LIST_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
+# File lưu danh sách bị ban
+BANNED_USERS_FILE = "banned_users.json"
+
+# Load danh sách bị ban
+def load_json(filename):
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
     return {}
 
-# Save ban list
-def save_ban_list():
-    with open(BAN_LIST_FILE, "w", encoding="utf-8") as file:
-        json.dump(ban_list, file, indent=4)
+# Lưu danh sách bị ban
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
 
-ban_list = load_ban_list()
+# Lớp kiểm tra người dùng bị ban
+class IsBanned(BaseFilter):
+    async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
+        banned_users = load_json(BANNED_USERS_FILE)
+        return str(event.from_user.id) in banned_users
 
-# Kiểm tra người dùng có bị ban không
-def is_banned(user_id):
-    return str(user_id) in ban_list
+# Chặn tin nhắn và xóa tất cả nút nếu bị ban
+async def remove_buttons(message: types.Message):
+    try:
+        await message.edit_reply_markup(reply_markup=None)  # Xóa nút
+    except:
+        pass  # Nếu không thể xóa thì bỏ qua lỗi
 
-# Lấy lý do ban
-def get_ban_reason(user_id):
-    return ban_list.get(str(user_id), "Không có lý do")
+# Chặn tin nhắn và hiển thị thông báo bị ban với nút Start
+@router.message(IsBanned())
+async def check_banned_users(message: types.Message):
+    await message.answer(
+        "🚫 Tài khoản của bạn đã bị khóa bởi admin.\n\n"
+        "Bạn không thể sử dụng các chức năng của bot. Nếu có thắc mắc, vui lòng liên hệ admin.",
+        reply_markup=ReplyKeyboardRemove()  # Xóa tất cả nút
+    )
+    
+    # Tạo nút "Start" cho người dùng bị ban
+    start_button = KeyboardButton("Start")
+    keyboard = InlineKeyboardMarkup().add(start_button)
+    
+    # Gửi lại nút Start cho người dùng
+    await message.answer("Bạn đã bị ban. Nếu cần hỗ trợ, vui lòng liên hệ admin.", reply_markup=keyboard)
+    await remove_buttons(message)
 
-# Ban user
+# Chặn callback khi người dùng bị ban
+@router.callback_query(IsBanned())
+async def check_banned_callbacks(callback: types.CallbackQuery):
+    await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await remove_buttons(callback.message)
+
+# Chặn inline query khi người dùng bị ban
+@router.inline_query(IsBanned())
+async def check_banned_inline(inline_query: types.InlineQuery):
+    await inline_query.answer([], cache_time=1, switch_pm_text="🚫 Bạn đã bị khóa.", switch_pm_parameter="banned")
+
+# Lệnh ban người dùng
 @router.message(Command("ban"))
 async def ban_user(message: types.Message):
     if message.from_user.id != ADMIN_ID:
-        await message.reply("Bạn không có quyền sử dụng lệnh này.")
+        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
         return
-    
-    args = message.text.split()[1:]
-    if len(args) < 2:
-        await message.reply("Usage: /ban [user_id] [reason]")
-        return
-    
-    try:
-        user_id = str(int(args[0]))  # Chuyển đổi ID về dạng chuỗi số
-    except ValueError:
-        await message.reply("User ID không hợp lệ.")
-        return
-    
-    reason = " ".join(args[1:])
-    ban_list[user_id] = reason
-    save_ban_list()
-    
-    await message.reply(f"Đã cấm user {user_id} vì: {reason}")
 
-# Unban user
+    args = message.text.split()
+    if len(args) != 2 or not args[1].isdigit():
+        await message.answer("❌ Sử dụng: /ban <user_id>")
+        return
+
+    user_id = args[1]
+    banned_users = load_json(BANNED_USERS_FILE)
+    banned_users[user_id] = True
+    save_json(BANNED_USERS_FILE, banned_users)
+
+    await message.answer(f"✅ Đã khóa tài khoản {user_id}, người này sẽ không thể sử dụng nút bấm.")
+
+# Lệnh mở khóa người dùng
 @router.message(Command("unban"))
 async def unban_user(message: types.Message):
     if message.from_user.id != ADMIN_ID:
-        await message.reply("Bạn không có quyền sử dụng lệnh này.")
+        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
         return
-    
-    args = message.text.split()[1:]
-    if len(args) < 1:
-        await message.reply("Usage: /unban [user_id]")
-        return
-    
-    try:
-        user_id = str(int(args[0]))  # Chuyển đổi ID về dạng chuỗi số
-    except ValueError:
-        await message.reply("User ID không hợp lệ.")
-        return
-    
-    if user_id in ban_list:
-        del ban_list[user_id]
-        save_ban_list()
-        await message.reply(f"Đã gỡ cấm user {user_id}.")
-    else:
-        await message.reply("Người dùng này không bị cấm.")
 
-# Lệnh start
-@router.message(Command("start"))
-async def start(message: types.Message):
-    user_id = str(message.from_user.id)
-    
-    if user_id in ban_list:
-        await message.reply(f"Bạn đã bị admin cấm tài khoản. Lý do: {get_ban_reason(user_id)}. Liên hệ admin nếu có thắc mắc.", reply_markup=ReplyKeyboardRemove())
+    args = message.text.split()
+    if len(args) != 2 or not args[1].isdigit():
+        await message.answer("❌ Sử dụng: /unban <user_id>")
+        return
+
+    user_id = args[1]
+    banned_users = load_json(BANNED_USERS_FILE)
+    if user_id in banned_users:
+        del banned_users[user_id]
+        save_json(BANNED_USERS_FILE, banned_users)
+        await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
     else:
-        await message.reply("Chào mừng bạn đến với bot!")
+        await message.answer("❌ Người dùng này không bị ban.")
+
+# Lệnh liệt kê người bị ban
+@router.message(Command("banned"))
+async def banned_list(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
+        return
+
+    banned_users = load_json(BANNED_USERS_FILE)
+    if not banned_users:
+        await message.answer("✅ Hiện không có ai bị ban.")
+    else:
+        banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
+        await message.answer(banned_list_text)
+
 
 # ===================== Chạy bot =====================
 async def main():
