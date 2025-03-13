@@ -1524,7 +1524,9 @@ async def force_all_games(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         logging.warning(f"User {message.from_user.id} tried to use /forceall without permission.")
         return
-
+        
+    results = []
+    
     args = message.text.split()
     if len(args) < 3:
         await message.answer("Usage: /forceall <game_name> <parameters> [user_id]")
