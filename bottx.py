@@ -1540,7 +1540,7 @@ async def force_all_games(message: types.Message):
 
         try:
             custom_x = float(args[2].replace('x', ''))
-            target_user = int(args[3])
+            target_user = str(args[3])  # Chuyển về str để đảm bảo tìm thấy user
         except ValueError:
             await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             return
@@ -1548,11 +1548,11 @@ async def force_all_games(message: types.Message):
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
         logging.info(f"Current crash_games: {crash_games}")
 
-        if str(target_user) not in crash_games and target_user not in crash_games:
+        if target_user not in crash_games:
             await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
             return
 
-        game = crash_games.get(str(target_user), crash_games.get(target_user, {}))
+        game = crash_games[target_user]
         bet = game.get("bet", 0)
         forced_multiplier = round(custom_x, 2)
         win_amount = round(bet * forced_multiplier)
@@ -1570,7 +1570,7 @@ async def force_all_games(message: types.Message):
             return
 
         try:
-            target_user = int(args[2])
+            target_user = str(args[2])  # Chuyển về str để đảm bảo tìm thấy user
         except ValueError:
             await message.answer("User ID không hợp lệ.")
             return
@@ -1578,11 +1578,11 @@ async def force_all_games(message: types.Message):
         logging.info(f"Admin ép thua game Đào Vàng cho user {target_user}")
         logging.info(f"Current daovang_states: {daovang_states}")
 
-        if str(target_user) not in daovang_states and target_user not in daovang_states:
+        if target_user not in daovang_states:
             await message.answer(f"⚠️ User {target_user} không có game Đào Vàng đang chạy.")
             return
 
-        state = daovang_states.get(str(target_user), daovang_states.get(target_user, {}))
+        state = daovang_states[target_user]
         bet = state.get("bet", 0)
         state["bomb_count"] += 1
 
