@@ -608,9 +608,17 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
-    countdown_time = random.choice([10,12,14,15])
+    countdown_time = random.choice([10,12,14, 15])
+    countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
     for i in range(countdown_time, 0, -1):
-        await message.answer(f"⏳ Máy bay sẽ cất cánh trong {i} giây...")
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=countdown_message.message_id,
+                text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
+            )
+        except Exception as e:
+            logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
         await asyncio.sleep(1)
 
     # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
