@@ -1666,7 +1666,7 @@ async def process_daovang(uid):
 game_players_default_range = {
     "🎲 Tài Xỉu": (40, 60),
     "🎰 Jackpot": (25, 34),
-    "✈️ Máy Bay": (50, 112),
+    "✈️ Máy Bay": (60, 82),
     "🐉 Rồng Hổ": (30, 60),
     "⛏️ Đào Vàng": (30, 45),
     "🃏 Mini Poker": (20, 40)
@@ -1758,8 +1758,6 @@ from aiogram.types import ReplyKeyboardRemove
 
 BAN_LIST_FILE = "ban_list.json"
 ADMIN_ID = 1985817060  # Thay bằng ID admin của bạn
-
-router = Router()
 
 # Load ban list
 def load_ban_list():
