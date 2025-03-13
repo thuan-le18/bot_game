@@ -1539,16 +1539,16 @@ async def force_all_games(message: types.Message):
         logging.warning(f"Invalid game name provided by user {message.from_user.id}: {game_name}.")
         return
 
+    # Đảm bảo lệnh game "Máy Bay" có thể điều chỉnh hệ số x
+    custom_x = None
     if game_name == "máy bay" and len(args) >= 3:
         try:
-            custom_x = float(args[2].replace('x', ''))
+            custom_x = float(args[2].replace('x', ''))  # Loại bỏ 'x' và chuyển đổi thành số thực
             logging.info(f"Admin set custom x for Máy Bay to: {custom_x}")
         except ValueError:
             await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             logging.warning(f"Invalid custom x value provided by user {message.from_user.id}: {args[2]}.")
             return
-    else:
-        custom_x = None
 
     # --- Force outcome cho game Máy Bay (Crash) ---
     async def process_crash(uid):
@@ -1565,6 +1565,7 @@ async def force_all_games(message: types.Message):
 
         logging.info(f"User {uid} is playing Crash with a bet of {bet} VNĐ and crash point {crash_point}.")
 
+        # Giải quyết kết quả thắng/thua
         if outcome == "win":
             forced_multiplier = round(crash_point, 2)
             win_amount = round(bet * forced_multiplier)
@@ -1576,6 +1577,11 @@ async def force_all_games(message: types.Message):
 
         crash_games[uid]["running"] = False
         del crash_games[uid]
+
+    # Xử lý khi người chơi đang tham gia game Máy Bay
+    for uid in crash_games:
+        await process_crash(uid)
+
 
     # --- Force outcome cho game Đào Vàng ---
     async def process_daovang(uid):
