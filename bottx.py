@@ -1512,7 +1512,6 @@ def player_exit_game(user_id, game_name):
         poker_states.pop(user_id, None)
 
 import logging
-import random
 from aiogram import types
 from aiogram.filters import Command
 
@@ -1527,27 +1526,23 @@ async def force_all_games(message: types.Message):
         await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
         return
 
-    # Tách lệnh thành từng phần
     args = message.text.strip().split()
     logging.info(f"Parsed arguments: {args}")
 
-    # Yêu cầu tối thiểu 5 phần: [/forceall, 'máy', 'bay', user_id, xValue]
     if len(args) < 5:
         await message.answer("❌ Usage: /forceall máy bay <user_id> x<value>")
         return
 
-    # Kiểm tra xem có đúng 'máy' 'bay' không
     if args[1].lower() == "máy" and args[2].lower() == "bay":
         game_name = "máy bay"
-        target_user = args[3]  # user_id
-        x_value_str = args[4]  # x<value>
+        target_user = args[3]  
+        x_value_str = args[4]  
     else:
         await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
         return
 
     logging.info(f"Game name: {game_name}, target_user: {target_user}, x_value_str: {x_value_str}")
 
-    # Xử lý game Máy Bay
     if game_name == "máy bay":
         try:
             custom_x = float(x_value_str.replace('x', ''))
@@ -1557,7 +1552,6 @@ async def force_all_games(message: types.Message):
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
 
-        # Kiểm tra xem user có game Máy Bay đang chạy không
         if target_user not in crash_games:
             await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
             return
@@ -1565,33 +1559,30 @@ async def force_all_games(message: types.Message):
         game = crash_games[target_user]
         bet = game.get("bet", 0)
 
-        # Máy bay rơi ngay, người chơi mất toàn bộ tiền cược
+        # Cập nhật hệ số rơi ngay khi admin ép
         crash_point = round(custom_x, 2)
         loss_amount = bet
         user_balance[target_user] = user_balance.get(target_user, 0) - loss_amount
 
-        # Cập nhật trạng thái game
         game["running"] = False
         game["forced_multiplier"] = crash_point
         game["crash_point"] = crash_point
 
         save_data(crash_games)
 
-        # Gửi tin nhắn cho người chơi
+        # Gửi tin nhắn báo thua
         await bot.send_message(
             target_user,
-            text=f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
-            parse_mode="HTML"
+            f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!"
         )
 
-        # Thông báo cho admin
         await message.answer(
             f"✅ Máy Bay - User {target_user} đã bị ép THUA (máy bay rơi tại x{crash_point})."
         )
 
     else:
-        # Ở đây bạn có thể thêm logic cho game khác nếu cần
         await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
+
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
