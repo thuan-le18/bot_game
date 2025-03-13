@@ -1580,7 +1580,8 @@ async def force_all_games(message: types.Message):
         # Gửi tin nhắn cho người chơi
         await bot.send_message(
             target_user,
-            f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!"
+            text=f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
+            parse_mode="HTML"
         )
 
         # Thông báo cho admin
