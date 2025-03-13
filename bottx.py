@@ -1752,17 +1752,24 @@ async def unlock_players(message: types.Message):
 
 import os
 import json
-from aiogram import Router, types
-from aiogram.filters import Command, BaseFilter
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup
+from aiogram import Router
 import logging
-logging.basicConfig(level=logging.INFO)
 
 # ID của admin
 ADMIN_ID = 1985817060
 
 # File lưu danh sách bị ban
 BANNED_USERS_FILE = "banned_users.json"
+
+# Cấu hình logging để dễ debug
+logging.basicConfig(level=logging.INFO)
+
+# Khởi tạo bot và router
+bot = Bot(token="YOUR_BOT_TOKEN")
+router = Router()
 
 # Load danh sách bị ban
 def load_json(filename):
@@ -1777,13 +1784,10 @@ def save_json(filename, data):
         json.dump(data, f, indent=4)
 
 # Lớp kiểm tra người dùng bị ban
-class IsBanned(BaseFilter):
+class IsBanned:
     async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
         banned_users = load_json(BANNED_USERS_FILE)
         return str(event.from_user.id) in banned_users
-
-# Khởi tạo router
-router = Router()
 
 # Chặn tin nhắn và xóa tất cả nút nếu bị ban
 async def remove_buttons(message: types.Message):
@@ -1874,8 +1878,6 @@ async def banned_list(message: types.Message):
     else:
         banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
         await message.answer(banned_list_text)
-
-
 
 # ===================== Chạy bot =====================
 async def main():
