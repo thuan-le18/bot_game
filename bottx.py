@@ -1527,7 +1527,7 @@ async def force_all_games(message: types.Message):
         await message.answer("Bạn không có quyền sử dụng lệnh này.")
         return
 
-    args = message.text.strip().split(maxsplit=2)  # ✅ Sửa lỗi tách sai
+    args = message.text.strip().split(maxsplit=3)  # ✅ Sửa lỗi tách game_name
     logging.info(f"Parsed arguments: {args}")
 
     if len(args) < 3:
@@ -1535,11 +1535,11 @@ async def force_all_games(message: types.Message):
         await message.answer("❌ Usage: /forceall <game_name> <parameters> [user_id]")
         return
 
-    game_name = args[1].strip().lower()
+    game_name = " ".join(args[1:3]).strip().lower()  # ✅ Gộp lại thành 'máy bay'
     logging.info(f"Game name detected: {game_name}")
 
     if game_name == "máy bay":
-        params = args[2].split()
+        params = args[3].split()
         if len(params) < 2:
             logging.warning(f"Invalid Máy Bay format from {message.from_user.id}: {message.text}")
             await message.answer("❌ Usage: /forceall máy bay <x_value> <user_id>")
@@ -1576,7 +1576,7 @@ async def force_all_games(message: types.Message):
 
     elif game_name == "đào vàng":
         try:
-            target_user = int(args[2])
+            target_user = int(args[3])
         except ValueError as e:
             logging.error(f"Error parsing user ID: {e}")
             await message.answer("❌ User ID không hợp lệ.")
