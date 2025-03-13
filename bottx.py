@@ -1526,21 +1526,21 @@ async def force_all_games(message: types.Message):
 
     args = message.text.split()
     if len(args) < 3:
-        await message.answer("Usage: /forceall <game_name> <parameters> [user_id]")
+        await message.answer("Usage: /forceall <game_name> <user_id> <parameters>")
         return
 
     game_name = args[1].lower().strip()
 
     if game_name == "máy bay":
         if len(args) < 4:
-            await message.answer("Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
+            await message.answer("Usage for Máy Bay: /forceall máy bay <user_id> x<value>")
             return
         
         try:
-            custom_x = float(args[2].replace('x', ''))
-            target_user = int(args[3])
+            target_user = int(args[2])
+            custom_x = float(args[3].replace('x', ''))
         except ValueError:
-            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
+            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x2.89).")
             return
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
@@ -1550,8 +1550,16 @@ async def force_all_games(message: types.Message):
             return
 
         game = crash_games[target_user]
-        game["forced_x"] = round(custom_x, 2)
-        await message.answer(f"Máy Bay - User {target_user} đã bị ép x{game['forced_x']}.")
+        bet = game.get("bet", 0)
+        forced_multiplier = round(custom_x, 2)
+        win_amount = round(bet * forced_multiplier)
+
+        user_balance[target_user] = user_balance.get(target_user, 0) + win_amount
+        await bot.send_message(target_user, f"🎉 Máy bay đạt x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!")
+        crash_games[target_user]["running"] = False  # Đánh dấu kết thúc
+
+        save_data(crash_games)
+        await message.answer(f"Máy Bay - User {target_user} đã bị ép x{forced_multiplier}.")
 
     elif game_name == "đào vàng":
         if len(args) < 3:
@@ -1572,9 +1580,9 @@ async def force_all_games(message: types.Message):
 
         state = daovang_states[target_user]
         bet = state.get("bet", 0)
-        state["next_tile_bomb"] = True  # Đánh dấu ô tiếp theo là bom
+        state["bomb_count"] += 1
 
-        await bot.send_message(target_user, "💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.")
+        await bot.send_message(target_user, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ.")
         save_data(daovang_states)
 
         await message.answer(f"Đào Vàng - User {target_user} đã bị ép THUA.")
