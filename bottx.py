@@ -608,7 +608,7 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
-    countdown_time = random.choice([10,12,14, 15])
+    countdown_time = random.choice([5,7,9,12])
     countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
     for i in range(countdown_time, 0, -1):
         try:
@@ -1522,93 +1522,14 @@ def player_exit_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states.pop(user_id, None)
 
-import logging
-import asyncio
-from aiogram import types
-from aiogram.filters import Command
-
-logging.basicConfig(level=logging.INFO)
-
-@router.message(Command("forceall"))
-async def force_all_games(message: types.Message):
-    logging.info(f"Received /forceall command from user {message.from_user.id}: {message.text}")
-
-    if message.from_user.id != ADMIN_ID:
-        logging.warning(f"User {message.from_user.id} tried to use /forceall without permission.")
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-
-    args = message.text.strip().split()
-    logging.info(f"Parsed arguments: {args}")
-
-    if len(args) < 5:
-        await message.answer("❌ Usage: /forceall máy bay <user_id> x<value>")
-        return
-
-    if args[1].lower() == "máy" and args[2].lower() == "bay":
-        game_name = "máy bay"
-        target_user = args[3]  
-        x_value_str = args[4]  
-    else:
-        await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
-        return
-
-    logging.info(f"Game name: {game_name}, target_user: {target_user}, x_value_str: {x_value_str}")
-
-    if game_name == "máy bay":
-        try:
-            custom_x = float(x_value_str.replace('x', ''))
-        except ValueError:
-            await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
-            return
-
-        logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
-
-        if target_user not in crash_games:
-            await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
-            return
-
-        game = crash_games[target_user]
-        bet = game.get("bet", 0)
-
-        # Chờ máy bay bay lên đúng hệ số admin muốn rồi mới rơi
-        current_x = 1.00
-        while current_x < custom_x:
-            current_x += 0.05  # Tăng hệ số dần dần
-            await asyncio.sleep(0.5)  # Mô phỏng máy bay bay
-
-        # Máy bay rơi khi đạt đúng hệ số
-        crash_point = round(custom_x, 2)
-        loss_amount = bet
-        user_balance[target_user] = user_balance.get(target_user, 0) - loss_amount
-
-        game["running"] = False
-        game["forced_multiplier"] = crash_point
-        game["crash_point"] = crash_point
-
-        save_data(crash_games)
-
-        # Gửi tin nhắn báo thua
-        await bot.send_message(
-            target_user,
-            f"💥 <b>Máy bay rơi tại</b> x{crash_point}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!"
-        )
-
-        await message.answer(
-            f"✅ Máy Bay - User {target_user} đã bị ép THUA (máy bay rơi tại x{crash_point})."
-        )
-
-    else:
-        await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
-
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
-    "🎲 Tài Xỉu": (40, 60),
+    "🎲 Tài Xỉu": (32, 53),
     "🎰 Jackpot": (25, 34),
-    "✈️ Máy Bay": (60, 82),
-    "🐉 Rồng Hổ": (30, 60),
-    "⛏️ Đào Vàng": (30, 45),
-    "🃏 Mini Poker": (20, 40)
+    "✈️ Máy Bay": (55, 82),
+    "🐉 Rồng Hổ": (38, 52),
+    "⛏️ Đào Vàng": (28, 35),
+    "🃏 Mini Poker": (35, 47)
 }
 
 game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
@@ -1622,13 +1543,13 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    delta = random.randint(-4, 4)
+                    delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
                     game_players[game] = max(20, min(200, new_value))
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
-            await asyncio.sleep(5)
+            await asyncio.sleep(4)
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
