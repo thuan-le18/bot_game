@@ -1755,6 +1755,8 @@ import json
 from aiogram import Router, types
 from aiogram.filters import Command, BaseFilter
 from aiogram.types import ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # ID của admin
 ADMIN_ID = 1985817060
