@@ -1767,8 +1767,6 @@ BANNED_USERS_FILE = "banned_users.json"
 # Cấu hình logging để dễ debug
 logging.basicConfig(level=logging.INFO)
 
-# Khởi tạo bot và router
-bot = Bot(token="YOUR_BOT_TOKEN")
 router = Router()
 
 # Load danh sách bị ban
