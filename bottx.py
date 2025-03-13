@@ -1526,21 +1526,21 @@ async def force_all_games(message: types.Message):
 
     args = message.text.split()
     if len(args) < 3:
-        await message.answer("Usage: /forceall <game_name> <user_id> <parameters>")
+        await message.answer("Usage: /forceall <game_name> <parameters> [user_id]")
         return
 
     game_name = args[1].lower().strip()
 
     if game_name == "máy bay":
         if len(args) < 4:
-            await message.answer("Usage for Máy Bay: /forceall máy bay <user_id> x<value>")
+            await message.answer("Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
             return
         
         try:
-            target_user = int(args[2])
-            custom_x = float(args[3].replace('x', ''))
+            custom_x = float(args[2].replace('x', ''))
+            target_user = int(args[3])
         except ValueError:
-            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x2.89).")
+            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             return
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
