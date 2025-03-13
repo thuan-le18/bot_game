@@ -1511,6 +1511,7 @@ def player_exit_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states.pop(user_id, None)
 
+# Chỉ admin mới được sử dụng lệnh này
 import logging
 import random
 
@@ -1528,49 +1529,51 @@ async def force_all_games(message: types.Message):
 
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("Usage: /forceall <win/lose> [user_id]")
+        await message.answer("Usage: /forceall <game_name> [parameters]")
         logging.warning(f"Invalid /forceall usage by user {message.from_user.id}: not enough arguments.")
         return
 
-    outcome = args[1].lower()
-    if outcome not in ["win", "lose"]:
-        await message.answer("Outcome phải là 'win' hoặc 'lose'.")
-        logging.warning(f"Invalid outcome provided by user {message.from_user.id}: {outcome}.")
+    game_name = args[1].lower()
+    if game_name not in ["máy bay", "daovang"]:
+        await message.answer("Chỉ hỗ trợ các game: Máy Bay, Đào Vàng.")
+        logging.warning(f"Invalid game name provided by user {message.from_user.id}: {game_name}.")
         return
 
-    target_user = args[2] if len(args) >= 3 else None
-    results = []
+    if game_name == "máy bay" and len(args) >= 3:
+        try:
+            custom_x = float(args[2].replace('x', ''))
+            logging.info(f"Admin set custom x for Máy Bay to: {custom_x}")
+        except ValueError:
+            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
+            logging.warning(f"Invalid custom x value provided by user {message.from_user.id}: {args[2]}.")
+            return
+    else:
+        custom_x = None
 
     # --- Force outcome cho game Máy Bay (Crash) ---
     async def process_crash(uid):
         game = crash_games.get(uid)
         if not game:
-            results.append(f"Máy Bay - User {uid}: Không có game đang chạy.")
+            await message.answer(f"Máy Bay - User {uid}: Không có game đang chạy.")
             logging.info(f"User {uid} does not have an active crash game.")
             return
         bet = game.get("bet", 0)
-        crash_point = game.get("crash_point", 1.0)  # Lấy hệ số hiện tại
-        
+        crash_point = game.get("crash_point", 1.0)  # Lấy hệ số hiện tại hoặc custom_x
+
+        if custom_x:
+            crash_point = custom_x  # Dùng giá trị x được admin set
+
         logging.info(f"User {uid} is playing Crash with a bet of {bet} VNĐ and crash point {crash_point}.")
 
         if outcome == "win":
-            forced_multiplier = round(random.uniform(4.5, 5.0), 2)
+            forced_multiplier = round(crash_point, 2)
             win_amount = round(bet * forced_multiplier)
             user_balance[uid] = user_balance.get(uid, 0) + win_amount
-            results.append(f"Máy Bay - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier}.")
-            logging.info(f"User {uid} forced WIN in Crash game with multiplier {forced_multiplier}. Win amount: {win_amount} VNĐ.")
-            try:
-                await bot.send_message(uid, f"🎉 Máy bay bay cao với hệ số x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Failed to send message to user {uid}: {e}")
+            await bot.send_message(uid, f"🎉 Máy bay bay cao với hệ số x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
         else:
             loss_amount = bet
-            results.append(f"Máy Bay - User {uid}: Ép thành LOSE (-{loss_amount} VNĐ) tại x{crash_point}.")
-            logging.info(f"User {uid} forced LOSE in Crash game at crash point {crash_point}.")
-            try:
-                await bot.send_message(uid, f"💥 Máy bay rơi tại x{crash_point}! ❌ Bạn đã mất {loss_amount:,} VNĐ!", reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Failed to send message to user {uid}: {e}")
+            await bot.send_message(uid, f"💥 Máy bay rơi tại x{crash_point}! ❌ Bạn đã mất {loss_amount} VNĐ!", reply_markup=main_menu)
+
         crash_games[uid]["running"] = False
         del crash_games[uid]
 
@@ -1578,7 +1581,7 @@ async def force_all_games(message: types.Message):
     async def process_daovang(uid):
         state = daovang_states.get(uid)
         if not state:
-            results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
+            await message.answer(f"Đào Vàng - User {uid}: Không có game đang chạy.")
             logging.info(f"User {uid} does not have an active Daovang game.")
             return
         bet = state.get("bet", 0)
@@ -1586,100 +1589,35 @@ async def force_all_games(message: types.Message):
         total_safe = 25 - bomb_count
         logging.info(f"User {uid} is playing Daovang with a bet of {bet} VNĐ and {bomb_count} bombs remaining.")
 
-        if outcome == "win":
-            forced_safe = 15 if total_safe >= 15 else total_safe
-            forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
-            win_amount = int(bet * forced_multiplier)
-            user_balance[uid] = user_balance.get(uid, 0) + win_amount
-            results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
-            logging.info(f"User {uid} forced WIN in Daovang game with multiplier {forced_multiplier}. Win amount: {win_amount} VNĐ.")
+        if outcome == "lose":
+            # Nếu người dùng thua, ô tiếp theo sẽ nổ
+            bomb_count += 1  # Tăng số BOM
+            state["bomb_count"] = bomb_count
+            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ), ô tiếp theo sẽ nổ.")
+            logging.info(f"User {uid} forced LOSE in Daovang game. Bomb count increased to {bomb_count}.")
             try:
-                await bot.send_message(uid, 
-                    f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", 
-                    reply_markup=main_menu)
+                await bot.send_message(uid, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.{bet} VNĐ.", reply_markup=main_menu)
             except Exception as e:
                 logging.error(f"Failed to send message to user {uid}: {e}")
         else:
-            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
-            logging.info(f"User {uid} forced LOSE in Daovang game.")
-            try:
-                await bot.send_message(uid, 
-                    f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", 
-                    reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Failed to send message to user {uid}: {e}")
+            results.append(f"Đào Vàng - User {uid}: Không thể ép WIN trong trò chơi này.")
+            logging.warning(f"User {uid} tried to force WIN in Daovang game, but this is not allowed.")
+
         del daovang_states[uid]
 
-    # --- Force outcome cho game Mini Poker ---
-    async def process_poker(uid):
-        if uid not in poker_states or not poker_states[uid].get("awaiting_bet"):
-            results.append(f"Mini Poker - User {uid}: Không có game đang chờ.")
-            logging.info(f"User {uid} does not have an active poker game awaiting bet.")
-            return
-
-        bet = poker_states[uid].get("bet")
-        if bet is None:
-            results.append(f"Mini Poker - User {uid}: Chưa có cược xác định.")
-            logging.info(f"User {uid} has not placed a bet in poker.")
-            return
-        
-        from aiogram.utils.keyboard import InlineKeyboardBuilder
-        poker_keyboard = InlineKeyboardBuilder()
-        poker_keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
-        poker_keyboard.button(text="🔙 Quay lại", callback_data="poker_back")
-        
-        if outcome == "lose":
-            hand_type = "Mậu Thầu"
-            cards = random.sample(CARD_DECK, 5)
-            result_text = (
-                f"🃏 **Bài của bạn:** {' '.join(cards)}\n"
-                f"🎯 **Kết quả:** {hand_type}\n"
-                "😢 **Chúc may mắn lần sau!**"
-            )
-            results.append(f"Mini Poker - User {uid}: Ép thành LOSE.")
-            logging.info(f"User {uid} forced LOSE in Poker game with hand {hand_type}.")
-            try:
-                await bot.send_message(uid, result_text, reply_markup=main_menu)
-            except Exception as e:
-                logging.error(f"Failed to send message to user {uid}: {e}")
-        else:
-            hand_type = "Đôi"
-            cards = random.sample(CARD_DECK, 5)
-            cards[0] = "♠A"
-            cards[1] = "♥A"
-            multiplier = PRIZES.get(hand_type, 0)
-            win_amount = int(bet * multiplier)
-            user_balance[uid] = user_balance.get(uid, 0) + win_amount
-            save_data(data)
-            result_text = (
-                f"🃏 **Bài của bạn:** {' '.join(cards)}\n"
-                f"🎯 **Kết quả:** {hand_type}\n"
-                f"🎉 **Thắng:** {win_amount} VNĐ (x{multiplier})!"
-            )
-            results.append(f"Mini Poker - User {uid}: Ép thành WIN (+{win_amount} VNĐ).")
-            logging.info(f"User {uid} forced WIN in Poker game with hand {hand_type}. Win amount: {win_amount} VNĐ.")
-            try:
-                await bot.send_message(uid, result_text, reply_markup=poker_keyboard.as_markup())
-            except Exception as e:
-                logging.error(f"Failed to send message to user {uid}: {e}")
-        del poker_states[uid]
-
-    if target_user:
-        if target_user in crash_games:
+    if game_name == "máy bay":
+        if target_user:
             await process_crash(target_user)
-        if target_user in daovang_states and daovang_states[target_user].get("active"):
+        else:
+            for uid in list(crash_games.keys()):
+                await process_crash(uid)
+
+    elif game_name == "daovang":
+        if target_user:
             await process_daovang(target_user)
-        if target_user in poker_states and poker_states[target_user].get("awaiting_bet"):
-            await process_poker(target_user)
-    else:
-        for uid in list(crash_games.keys()):
-            await process_crash(uid)
-        for uid, state in list(daovang_states.items()):
-            if state.get("active"):
+        else:
+            for uid, state in list(daovang_states.items()):
                 await process_daovang(uid)
-        for uid, state in list(poker_states.items()):
-            if state.get("awaiting_bet"):
-                await process_poker(uid)
 
     save_data(data)
     if results:
@@ -1688,7 +1626,6 @@ async def force_all_games(message: types.Message):
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
         logging.info(f"No active games for /forceall command from user {message.from_user.id}.")
-
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
