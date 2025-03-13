@@ -39,8 +39,6 @@ def add_referral(referrer_id, new_user_id):
     referrals[referrer_id].append({"user_id": new_user_id, "timestamp": datetime.now().isoformat()})
     save_json(REFERRAL_FILE, referrals)
 
-
-
 # ===================== Cấu hình bot =====================
 TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
@@ -1751,6 +1749,88 @@ async def unlock_players(message: types.Message):
 
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
+
+import json
+import os
+from aiogram import types, Router
+from aiogram.filters import Command
+from aiogram.types import ReplyKeyboardRemove
+
+BAN_LIST_FILE = "ban_list.json"
+ADMIN_ID = 1985817060  # Thay bằng ID admin của bạn
+
+router = Router()
+
+# Load ban list
+def load_ban_list():
+    if os.path.exists(BAN_LIST_FILE):
+        with open(BAN_LIST_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
+    return {}
+
+# Save ban list
+def save_ban_list(ban_list):
+    with open(BAN_LIST_FILE, "w", encoding="utf-8") as file:
+        json.dump(ban_list, file, indent=4)
+
+ban_list = load_ban_list()
+
+# Kiểm tra người dùng có bị ban không
+def is_banned(user_id):
+    return str(user_id) in ban_list
+
+# Lấy lý do ban
+def get_ban_reason(user_id):
+    return ban_list.get(str(user_id), "Không có lý do")
+
+# Ban user
+@router.message(Command("ban"))
+async def ban_user(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.reply("Bạn không có quyền sử dụng lệnh này.")
+        return
+    
+    args = message.text.split()[1:]
+    if len(args) < 2:
+        await message.reply("Usage: /ban [user_id] [reason]")
+        return
+    
+    user_id = args[0]
+    reason = " ".join(args[1:])
+    ban_list[user_id] = reason
+    save_ban_list(ban_list)
+    
+    await message.reply(f"Đã cấm user {user_id} vì: {reason}")
+
+# Unban user
+@router.message(Command("unban"))
+async def unban_user(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.reply("Bạn không có quyền sử dụng lệnh này.")
+        return
+    
+    args = message.text.split()[1:]
+    if len(args) < 1:
+        await message.reply("Usage: /unban [user_id]")
+        return
+    
+    user_id = args[0]
+    if user_id in ban_list:
+        del ban_list[user_id]
+        save_ban_list(ban_list)
+        await message.reply(f"Đã gỡ cấm user {user_id}.")
+    else:
+        await message.reply("Người dùng này không bị cấm.")
+
+# Lệnh start
+@router.message(Command("start"))
+async def start(message: types.Message):
+    user_id = str(message.from_user.id)
+    
+    if user_id in ban_list:
+        await message.reply("Bạn đã bị admin cấm tài khoản. Liên hệ admin nếu có thắc mắc.", reply_markup=ReplyKeyboardRemove())
+    else:
+        await message.reply("Chào mừng bạn đến với bot!")
 
 # ===================== Chạy bot =====================
 async def main():
