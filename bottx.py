@@ -1511,20 +1511,31 @@ def player_exit_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states.pop(user_id, None)
 
+import logging
+import random
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO)
+
 # Chỉ admin mới được sử dụng lệnh này
 @router.message(Command("forceall"))
 async def force_all_games(message: types.Message):
+    logging.info(f"Received /forceall command from user {message.from_user.id}")
+    
     if message.from_user.id != ADMIN_ID:
+        logging.warning(f"User {message.from_user.id} tried to use /forceall without permission.")
         return
 
     args = message.text.split()
     if len(args) < 2:
         await message.answer("Usage: /forceall <win/lose> [user_id]")
+        logging.warning(f"Invalid /forceall usage by user {message.from_user.id}: not enough arguments.")
         return
 
     outcome = args[1].lower()
     if outcome not in ["win", "lose"]:
         await message.answer("Outcome phải là 'win' hoặc 'lose'.")
+        logging.warning(f"Invalid outcome provided by user {message.from_user.id}: {outcome}.")
         return
 
     target_user = args[2] if len(args) >= 3 else None
@@ -1535,69 +1546,81 @@ async def force_all_games(message: types.Message):
         game = crash_games.get(uid)
         if not game:
             results.append(f"Máy Bay - User {uid}: Không có game đang chạy.")
+            logging.info(f"User {uid} does not have an active crash game.")
             return
         bet = game.get("bet", 0)
         crash_point = game.get("crash_point", 1.0)  # Lấy hệ số hiện tại
         
+        logging.info(f"User {uid} is playing Crash with a bet of {bet} VNĐ and crash point {crash_point}.")
+
         if outcome == "win":
             forced_multiplier = round(random.uniform(4.5, 5.0), 2)
             win_amount = round(bet * forced_multiplier)
             user_balance[uid] = user_balance.get(uid, 0) + win_amount
             results.append(f"Máy Bay - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier}.")
+            logging.info(f"User {uid} forced WIN in Crash game with multiplier {forced_multiplier}. Win amount: {win_amount} VNĐ.")
             try:
                 await bot.send_message(uid, f"🎉 Máy bay bay cao với hệ số x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!", reply_markup=main_menu)
             except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
+                logging.error(f"Failed to send message to user {uid}: {e}")
         else:
             loss_amount = bet
             results.append(f"Máy Bay - User {uid}: Ép thành LOSE (-{loss_amount} VNĐ) tại x{crash_point}.")
+            logging.info(f"User {uid} forced LOSE in Crash game at crash point {crash_point}.")
             try:
                 await bot.send_message(uid, f"💥 Máy bay rơi tại x{crash_point}! ❌ Bạn đã mất {loss_amount:,} VNĐ!", reply_markup=main_menu)
             except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
+                logging.error(f"Failed to send message to user {uid}: {e}")
         crash_games[uid]["running"] = False
         del crash_games[uid]
 
     # --- Force outcome cho game Đào Vàng ---
-async def process_daovang(uid):
-    state = daovang_states.get(uid)
-    if not state:
-        results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
-        return
-    bet = state.get("bet", 0)
-    bomb_count = state.get("bomb_count", 3)
-    total_safe = 25 - bomb_count
-    if outcome == "win":
-        forced_safe = 15 if total_safe >= 15 else total_safe
-        forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
-        win_amount = int(bet * forced_multiplier)
-        user_balance[uid] = user_balance.get(uid, 0) + win_amount
-        results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
-        try:
-            await bot.send_message(uid, 
-                f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", 
-                reply_markup=main_menu)
-        except Exception as e:
-            logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
-    else:
-        results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
-        try:
-            await bot.send_message(uid, 
-                f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", 
-                reply_markup=main_menu)
-        except Exception as e:
-            logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
-    del daovang_states[uid]
+    async def process_daovang(uid):
+        state = daovang_states.get(uid)
+        if not state:
+            results.append(f"Đào Vàng - User {uid}: Không có game đang chạy.")
+            logging.info(f"User {uid} does not have an active Daovang game.")
+            return
+        bet = state.get("bet", 0)
+        bomb_count = state.get("bomb_count", 3)
+        total_safe = 25 - bomb_count
+        logging.info(f"User {uid} is playing Daovang with a bet of {bet} VNĐ and {bomb_count} bombs remaining.")
+
+        if outcome == "win":
+            forced_safe = 15 if total_safe >= 15 else total_safe
+            forced_multiplier = calculate_multiplier(forced_safe, bomb_count)
+            win_amount = int(bet * forced_multiplier)
+            user_balance[uid] = user_balance.get(uid, 0) + win_amount
+            results.append(f"Đào Vàng - User {uid}: Ép thành WIN (+{win_amount} VNĐ) với x{forced_multiplier:.2f}.")
+            logging.info(f"User {uid} forced WIN in Daovang game with multiplier {forced_multiplier}. Win amount: {win_amount} VNĐ.")
+            try:
+                await bot.send_message(uid, 
+                    f"🎉 Rút vàng thành công! Bạn trúng {forced_safe} ô an toàn và thắng {win_amount} VNĐ!", 
+                    reply_markup=main_menu)
+            except Exception as e:
+                logging.error(f"Failed to send message to user {uid}: {e}")
+        else:
+            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ).")
+            logging.info(f"User {uid} forced LOSE in Daovang game.")
+            try:
+                await bot.send_message(uid, 
+                    f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", 
+                    reply_markup=main_menu)
+            except Exception as e:
+                logging.error(f"Failed to send message to user {uid}: {e}")
+        del daovang_states[uid]
 
     # --- Force outcome cho game Mini Poker ---
     async def process_poker(uid):
         if uid not in poker_states or not poker_states[uid].get("awaiting_bet"):
             results.append(f"Mini Poker - User {uid}: Không có game đang chờ.")
+            logging.info(f"User {uid} does not have an active poker game awaiting bet.")
             return
 
         bet = poker_states[uid].get("bet")
         if bet is None:
             results.append(f"Mini Poker - User {uid}: Chưa có cược xác định.")
+            logging.info(f"User {uid} has not placed a bet in poker.")
             return
         
         from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -1614,10 +1637,11 @@ async def process_daovang(uid):
                 "😢 **Chúc may mắn lần sau!**"
             )
             results.append(f"Mini Poker - User {uid}: Ép thành LOSE.")
+            logging.info(f"User {uid} forced LOSE in Poker game with hand {hand_type}.")
             try:
                 await bot.send_message(uid, result_text, reply_markup=main_menu)
             except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
+                logging.error(f"Failed to send message to user {uid}: {e}")
         else:
             hand_type = "Đôi"
             cards = random.sample(CARD_DECK, 5)
@@ -1633,10 +1657,11 @@ async def process_daovang(uid):
                 f"🎉 **Thắng:** {win_amount} VNĐ (x{multiplier})!"
             )
             results.append(f"Mini Poker - User {uid}: Ép thành WIN (+{win_amount} VNĐ).")
+            logging.info(f"User {uid} forced WIN in Poker game with hand {hand_type}. Win amount: {win_amount} VNĐ.")
             try:
                 await bot.send_message(uid, result_text, reply_markup=poker_keyboard.as_markup())
             except Exception as e:
-                logging.error(f"Không thể gửi tin nhắn đến {uid}: {e}")
+                logging.error(f"Failed to send message to user {uid}: {e}")
         del poker_states[uid]
 
     if target_user:
@@ -1659,8 +1684,11 @@ async def process_daovang(uid):
     save_data(data)
     if results:
         await message.answer("\n".join(results))
+        logging.info(f"Forceall results for user {message.from_user.id}: {results}")
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
+        logging.info(f"No active games for /forceall command from user {message.from_user.id}.")
+
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
@@ -1750,132 +1778,6 @@ async def unlock_players(message: types.Message):
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
 
-import os
-import json
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup
-from aiogram import Router
-import logging
-
-# ID của admin
-ADMIN_ID = 1985817060
-
-# File lưu danh sách bị ban
-BANNED_USERS_FILE = "banned_users.json"
-
-# Cấu hình logging để dễ debug
-logging.basicConfig(level=logging.INFO)
-
-router = Router()
-
-# Load danh sách bị ban
-def load_json(filename):
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-# Lưu danh sách bị ban
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
-
-# Lớp kiểm tra người dùng bị ban
-class IsBanned:
-    async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
-        banned_users = load_json(BANNED_USERS_FILE)
-        return str(event.from_user.id) in banned_users
-
-# Chặn tin nhắn và xóa tất cả nút nếu bị ban
-async def remove_buttons(message: types.Message):
-    try:
-        await message.edit_reply_markup(reply_markup=None)  # Xóa nút
-    except:
-        pass  # Nếu không thể xóa thì bỏ qua lỗi
-
-# Chặn tin nhắn và hiển thị thông báo bị ban với nút Start
-@router.message(IsBanned())
-async def check_banned_users(message: types.Message):
-    await message.answer(
-        "🚫 Tài khoản của bạn đã bị khóa bởi admin.\n\n"
-        "Bạn không thể sử dụng các chức năng của bot. Nếu có thắc mắc, vui lòng liên hệ admin.",
-        reply_markup=ReplyKeyboardRemove()  # Xóa tất cả nút
-    )
-    
-    # Tạo nút "Start" cho người dùng bị ban
-    start_button = KeyboardButton("Start")
-    keyboard = InlineKeyboardMarkup().add(start_button)
-    
-    # Gửi lại nút Start cho người dùng
-    await message.answer("Bạn đã bị ban. Nếu cần hỗ trợ, vui lòng liên hệ admin.", reply_markup=keyboard)
-    await remove_buttons(message)
-
-# Chặn callback khi người dùng bị ban
-@router.callback_query(IsBanned())
-async def check_banned_callbacks(callback: types.CallbackQuery):
-    await callback.answer("🚫 Tài khoản của bạn đã bị khóa bởi admin.", show_alert=True)
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await remove_buttons(callback.message)
-
-# Chặn inline query khi người dùng bị ban
-@router.inline_query(IsBanned())
-async def check_banned_inline(inline_query: types.InlineQuery):
-    await inline_query.answer([], cache_time=1, switch_pm_text="🚫 Bạn đã bị khóa.", switch_pm_parameter="banned")
-
-# Lệnh ban người dùng
-@router.message(Command("ban"))
-async def ban_user(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        await message.answer("❌ Sử dụng: /ban <user_id>")
-        return
-
-    user_id = args[1]
-    banned_users = load_json(BANNED_USERS_FILE)
-    banned_users[user_id] = True
-    save_json(BANNED_USERS_FILE, banned_users)
-
-    await message.answer(f"✅ Đã khóa tài khoản {user_id}, người này sẽ không thể sử dụng nút bấm.")
-
-# Lệnh mở khóa người dùng
-@router.message(Command("unban"))
-async def unban_user(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        await message.answer("❌ Sử dụng: /unban <user_id>")
-        return
-
-    user_id = args[1]
-    banned_users = load_json(BANNED_USERS_FILE)
-    if user_id in banned_users:
-        del banned_users[user_id]
-        save_json(BANNED_USERS_FILE, banned_users)
-        await message.answer(f"✅ Đã mở khóa tài khoản {user_id}.")
-    else:
-        await message.answer("❌ Người dùng này không bị ban.")
-
-# Lệnh liệt kê người bị ban
-@router.message(Command("banned"))
-async def banned_list(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
-        return
-
-    banned_users = load_json(BANNED_USERS_FILE)
-    if not banned_users:
-        await message.answer("✅ Hiện không có ai bị ban.")
-    else:
-        banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
-        await message.answer(banned_list_text)
 
 # ===================== Chạy bot =====================
 async def main():
