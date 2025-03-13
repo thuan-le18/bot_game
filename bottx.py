@@ -692,14 +692,15 @@ async def withdraw_crash(callback: types.CallbackQuery):
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        win_amount = round(bet * multiplier)  # Tiền thắng
+        profit = round(bet * (multiplier - 1))  # Chỉ tính lợi nhuận
+        win_amount = profit + bet  # Tổng tiền trả lại (gốc + lợi nhuận)
 
         # Cộng tiền thắng vào số dư
         user_balance[user_id] += win_amount
         save_data(user_balance)
 
         # Lưu lịch sử thắng
-        record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
+        record_bet_history(user_id, "Máy Bay", bet, "win", profit)
 
         # Dừng game
         crash_games[user_id]["running"] = False
@@ -708,16 +709,15 @@ async def withdraw_crash(callback: types.CallbackQuery):
         # Thông báo rút tiền thành công với số tiền cụ thể
         try:
             await callback.message.edit_text(
-                f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {win_amount:,} VNĐ\n📈 Hệ số nhân: x{multiplier}",
+                f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n📈 Hệ số nhân: x{multiplier}",
                 reply_markup=main_menu
             )
         except Exception as e:
             logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
 
-        await callback.answer(f"💸 Bạn đã rút {win_amount:,} VNĐ thành công!")
+        await callback.answer(f"💸 Bạn đã rút {profit:,} VNĐ lợi nhuận thành công!")
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
