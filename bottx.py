@@ -1511,7 +1511,6 @@ def player_exit_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states.pop(user_id, None)
 
-# Chỉ admin mới được sử dụng lệnh này
 import logging
 import random
 
@@ -1595,34 +1594,33 @@ async def force_all_games(message: types.Message):
         total_safe = 25 - bomb_count
         logging.info(f"User {uid} is playing Daovang with a bet of {bet} VNĐ and {bomb_count} bombs remaining.")
 
-        if outcome == "lose":
+        if args[2].lower() == "lose":
             # Nếu người dùng thua, ô tiếp theo sẽ nổ
             bomb_count += 1  # Tăng số BOM
             state["bomb_count"] = bomb_count
-            results.append(f"Đào Vàng - User {uid}: Ép thành LOSE (-{bet} VNĐ), ô tiếp theo sẽ nổ.")
             logging.info(f"User {uid} forced LOSE in Daovang game. Bomb count increased to {bomb_count}.")
             try:
-                await bot.send_message(uid, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.{bet} VNĐ.", reply_markup=main_menu)
+                await bot.send_message(uid, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược: {bet} VNĐ.", reply_markup=main_menu)
             except Exception as e:
                 logging.error(f"Failed to send message to user {uid}: {e}")
         else:
-            results.append(f"Đào Vàng - User {uid}: Không thể ép WIN trong trò chơi này.")
             logging.warning(f"User {uid} tried to force WIN in Daovang game, but this is not allowed.")
 
         del daovang_states[uid]
 
     if game_name == "máy bay":
-        if target_user:
-            await process_crash(target_user)
+        if len(args) >= 3:
+            await process_crash(int(args[2]))  # Đảm bảo nếu có ID, xử lý cho người chơi đó
         else:
             for uid in list(crash_games.keys()):
                 await process_crash(uid)
 
     elif game_name == "daovang":
-        if target_user:
+        if len(args) >= 3:
+            target_user = int(args[2])
             await process_daovang(target_user)
         else:
-            for uid, state in list(daovang_states.items()):
+            for uid in list(daovang_states.keys()):
                 await process_daovang(uid)
 
     save_data(data)
@@ -1632,6 +1630,7 @@ async def force_all_games(message: types.Message):
     else:
         await message.answer("Không có game nào đang chạy để ép kết quả.")
         logging.info(f"No active games for /forceall command from user {message.from_user.id}.")
+
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
