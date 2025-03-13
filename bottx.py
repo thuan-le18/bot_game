@@ -1512,6 +1512,7 @@ def player_exit_game(user_id, game_name):
         poker_states.pop(user_id, None)
 
 import logging
+import asyncio
 from aiogram import types
 from aiogram.filters import Command
 
@@ -1559,7 +1560,13 @@ async def force_all_games(message: types.Message):
         game = crash_games[target_user]
         bet = game.get("bet", 0)
 
-        # Cập nhật hệ số rơi ngay khi admin ép
+        # Chờ máy bay bay lên đúng hệ số admin muốn rồi mới rơi
+        current_x = 1.00
+        while current_x < custom_x:
+            current_x += 0.05  # Tăng hệ số dần dần
+            await asyncio.sleep(0.5)  # Mô phỏng máy bay bay
+
+        # Máy bay rơi khi đạt đúng hệ số
         crash_point = round(custom_x, 2)
         loss_amount = bet
         user_balance[target_user] = user_balance.get(target_user, 0) - loss_amount
@@ -1582,7 +1589,6 @@ async def force_all_games(message: types.Message):
 
     else:
         await message.answer("❌ Game không hợp lệ! Hiện chỉ hỗ trợ: Máy Bay.")
-
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
