@@ -399,7 +399,7 @@ class TransferState(StatesGroup):
     waiting_for_receiver = State()
     waiting_for_amount = State()
 
-# ===================== Chuyển Tiền Handler =====================
+# ===================== Chuyển Tiền Handler ===================== 
 @router.callback_query(F.data == "transfer_money")
 async def transfer_money_callback(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("🔹Nhập ID người nhận trước:\n💡 Lưu ý: Chuyển tiền sẽ mất phí 3% và tối thiểu 20,000 VNĐ.")
@@ -410,9 +410,12 @@ async def transfer_money_callback(callback: types.CallbackQuery, state: FSMConte
 async def enter_receiver_id(message: types.Message, state: FSMContext):
     receiver_id = message.text.strip()
 
-    # Kiểm tra xem user có nhập số hay không
+    # Kiểm tra xem user có nhập số hợp lệ không
     if not receiver_id.isdigit():
-        await message.answer("❌ ID không hợp lệ")
+        await message.answer("❌ ID không hợp lệ. Quay lại menu chính.", reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="🔙 Quay lại", callback_data="main_menu")]]
+        ))
+        await state.clear()
         return
     
     await state.update_data(receiver_id=receiver_id)
@@ -422,8 +425,12 @@ async def enter_receiver_id(message: types.Message, state: FSMContext):
 @router.message(TransferState.waiting_for_amount)
 async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: Bot):
     amount = message.text.strip()
+    
     if not amount.isdigit() or int(amount) < 20000:
-        await message.answer("❌ Số tiền không hợp lệ. Vui lòng nhập ít nhất 20,000 VNĐ:")
+        await message.answer("❌ Số tiền không hợp lệ. Quay lại menu chính.", reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="🔙 Quay lại", callback_data="main_menu")]]
+        ))
+        await state.clear()
         return
     
     user_id = str(message.from_user.id)
@@ -435,7 +442,9 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < total_deduction:
-        await message.answer("❌ Số dư không đủ để thực hiện giao dịch.")
+        await message.answer("❌ Số dư không đủ để thực hiện giao dịch. Quay lại menu chính.", reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="🔙 Quay lại", callback_data="main_menu")]]
+        ))
         await state.clear()
         return
     
@@ -444,7 +453,7 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     user_balance[receiver_id] = user_balance.get(receiver_id, 0) + amount
     
     await message.answer(f"✅ Bạn đã chuyển thành công {amount} VNĐ cho ID {receiver_id}. (Phí: {fee} VNĐ)")
-    await message.bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
+    await bot.send_message(receiver_id, f"💰 Bạn đã nhận {amount} VNĐ từ ID {user_id}.")
     
     await state.clear()
     
@@ -1333,7 +1342,7 @@ async def process_withdraw_request(message: types.Message):
         reply_markup=main_menu
     )
 
-    await message.answer("💬 Bạn vui lòng nhắn tin cho hỗ trợ để được rút tiền.", parse_mode="Markdown")
+    await message.answer("Nếu quá 5p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
 #           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 # ======================================================================
@@ -1655,14 +1664,16 @@ async def process_daovang(uid):
         await message.answer("Không có game nào đang chạy để ép kết quả.")
 
 # ===================== Quản lý số người chơi ảo =====================
-game_players = {
-    "🎲 Tài Xỉu": random.randint(30, 60),
-    "🎰 Jackpot": random.randint(20, 30),
-    "✈️ Máy Bay": random.randint(50, 112),
-    "🐉 Rồng Hổ": random.randint(30, 60),
-    "⛏️ Đào Vàng": random.randint(20, 40),
-    "🃏 Mini Poker": random.randint(20, 50)
+game_players_default_range = {
+    "🎲 Tài Xỉu": (40, 60),
+    "🎰 Jackpot": (25, 34),
+    "✈️ Máy Bay": (50, 112),
+    "🐉 Rồng Hổ": (30, 60),
+    "⛏️ Đào Vàng": (30, 45),
+    "🃏 Mini Poker": (20, 40)
 }
+
+game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
 player_fixed_value = None  # Nếu không phải None, số người chơi cố định
@@ -1732,9 +1743,14 @@ async def set_players(message: types.Message):
 @router.message(F.text == "/unlockplayers")
 async def unlock_players(message: types.Message):
     global player_lock
+
+    # Reset số người chơi về mặc định
+    for game in game_players_default_range:
+        game_players[game] = random.randint(*game_players_default_range[game])
+
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
-    
+
 # ===================== Chạy bot =====================
 async def main():
     # Chạy update_players() trong background
