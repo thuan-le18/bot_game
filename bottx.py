@@ -1769,7 +1769,7 @@ def load_ban_list():
     return {}
 
 # Save ban list
-def save_ban_list(ban_list):
+def save_ban_list():
     with open(BAN_LIST_FILE, "w", encoding="utf-8") as file:
         json.dump(ban_list, file, indent=4)
 
@@ -1795,10 +1795,15 @@ async def ban_user(message: types.Message):
         await message.reply("Usage: /ban [user_id] [reason]")
         return
     
-    user_id = args[0]
+    try:
+        user_id = str(int(args[0]))  # Chuyển đổi ID về dạng chuỗi số
+    except ValueError:
+        await message.reply("User ID không hợp lệ.")
+        return
+    
     reason = " ".join(args[1:])
     ban_list[user_id] = reason
-    save_ban_list(ban_list)
+    save_ban_list()
     
     await message.reply(f"Đã cấm user {user_id} vì: {reason}")
 
@@ -1814,10 +1819,15 @@ async def unban_user(message: types.Message):
         await message.reply("Usage: /unban [user_id]")
         return
     
-    user_id = args[0]
+    try:
+        user_id = str(int(args[0]))  # Chuyển đổi ID về dạng chuỗi số
+    except ValueError:
+        await message.reply("User ID không hợp lệ.")
+        return
+    
     if user_id in ban_list:
         del ban_list[user_id]
-        save_ban_list(ban_list)
+        save_ban_list()
         await message.reply(f"Đã gỡ cấm user {user_id}.")
     else:
         await message.reply("Người dùng này không bị cấm.")
@@ -1828,7 +1838,7 @@ async def start(message: types.Message):
     user_id = str(message.from_user.id)
     
     if user_id in ban_list:
-        await message.reply("Bạn đã bị admin cấm tài khoản. Liên hệ admin nếu có thắc mắc.", reply_markup=ReplyKeyboardRemove())
+        await message.reply(f"Bạn đã bị admin cấm tài khoản. Lý do: {get_ban_reason(user_id)}. Liên hệ admin nếu có thắc mắc.", reply_markup=ReplyKeyboardRemove())
     else:
         await message.reply("Chào mừng bạn đến với bot!")
 
