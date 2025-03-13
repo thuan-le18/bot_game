@@ -1513,40 +1513,50 @@ def player_exit_game(user_id, game_name):
 
 import logging
 import random
+from aiogram import types
+from aiogram.filters import Command
 
 logging.basicConfig(level=logging.INFO)
 
 @router.message(Command("forceall"))
 async def force_all_games(message: types.Message):
-    logging.info(f"Received /forceall command from user {message.from_user.id}")
+    logging.info(f"Received /forceall command from user {message.from_user.id}: {message.text}")
 
     if message.from_user.id != ADMIN_ID:
         logging.warning(f"User {message.from_user.id} tried to use /forceall without permission.")
+        await message.answer("Bạn không có quyền sử dụng lệnh này.")
         return
 
-    args = message.text.split()
+    args = message.text.strip().split()
+    logging.info(f"Parsed arguments: {args}")
+
     if len(args) < 3:
-        await message.answer("Usage: /forceall <game_name> <parameters> [user_id]")
+        logging.warning(f"Invalid command format from {message.from_user.id}: {message.text}")
+        await message.answer("❌ Usage: /forceall <game_name> <parameters> [user_id]")
         return
 
-    game_name = args[1].lower().strip()
+    game_name = args[1].strip().lower()
+    logging.info(f"Game name detected: {game_name}")
 
     if game_name == "máy bay":
         if len(args) < 4:
-            await message.answer("Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
+            logging.warning(f"Invalid Máy Bay format from {message.from_user.id}: {message.text}")
+            await message.answer("❌ Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
             return
         
         try:
             custom_x = float(args[2].replace('x', ''))
             target_user = int(args[3])
-        except ValueError:
-            await message.answer("Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
+        except ValueError as e:
+            logging.error(f"Error parsing parameters: {e}")
+            await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             return
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
 
         if target_user not in crash_games:
-            await message.answer(f"User {target_user} không có game Máy Bay đang chạy.")
+            logging.warning(f"User {target_user} không có game Máy Bay đang chạy.")
+            await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
             return
 
         game = crash_games[target_user]
@@ -1554,41 +1564,49 @@ async def force_all_games(message: types.Message):
         forced_multiplier = round(custom_x, 2)
         win_amount = round(bet * forced_multiplier)
 
+        logging.info(f"✅ User {target_user} đặt cược {bet} VNĐ, ép x{forced_multiplier}, thắng {win_amount} VNĐ.")
+
         user_balance[target_user] = user_balance.get(target_user, 0) + win_amount
         await bot.send_message(target_user, f"🎉 Máy bay đạt x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!")
         crash_games[target_user]["running"] = False  # Đánh dấu kết thúc
 
         save_data(crash_games)
-        await message.answer(f"Máy Bay - User {target_user} đã bị ép x{forced_multiplier}.")
+        await message.answer(f"✅ Máy Bay - User {target_user} đã bị ép x{forced_multiplier}.")
 
     elif game_name == "đào vàng":
         if len(args) < 3:
-            await message.answer("Usage: /forceall đào vàng <user_id>")
+            logging.warning(f"Invalid Đào Vàng format from {message.from_user.id}: {message.text}")
+            await message.answer("❌ Usage: /forceall đào vàng <user_id>")
             return
 
         try:
             target_user = int(args[2])
-        except ValueError:
-            await message.answer("User ID không hợp lệ.")
+        except ValueError as e:
+            logging.error(f"Error parsing user ID: {e}")
+            await message.answer("❌ User ID không hợp lệ.")
             return
 
         logging.info(f"Admin ép thua game Đào Vàng cho user {target_user}")
 
         if target_user not in daovang_states:
-            await message.answer(f"User {target_user} không có game Đào Vàng đang chạy.")
+            logging.warning(f"User {target_user} không có game Đào Vàng đang chạy.")
+            await message.answer(f"⚠️ User {target_user} không có game Đào Vàng đang chạy.")
             return
 
         state = daovang_states[target_user]
         bet = state.get("bet", 0)
         state["bomb_count"] += 1
 
+        logging.info(f"💥 User {target_user} mất {bet} VNĐ do bom!")
+
         await bot.send_message(target_user, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ.")
         save_data(daovang_states)
 
-        await message.answer(f"Đào Vàng - User {target_user} đã bị ép THUA.")
+        await message.answer(f"✅ Đào Vàng - User {target_user} đã bị ép THUA.")
 
     else:
-        await message.answer("Game không hợp lệ! Hiện hỗ trợ: Máy Bay, Đào Vàng.")
+        logging.warning(f"Invalid game name: {game_name}")
+        await message.answer("❌ Game không hợp lệ! Hiện hỗ trợ: Máy Bay, Đào Vàng.")
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
