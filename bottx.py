@@ -1754,7 +1754,7 @@ import os
 import json
 from aiogram import Router, types
 from aiogram.filters import Command, BaseFilter
-from aiogram.utils.keyboard import InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup
 
 # ID của admin
 ADMIN_ID = 1985817060
@@ -1779,6 +1779,9 @@ class IsBanned(BaseFilter):
     async def __call__(self, event: types.Message | types.CallbackQuery | types.InlineQuery) -> bool:
         banned_users = load_json(BANNED_USERS_FILE)
         return str(event.from_user.id) in banned_users
+
+# Khởi tạo router
+router = Router()
 
 # Chặn tin nhắn và xóa tất cả nút nếu bị ban
 async def remove_buttons(message: types.Message):
@@ -1869,6 +1872,7 @@ async def banned_list(message: types.Message):
     else:
         banned_list_text = "🚫 Danh sách người dùng bị ban:\n" + "\n".join(banned_users.keys())
         await message.answer(banned_list_text)
+
 
 
 # ===================== Chạy bot =====================
