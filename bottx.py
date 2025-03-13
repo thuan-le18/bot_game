@@ -608,8 +608,10 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
-    await message.answer("⏳ Máy bay sẽ cất cánh trong giây lát...")
-    await asyncio.sleep(random.choice([10,12,14,15]))  # Chờ ngẫu nhiên 10s hoặc 15s trước khi máy bay cất cánh
+    countdown_time = random.choice([10,12,14,15])
+    for i in range(countdown_time, 0, -1):
+        await message.answer(f"⏳ Máy bay sẽ cất cánh trong {i} giây...")
+        await asyncio.sleep(1)
 
     # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
