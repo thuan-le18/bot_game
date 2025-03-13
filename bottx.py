@@ -1527,7 +1527,7 @@ async def force_all_games(message: types.Message):
         await message.answer("Bạn không có quyền sử dụng lệnh này.")
         return
 
-    args = message.text.strip().split()
+    args = message.text.strip().split(maxsplit=2)  # ✅ Sửa lỗi tách sai
     logging.info(f"Parsed arguments: {args}")
 
     if len(args) < 3:
@@ -1539,14 +1539,15 @@ async def force_all_games(message: types.Message):
     logging.info(f"Game name detected: {game_name}")
 
     if game_name == "máy bay":
-        if len(args) < 4:
+        params = args[2].split()
+        if len(params) < 2:
             logging.warning(f"Invalid Máy Bay format from {message.from_user.id}: {message.text}")
-            await message.answer("❌ Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
+            await message.answer("❌ Usage: /forceall máy bay <x_value> <user_id>")
             return
         
         try:
-            custom_x = float(args[2].replace('x', ''))
-            target_user = int(args[3])
+            custom_x = float(params[0].replace('x', ''))
+            target_user = int(params[1])
         except ValueError as e:
             logging.error(f"Error parsing parameters: {e}")
             await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
@@ -1574,11 +1575,6 @@ async def force_all_games(message: types.Message):
         await message.answer(f"✅ Máy Bay - User {target_user} đã bị ép x{forced_multiplier}.")
 
     elif game_name == "đào vàng":
-        if len(args) < 3:
-            logging.warning(f"Invalid Đào Vàng format from {message.from_user.id}: {message.text}")
-            await message.answer("❌ Usage: /forceall đào vàng <user_id>")
-            return
-
         try:
             target_user = int(args[2])
         except ValueError as e:
