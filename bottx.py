@@ -643,28 +643,37 @@ async def initiate_crash_game(message: types.Message):
         )
         await asyncio.sleep(1)
 
-@router.callback_query(lambda call: call.data.startswith("withdraw_crash_"))
-async def withdraw_crash(call: types.CallbackQuery):
-    user_id = call.data.split("_")[-1]
+@router.callback_query(lambda c: c.data == "withdraw_crash")
+async def withdraw_crash(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
     if user_id in crash_games and crash_games[user_id]["running"]:
-        win_amount = round(crash_games[user_id]["bet"] * crash_games[user_id]["current_multiplier"])
+        bet = crash_games[user_id]["bet"]
+        multiplier = crash_games[user_id]["current_multiplier"]
+        win_amount = round(bet * multiplier)  # Tiền thắng
+
+        # Cộng tiền thắng vào số dư
         user_balance[user_id] += win_amount
         save_data(user_balance)
-        record_bet_history(user_id, "Máy Bay", crash_games[user_id]["bet"], "win", win_amount)
 
-        await call.message.bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=crash_games[user_id]["message_id"],
-            text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
-            reply_markup=main_menu
-        )
-        await call.answer("💸 Rút tiền thành công!")
+        # Lưu lịch sử thắng
+        record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
+
+        # Dừng game
+        crash_games[user_id]["running"] = False
+        crash_games[user_id]["withdraw_event"].set()
+
+        # Thông báo rút tiền thành công với số tiền cụ thể
+        try:
+            await callback.message.edit_text(
+                f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {win_amount:,} VNĐ\n📈 Hệ số nhân: x{multiplier}",
+                reply_markup=main_menu
+            )
+        except Exception as e:
+            logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
+
+        await callback.answer(f"💸 Bạn đã rút {win_amount:,} VNĐ thành công!")
     else:
-        await call.answer("❌ Không thể rút tiền vào lúc này!")
-
-    crash_states[user_id] = False
-    crash_games.pop(user_id, None)
-    await call.message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
+        await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
