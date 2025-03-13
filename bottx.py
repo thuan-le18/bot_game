@@ -704,20 +704,18 @@ async def withdraw_crash(callback: types.CallbackQuery):
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
         profit = round(bet * (multiplier - 1))  # Chỉ tính lợi nhuận
-        win_amount = profit + bet  # Tổng tiền trả lại (gốc + lợi nhuận)
-
-        # Cộng tiền thắng vào số dư
-        user_balance[user_id] += win_amount
+        # Chỉ cộng lợi nhuận vào số dư, vì tiền cược đã bị trừ lúc bắt đầu game
+        win_amount = profit
+        
+        user_balance[user_id] = user_balance.get(user_id, 0) + win_amount
         save_data(user_balance)
 
-        # Lưu lịch sử thắng
+        # Lưu lịch sử thắng (chỉ lưu lợi nhuận)\n
         record_bet_history(user_id, "Máy Bay", bet, "win", profit)
-
-        # Dừng game
+        
         crash_games[user_id]["running"] = False
         crash_games[user_id]["withdraw_event"].set()
 
-        # Thông báo rút tiền thành công với số tiền cụ thể
         try:
             await callback.message.edit_text(
                 f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n📈 Hệ số nhân: x{multiplier}",
