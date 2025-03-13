@@ -1513,6 +1513,8 @@ def player_exit_game(user_id, game_name):
 
 import logging
 import random
+from aiogram import types
+from aiogram.filters import Command
 
 logging.basicConfig(level=logging.INFO)
 
@@ -1525,29 +1527,46 @@ async def force_all_games(message: types.Message):
         await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
         return
 
-    args = message.text.split()
+    # Tách các tham số ban đầu
+    args = message.text.strip().split()
     logging.info(f"Parsed arguments: {args}")
 
+    # Nếu tên game gồm nhiều từ, gộp lại
+    # Ví dụ: /forceall máy bay x6.55 7775002038 -> cần gộp args[1] và args[2] thành "máy bay"
+    if len(args) >= 3:
+        if args[1].lower() == "máy" and len(args) >= 5 and args[2].lower() == "bay":
+            # Gộp args[1] và args[2] thành "máy bay" rồi bổ sung các tham số còn lại
+            new_args = [args[0], "máy bay"] + args[3:]
+            args = new_args
+            logging.info(f"Reassembled arguments for Máy Bay: {args}")
+        elif args[1].lower() == "đào" and len(args) >= 4 and args[2].lower() == "vàng":
+            new_args = [args[0], "đào vàng"] + args[3:]
+            args = new_args
+            logging.info(f"Reassembled arguments for Đào Vàng: {args}")
+
+    # Kiểm tra số lượng tham số cần thiết theo game
     if len(args) < 3:
-        await message.answer("Usage: /forceall <game_name> <parameters> [user_id]")
+        await message.answer("❌ Usage: /forceall <game_name> <parameters> [user_id]")
         return
 
-    game_name = " ".join(args[1:3]).lower().strip()  # Gộp lại tên game nếu có khoảng trắng
+    game_name = args[1].lower().strip()
+    logging.info(f"Game name detected: {game_name}")
 
     if game_name == "máy bay":
-        if len(args) < 5:
-            await message.answer("Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
+        if len(args) < 4:
+            await message.answer("❌ Usage for Máy Bay: /forceall máy bay <x_value> <user_id>")
             return
 
         try:
-            custom_x = float(args[3].replace('x', ''))
-            target_user = str(args[4])
+            custom_x = float(args[2].replace('x', ''))
+            target_user = str(args[3])  # Sử dụng dạng chuỗi để so sánh với crash_games keys
         except ValueError:
-            await message.answer("⚠️ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
+            await message.answer("❌ Số x phải là một giá trị hợp lệ (ví dụ: x1.12).")
             return
 
         logging.info(f"Admin ép hệ số x cho Máy Bay: {custom_x} cho user {target_user}")
-        
+        logging.info(f"Current crash_games: {crash_games}")
+
         if target_user not in crash_games:
             await message.answer(f"⚠️ User {target_user} không có game Máy Bay đang chạy.")
             return
@@ -1558,21 +1577,26 @@ async def force_all_games(message: types.Message):
         win_amount = round(bet * forced_multiplier)
 
         user_balance[target_user] = user_balance.get(target_user, 0) + win_amount
-        crash_games[target_user]["running"] = False
+        await bot.send_message(target_user, f"🎉 Máy bay đạt x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!")
+        crash_games[target_user]["running"] = False  # Đánh dấu kết thúc
 
         save_data(crash_games)
-        await bot.send_message(target_user, f"🎉 Máy bay đạt x{forced_multiplier}! Bạn thắng {win_amount} VNĐ!")
         await message.answer(f"✅ Máy Bay - User {target_user} đã bị ép x{forced_multiplier}.")
 
     elif game_name == "đào vàng":
-        if len(args) < 4:
-            await message.answer("Usage: /forceall đào vàng <user_id>")
+        if len(args) < 3:
+            await message.answer("❌ Usage: /forceall đào vàng <user_id>")
             return
 
-        target_user = str(args[3])
-        
+        try:
+            target_user = str(args[2])
+        except ValueError:
+            await message.answer("❌ User ID không hợp lệ.")
+            return
+
         logging.info(f"Admin ép thua game Đào Vàng cho user {target_user}")
-        
+        logging.info(f"Current daovang_states: {daovang_states}")
+
         if target_user not in daovang_states:
             await message.answer(f"⚠️ User {target_user} không có game Đào Vàng đang chạy.")
             return
@@ -1581,8 +1605,9 @@ async def force_all_games(message: types.Message):
         bet = state.get("bet", 0)
         state["bomb_count"] += 1
 
+        await bot.send_message(target_user, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ và quay về menu.")
         save_data(daovang_states)
-        await bot.send_message(target_user, f"💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược {bet} VNĐ.")
+
         await message.answer(f"✅ Đào Vàng - User {target_user} đã bị ép THUA.")
 
     else:
