@@ -742,9 +742,12 @@ async def withdraw_crash(callback: types.CallbackQuery):
             logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
 
         await callback.answer(f"💸 Bạn đã rút {profit:,} VNĐ lợi nhuận thành công!")
+
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-    await run_crash_game(message, user_id)
+    
+    # Lấy message từ callback để gọi lại game
+    await run_crash_game(callback.message, user_id)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
