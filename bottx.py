@@ -715,6 +715,7 @@ async def run_crash_game(message: types.Message, user_id: str):
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
+    
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
@@ -732,7 +733,7 @@ async def withdraw_crash(callback: types.CallbackQuery):
         crash_games[user_id]["running"] = False
         crash_games[user_id]["withdraw_event"].set()
 
-        # Thông báo rút tiền thành công với số tiền cụ thể
+        # Thông báo rút tiền thành công
         try:
             await callback.message.edit_text(
                 f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n📈 Hệ số nhân: x{multiplier}",
@@ -745,9 +746,10 @@ async def withdraw_crash(callback: types.CallbackQuery):
 
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-    
-    # Lấy message từ callback để gọi lại game
-    await run_crash_game(callback.message, user_id)
+
+    # Fix lỗi KeyError nếu user không còn trong crash_games
+    if user_id in crash_games and crash_games[user_id]["running"]:
+        await run_crash_game(callback.message, user_id)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
