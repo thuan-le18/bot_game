@@ -607,29 +607,31 @@ async def initiate_crash_game(message: types.Message):
          "withdraw_event": withdraw_event,
          "message_id": None
     }
+await countdown_and_delete(message)
 
+async def countdown_and_delete(message: types.Message):
     countdown_time = random.choice([5, 7, 9, 12])
-countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
+    countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
 
-for i in range(countdown_time, 0, -1):
+    for i in range(countdown_time, 0, -1):
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=countdown_message.message_id,
+                text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
+            )
+        except Exception as e:
+            logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
+        await asyncio.sleep(1)
+
+    # Xóa tin nhắn đếm ngược sau khi kết thúc
     try:
-        await message.bot.edit_message_text(
+        await message.bot.delete_message(
             chat_id=message.chat.id,
-            message_id=countdown_message.message_id,
-            text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
+            message_id=countdown_message.message_id
         )
     except Exception as e:
-        logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
-    await asyncio.sleep(1)
-
-# Xóa tin nhắn đếm ngược sau khi kết thúc
-try:
-    await message.bot.delete_message(
-        chat_id=message.chat.id,
-        message_id=countdown_message.message_id
-    )
-except Exception as e:
-    logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
+        logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
     # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
