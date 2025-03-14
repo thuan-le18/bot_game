@@ -1584,12 +1584,16 @@ async def update_players():
 @router.message(F.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
+    
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
     
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("🔄 Cập nhật số người chơi")
-    
+    # Sửa lỗi: Thêm danh sách các nút vào keyboard
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=[[types.KeyboardButton(text="🔄 Cập nhật số người chơi")]],
+        resize_keyboard=True
+    )
+
     await message.answer(player_text, reply_markup=keyboard)
 
 # ===================== Người dùng cập nhật số người chơi =====================
