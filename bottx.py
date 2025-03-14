@@ -609,12 +609,8 @@ async def initiate_crash_game(message: types.Message):
         "message_id": None
     }
 
-    # Gọi hàm chính chạy game
-    await run_crash_game(message, user_id)
-
-async def run_crash_game(message: types.Message, user_id: str):
-    """Hàm gộp toàn bộ logic: đếm ngược, cất cánh, tăng hệ số, rơi."""
-    # 1) Đếm ngược
+    async def run_crash_game(message: types.Message, user_id: str):
+    """Hàm chính chạy game Máy Bay, đảm bảo hệ số nhân tăng đúng."""
     countdown_time = random.choice([5, 7, 9, 12])
     countdown_message = await message.answer(
         f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
@@ -627,8 +623,8 @@ async def run_crash_game(message: types.Message, user_id: str):
                 message_id=countdown_message.message_id,
                 text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
             )
-        except Exception as e:
-            logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
+        except:
+            pass
         await asyncio.sleep(1)
 
     # Xóa tin nhắn đếm ngược
@@ -637,27 +633,27 @@ async def run_crash_game(message: types.Message, user_id: str):
             chat_id=message.chat.id,
             message_id=countdown_message.message_id
         )
-    except Exception as e:
-        logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
+    except:
+        pass
 
-    # 2) Tạo nút rút tiền
+    # Tạo nút rút tiền
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
+        [InlineKeyboardButton(text="💸 Rút tiền", callback_data="withdraw_crash")]
     ])
 
-    # 3) Gửi tin nhắn cất cánh
+    # Gửi tin nhắn cất cánh
     sent_message = await message.answer(
-        f"✈️ Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00",
+        "✈️ Máy bay đã cất cánh...\n📈 Hệ số nhân: x1.00",
         reply_markup=crash_keyboard
     )
     crash_games[user_id]["message_id"] = sent_message.message_id
 
-    # 4) Vòng lặp tăng hệ số
+    # Vòng lặp tăng hệ số
     while crash_games[user_id]["running"]:
-        await asyncio.sleep(1)  # Mỗi giây tăng 1 lần
+        await asyncio.sleep(1)  # Mỗi giây tăng hệ số một lần
         current_multiplier = crash_games[user_id]["current_multiplier"]
 
-        # Tính increment
+        # Xác định bước nhảy của hệ số
         if current_multiplier < 2.0:
             increment = round(random.uniform(0.1, 0.15), 2)
         elif current_multiplier < 5.0:
@@ -671,9 +667,11 @@ async def run_crash_game(message: types.Message, user_id: str):
 
         crash_games[user_id]["current_multiplier"] = new_multiplier
 
-        # Kiểm tra rơi
+        # Kiểm tra nếu máy bay rơi
         if new_multiplier >= crash_games[user_id]["crash_point"]:
+            crash_games[user_id]["running"] = False
             loss_amount = crash_games[user_id]["bet"]
+
             try:
                 await message.bot.edit_message_text(
                     chat_id=message.chat.id,
@@ -685,11 +683,10 @@ async def run_crash_game(message: types.Message, user_id: str):
                     parse_mode="HTML",
                     reply_markup=None
                 )
-            except Exception as e:
-                logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
+            except:
+                pass
 
-            record_bet_history(user_id, "Máy Bay", crash_games[user_id]["bet"], "lose", 0)
-            crash_games[user_id]["running"] = False
+            record_bet_history(user_id, "Máy Bay", loss_amount, "lose", 0)
             break
 
         # Cập nhật hệ số trên giao diện
@@ -700,10 +697,10 @@ async def run_crash_game(message: types.Message, user_id: str):
                 text=f"✈️ Máy bay đang bay...\n📈 Hệ số nhân: x{new_multiplier}",
                 reply_markup=crash_keyboard
             )
-        except Exception as e:
-            logging.error(f"Lỗi khi cập nhật hệ số nhân: {e}")
+        except:
+            pass
 
-    # 5) Game kết thúc
+    # Kết thúc game
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
