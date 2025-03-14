@@ -558,7 +558,7 @@ import random
 import asyncio
 import logging
 from aiogram import types, Router
-from aiogram.filters import Text
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 
 router = Router()
