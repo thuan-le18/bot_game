@@ -1590,31 +1590,50 @@ async def update_players():
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
+import logging
+from aiogram import types
+
+logging.basicConfig(level=logging.INFO)
+
 # ===================== Người dùng xem số người đang chơi =====================
 @router.message(lambda msg: msg.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
     """ Hiển thị số người chơi hiện tại """
-    player_text = "📊 Số người đang chơi mỗi game:\n\n"
-    
-    for game, count in game_players.items():
-        player_text += f"{game}: {count} người chơi\n"
-    
-    player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng"
+    logging.info(f"📌 Người dùng {message.from_user.id} bấm '👥 Số người đang chơi'.")
 
-    # Bổ sung nút cập nhật và quay lại
-    keyboard = types.ReplyKeyboardMarkup(
-        keyboard=[
-            [types.KeyboardButton(text="🔄 Cập nhật")],
-            [types.KeyboardButton(text="⬅ Quay lại")]
-        ],
-        resize_keyboard=True
-    )
+    try:
+        player_text = "📊 Số người đang chơi mỗi game:\n\n"
+
+        for game, count in game_players.items():
+            player_text += f"{game}: {count} người chơi\n"
+        
+        player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng! 🎉"
+
+        # Bổ sung nút cập nhật và quay lại
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=[
+                [types.KeyboardButton(text="🔄 Cập nhật")],
+                [types.KeyboardButton(text="⬅ Quay lại")]
+            ],
+            resize_keyboard=True
+        )
+
+        await message.answer(player_text, reply_markup=keyboard)
+        logging.info("✅ Gửi thành công danh sách số người đang chơi.")
+    except Exception as e:
+        logging.error(f"❌ Lỗi khi xử lý '👥 Số người đang chơi': {e}")
+
 # ===================== Quay lại menu chính =====================
 @router.message(lambda msg: msg.text == "⬅ Quay lại")
 async def back_to_menu(message: types.Message):
     """ Xử lý khi người dùng bấm nút Quay lại """
-    await message.answer("🏠 Bạn đã quay lại menu chính.")
+    logging.info(f"📌 Người dùng {message.from_user.id} bấm '⬅ Quay lại'.")
 
+    try:
+        await message.answer("🏠 Bạn đã quay lại menu chính.", reply_markup=main_menu)
+        logging.info("✅ Đã gửi tin nhắn quay lại menu chính.")
+    except Exception as e:
+        logging.error(f"❌ Lỗi khi xử lý '⬅ Quay lại': {e}")
 
 # ===================== Người dùng cập nhật số người chơi =====================
 @router.message(lambda msg: msg.text == "🔄 Cập nhật")
