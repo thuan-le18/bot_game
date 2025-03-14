@@ -186,7 +186,6 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
         BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
-        BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ]
     if user_id == str(ADMIN_ID):
@@ -1543,18 +1542,18 @@ def player_exit_game(user_id, game_name):
     elif game_name == "Mini Poker":
         poker_states.pop(user_id, None)
 
-import random
 import asyncio
-from aiogram import types, Router, F
+import random
+from aiogram import Router, types
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
     "🎲 Tài Xỉu": (32, 53),
-    "🎰 Jackpot": (25, 34),
+    "🎰 Jackpot": (30, 37),
     "✈️ Máy Bay": (55, 82),
     "🐉 Rồng Hổ": (38, 52),
-    "⛏️ Đào Vàng": (28, 35),
-    "🃏 Mini Poker": (35, 47)
+    "⛏️ Đào Vàng": (28, 45),
+    "🃏 Mini Poker": (28, 40)
 }
 
 game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
@@ -1562,8 +1561,10 @@ game_limits = {game: game_players_default_range[game] for game in game_players_d
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
 player_fixed_value = None  # Nếu không phải None, số người chơi cố định
+last_update_time = 0  # Thời gian lần cuối cập nhật
 
 async def update_players():
+    """ Cập nhật số người chơi theo cơ chế tự nhiên. """
     print("✅ update_players() đã chạy!")  # Kiểm tra log
     while True:
         try:
@@ -1572,42 +1573,71 @@ async def update_players():
                     delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
                     min_limit, max_limit = game_limits[game]  # Lấy min/max đã đặt
-                    game_players[game] = max(min_limit, min(max_limit, new_value))  # Giới hạn không vượt quá min/max
+                    
+                    # Nếu vượt quá giới hạn, điều chỉnh giảm dần
+                    if new_value > max_limit:
+                        game_players[game] -= random.randint(1, 4)  # Giảm từ từ
+                    elif new_value < min_limit:
+                        game_players[game] += random.randint(1, 4)  # Tăng từ từ
+                    else:
+                        game_players[game] = new_value  # Cập nhật bình thường
+
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
-            await asyncio.sleep(5)
+                    
+            await asyncio.sleep(5)  # Chờ 5 giây trước khi cập nhật tiếp
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
 # ===================== Người dùng xem số người đang chơi =====================
-@router.message(F.text == "👥 Số người đang chơi")
+@router.message(lambda msg: msg.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
+    """ Hiển thị số người chơi hiện tại """
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
     
-    # Sửa lỗi: Thêm danh sách các nút vào keyboard
+    player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng! 🎉"
+
+    # Bổ sung nút cập nhật và quay lại
     keyboard = types.ReplyKeyboardMarkup(
-        keyboard=[[types.KeyboardButton(text="🔄 Cập nhật số người chơi")]],
+        keyboard=[
+            [types.KeyboardButton(text="🔄 Cập nhật")],
+            [types.KeyboardButton(text="⬅ Quay lại")]
+        ],
         resize_keyboard=True
     )
 
     await message.answer(player_text, reply_markup=keyboard)
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(callback: types.CallbackQuery):
+    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await callback.answer()
 
 # ===================== Người dùng cập nhật số người chơi =====================
-@router.message(F.text == "🔄 Cập nhật số người chơi")
+@router.message(lambda msg: msg.text == "🔄 Cập nhật")
 async def refresh_players(message: types.Message):
-    global game_players
+    """ Người dùng cập nhật số người chơi (không cho spam) """
+    global last_update_time, game_players
+    now = asyncio.get_event_loop().time()
+
+    if now - last_update_time < 6:
+        await message.answer("⏳ Vui lòng đợi 6 giây trước khi cập nhật lại!")
+        return
+    
+    last_update_time = now  # Cập nhật thời gian cập nhật cuối cùng
+
     if not player_lock:  # Chỉ cập nhật nếu không bị khóa
         game_players = {game: random.randint(*game_limits[game]) for game in game_limits}
 
     await show_players(message)  # Hiển thị lại số người chơi mới
 
 # ===================== Admin Tùy chỉnh số người chơi =====================
-@router.message(F.text.startswith("/setplayers "))
+@router.message(lambda msg: msg.text.startswith("/setplayers "))
 async def set_players(message: types.Message):
+    """ Admin chỉnh số người chơi của game """
     global player_lock, player_fixed_value
     args = message.text.split()
 
@@ -1645,8 +1675,9 @@ async def set_players(message: types.Message):
     player_lock = False  # Mở lại cập nhật tự động
     player_fixed_value = None  # Xóa giá trị cố định
 
-@router.message(F.text == "/unlockplayers")
+@router.message(lambda msg: msg.text == "/unlockplayers")
 async def unlock_players(message: types.Message):
+    """ Admin mở khóa số người chơi (trở về random tự động) """
     global player_lock
 
     # Reset số người chơi về mặc định
@@ -1668,7 +1699,6 @@ async def main():
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
-        BotCommand(command="forceall", description="Ép kết quả game (WIN/LOSE)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
 
