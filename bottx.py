@@ -1599,7 +1599,7 @@ async def show_players(message: types.Message):
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
     
-    player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng! 🎉"
+    player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng"
 
     # Bổ sung nút cập nhật và quay lại
     keyboard = types.ReplyKeyboardMarkup(
@@ -1609,12 +1609,12 @@ async def show_players(message: types.Message):
         ],
         resize_keyboard=True
     )
+# ===================== Quay lại menu chính =====================
+@router.message(lambda msg: msg.text == "⬅ Quay lại")
+async def back_to_menu(message: types.Message):
+    """ Xử lý khi người dùng bấm nút Quay lại """
+    await message.answer("🏠 Bạn đã quay lại menu chính.")
 
-    await message.answer(player_text, reply_markup=keyboard)
-@router.callback_query(lambda c: c.data == "back_to_menu")
-async def back_to_menu_handler(callback: types.CallbackQuery):
-    await callback.message.answer("🔙 Quay lại menu chính.", reply_markup=main_menu)
-    await callback.answer()
 
 # ===================== Người dùng cập nhật số người chơi =====================
 @router.message(lambda msg: msg.text == "🔄 Cập nhật")
@@ -1623,8 +1623,8 @@ async def refresh_players(message: types.Message):
     global last_update_time, game_players
     now = asyncio.get_event_loop().time()
 
-    if now - last_update_time < 6:
-        await message.answer("⏳ Vui lòng đợi 6 giây trước khi cập nhật lại!")
+    if now - last_update_time < 7:
+        await message.answer("⏳ Vui lòng đợi 7 giây trước khi cập nhật lại!")
         return
     
     last_update_time = now  # Cập nhật thời gian cập nhật cuối cùng
