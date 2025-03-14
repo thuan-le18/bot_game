@@ -1548,7 +1548,7 @@ from aiogram import Router, types
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
-    "🎲 Tài Xỉu": (32, 53),
+    "🎲 Tài Xỉu": (38, 53),
     "🎰 Jackpot": (30, 37),
     "✈️ Máy Bay": (55, 82),
     "🐉 Rồng Hổ": (38, 52),
@@ -1572,79 +1572,8 @@ async def update_players():
                 for game in game_players:
                     delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
-                    min_limit, max_limit = game_limits[game]  # Lấy min/max đã đặt
-                    
-                    # Nếu vượt quá giới hạn, điều chỉnh giảm dần
-                    if new_value > max_limit:
-                        game_players[game] -= random.randint(1, 4)  # Giảm từ từ
-                    elif new_value < min_limit:
-                        game_players[game] += random.randint(1, 4)  # Tăng từ từ
-                    else:
-                        game_players[game] = new_value  # Cập nhật bình thường
-
-            elif player_fixed_value is not None:
-                for game in game_players:
-                    game_players[game] = player_fixed_value
-                    
-            await asyncio.sleep(5)  # Chờ 5 giây trước khi cập nhật tiếp
-        except Exception as e:
-            print(f"🔥 Lỗi trong update_players(): {e}")
-
-import logging
-from aiogram import types
-
-logging.basicConfig(level=logging.INFO)
-
-# ===================== Người dùng xem số người đang chơi =====================
-@router.message(lambda msg: msg.text == "👥 Số người đang chơi")
-async def show_players(message: types.Message):
-    """ Hiển thị số người chơi hiện tại """
-    logging.info(f"📌 Người dùng {message.from_user.id} bấm '👥 Số người đang chơi'.")
-
-    try:
-        player_text = "📊 Số người đang chơi mỗi game:\n\n"
-
-        for game, count in game_players.items():
-            player_text += f"{game}: {count} người chơi\n"
-        
-        player_text += "\n🔥 Hiện đang có rất nhiều người tham gia, hãy cùng chơi ngay và giành chiến thắng! 🎉"
-
-        # Bổ sung nút cập nhật và quay lại
-        keyboard = types.ReplyKeyboardMarkup(
-            keyboard=[
-                [types.KeyboardButton(text="🔄 Cập nhật")],
-                [types.KeyboardButton(text="⬅ Quay lại")]
-            ],
-            resize_keyboard=True
-        )
-
-        await message.answer(player_text, reply_markup=keyboard)
-        logging.info("✅ Gửi thành công danh sách số người đang chơi.")
-    except Exception as e:
-        logging.error(f"❌ Lỗi khi xử lý '👥 Số người đang chơi': {e}")
-
-# ===================== Quay lại menu chính =====================
-@router.message(lambda msg: msg.text == "⬅ Quay lại")
-async def back_to_menu(message: types.Message):
-    """ Xử lý khi người dùng bấm nút Quay lại """
-    logging.info(f"📌 Người dùng {message.from_user.id} bấm '⬅ Quay lại'.")
-
-    try:
-        await message.answer("🏠 Bạn đã quay lại menu chính.", reply_markup=main_menu)
-        logging.info("✅ Đã gửi tin nhắn quay lại menu chính.")
-    except Exception as e:
-        logging.error(f"❌ Lỗi khi xử lý '⬅ Quay lại': {e}")
-
-
-# ===================== Người dùng cập nhật số người chơi =====================
-@router.message(lambda msg: msg.text == "🔄 Cập nhật")
-async def refresh_players(message: types.Message):
-    """ Người dùng cập nhật số người chơi (không cho spam) """
-    global last_update_time, game_players
-    now = asyncio.get_event_loop().time()
-
-    if now - last_update_time < 7:
-        await message.answer("⏳ Vui lòng đợi 7 giây trước khi cập nhật lại!")
+                    min_limit, max_limit = ga9:
+        await message.answer("⏳ Vui lòng đợi 9 giây trước khi cập nhật lại!")
         return
     
     last_update_time = now  # Cập nhật thời gian cập nhật cuối cùng
