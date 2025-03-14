@@ -560,14 +560,10 @@ import logging
 from aiogram import types
 from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 
-# --- GAME: Máy Bay (Crash Game) ---
-
-# Giả sử các biến toàn cục được khởi tạo từ trước
 crash_states = {}
 crash_games = {}
-user_balance = {}  # Lưu số dư người dùng
-data = {}          # Dữ liệu tổng (được lưu vào file JSON)
-# Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
+user_balance = {}
+data = {}
 
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
@@ -593,12 +589,10 @@ async def initiate_crash_game(message: types.Message):
         crash_states[user_id] = False
         return
 
-    # Trừ tiền cược
     user_balance[user_id] -= bet
     save_data(user_balance)
     await add_commission(user_id, bet)
 
-    # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
     crash_point = round(random.uniform(1.1, 15.0), 2)
     withdraw_event = asyncio.Event()
 
@@ -611,12 +605,9 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
-    # Gọi hàm run_crash_game() một cách hợp lệ trong async
     await run_crash_game(message, user_id)
 
 async def run_crash_game(message: types.Message, user_id: str):
-    """Hàm gộp toàn bộ logic: đếm ngược, cất cánh, tăng hệ số, rơi."""
-    # 1) Đếm ngược
     countdown_time = random.choice([5, 7, 9, 12])
     countdown_message = await message.answer(
         f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
@@ -633,7 +624,6 @@ async def run_crash_game(message: types.Message, user_id: str):
             logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
         await asyncio.sleep(1)
 
-    # Xóa tin nhắn đếm ngược
     try:
         await message.bot.delete_message(
             chat_id=message.chat.id,
@@ -642,8 +632,6 @@ async def run_crash_game(message: types.Message, user_id: str):
     except Exception as e:
         logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
-    # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
          [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
     ])
@@ -653,7 +641,6 @@ async def run_crash_game(message: types.Message, user_id: str):
     )
     crash_games[user_id]["message_id"] = sent_message.message_id
 
-    # Vòng lặp cập nhật hệ số nhân mượt mà
     while crash_games[user_id]["running"]:
         try:
             await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=1)
@@ -677,11 +664,11 @@ async def run_crash_game(message: types.Message, user_id: str):
             current_multiplier = crash_games[user_id]["current_multiplier"]
 
             if current_multiplier < 2.0:
-                increment = round(random.uniform(0.1, 0.15), 2)
+                increment = round(random.uniform(0.01, 0.1), 2)
             elif current_multiplier < 5.0:
-                increment = round(random.uniform(0.2, 0.35), 2)
+                increment = round(random.uniform(0.1, 0.3), 2)
             else:
-                increment = round(random.uniform(0.4, 0.5), 2)
+                increment = round(random.uniform(0.2, 0.5), 2)
 
             new_multiplier = round(current_multiplier + increment, 2)
             if new_multiplier > 15.0:
@@ -724,21 +711,17 @@ async def withdraw_crash(callback: types.CallbackQuery):
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        profit = round(bet * (multiplier - 1))  # Chỉ tính lợi nhuận
-        win_amount = profit + bet  # Tổng tiền trả lại (gốc + lợi nhuận)
+        profit = round(bet * (multiplier - 1))
+        win_amount = profit + bet
 
-        # Cộng tiền thắng vào số dư
         user_balance[user_id] += win_amount
         save_data(user_balance)
 
-        # Lưu lịch sử thắng
         record_bet_history(user_id, "Máy Bay", bet, "win", profit)
 
-        # Dừng game
         crash_games[user_id]["running"] = False
         crash_games[user_id]["withdraw_event"].set()
 
-        # Thông báo rút tiền thành công với số tiền cụ thể
         try:
             await callback.message.edit_text(
                 f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n📈 Hệ số nhân: x{multiplier}",
