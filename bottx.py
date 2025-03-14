@@ -556,6 +556,9 @@ async def jackpot_bet(message: types.Message):
 
 import random
 import asyncio
+import logging
+from aiogram import types
+from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 
 # --- GAME: Máy Bay (Crash Game) ---
 
@@ -607,7 +610,9 @@ async def initiate_crash_game(message: types.Message):
          "withdraw_event": withdraw_event,
          "message_id": None
     }
-await run_crash_game(message, user_id)
+
+    # Gọi hàm run_crash_game() một cách hợp lệ trong async
+    await run_crash_game(message, user_id)
 
 async def run_crash_game(message: types.Message, user_id: str):
     """Hàm gộp toàn bộ logic: đếm ngược, cất cánh, tăng hệ số, rơi."""
