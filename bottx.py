@@ -571,8 +571,8 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     await message.answer(
-         "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
-         reply_markup=ReplyKeyboardRemove()
+        "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
+        reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id), False) and msg.text.isdigit())
@@ -600,14 +600,18 @@ async def initiate_crash_game(message: types.Message):
     withdraw_event = asyncio.Event()
 
     crash_games[user_id] = {
-         "bet": bet,
-         "current_multiplier": 1.0,
-         "running": True,
-         "crash_point": crash_point,
-         "withdraw_event": withdraw_event,
-         "message_id": None
+        "bet": bet,
+        "current_multiplier": 1.0,
+        "running": True,
+        "crash_point": crash_point,
+        "withdraw_event": withdraw_event,
+        "message_id": None
     }
-    async def run_crash_game(message: types.Message, user_id: str):
+
+    # Chạy hàm máy bay bay sau thời gian chờ ngẫu nhiên
+    await run_crash_game(message, user_id)
+
+async def run_crash_game(message: types.Message, user_id: str):
     countdown_time = random.choice([5, 7, 9, 12])
     countdown_message = await message.answer(
         f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
@@ -623,6 +627,7 @@ async def initiate_crash_game(message: types.Message):
         except Exception as e:
             logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
         await asyncio.sleep(1)
+
     try:
         await message.bot.delete_message(
             chat_id=message.chat.id,
