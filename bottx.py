@@ -607,7 +607,6 @@ async def initiate_crash_game(message: types.Message):
          "withdraw_event": withdraw_event,
          "message_id": None
     }
-
     async def run_crash_game(message: types.Message, user_id: str):
     countdown_time = random.choice([5, 7, 9, 12])
     countdown_message = await message.answer(
@@ -624,7 +623,6 @@ async def initiate_crash_game(message: types.Message):
         except Exception as e:
             logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
         await asyncio.sleep(1)
-
     try:
         await message.bot.delete_message(
             chat_id=message.chat.id,
