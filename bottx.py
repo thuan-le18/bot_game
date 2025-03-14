@@ -1561,9 +1561,6 @@ game_players_default_range = {
 
 game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
 
-# Lưu min/max của từng game (mặc định theo khoảng ban đầu)
-game_players_limit = {game: game_players_default_range[game] for game in game_players_default_range}
-
 player_lock = False  # Nếu True, số người chơi không thay đổi
 player_fixed_value = None  # Nếu không phải None, số người chơi cố định
 
@@ -1573,14 +1570,13 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    min_value, max_value = game_players_limit[game]  # Lấy giới hạn hiện tại
                     delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
-                    game_players[game] = max(min_value, min(max_value, new_value))  # Giữ trong giới hạn
+                    game_players[game] = max(20, min(200, new_value))
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
-            await asyncio.sleep(5)
+            await asyncio.sleep(4)
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
@@ -1612,7 +1608,6 @@ async def set_players(message: types.Message):
 
     if game_name == "all":
         for game in game_players:
-            game_players_limit[game] = (min_value, max_value)  # Cập nhật min/max
             game_players[game] = random.randint(min_value, max_value)
         await message.answer(f"🔒 Đã đặt số người chơi **tất cả game** trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
     else:
@@ -1623,7 +1618,6 @@ async def set_players(message: types.Message):
             return
 
         for game in matched_games:
-            game_players_limit[game] = (min_value, max_value)  # Cập nhật min/max
             game_players[game] = random.randint(min_value, max_value)
 
         game_list = "\n".join([f"🔹 {g}" for g in matched_games])
@@ -1638,7 +1632,6 @@ async def unlock_players(message: types.Message):
 
     # Reset số người chơi về mặc định
     for game in game_players_default_range:
-        game_players_limit[game] = game_players_default_range[game]  # Reset min/max
         game_players[game] = random.randint(*game_players_default_range[game])
 
     player_lock = False
