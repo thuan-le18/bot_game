@@ -581,7 +581,7 @@ async def initiate_crash_game(message: types.Message):
     bet = int(message.text)
 
     if bet < 1000 or bet > 10000000:
-        await message.answer("❌ Cược hợp lệ từ 1.000 VNĐ đến 10.000.000 VNĐ!", reply_markup=main_menu)
+        await message.answer("❌ Cược hợp lệ từ 1.000 VNĐ tối đa đến 10.000.000 VNĐ!", reply_markup=main_menu)
         crash_states[user_id] = False
         return
 
@@ -608,18 +608,28 @@ async def initiate_crash_game(message: types.Message):
          "message_id": None
     }
 
-    countdown_time = random.choice([5,7,9,12])
-    countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
-    for i in range(countdown_time, 0, -1):
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=countdown_message.message_id,
-                text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
-            )
-        except Exception as e:
-            logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
-        await asyncio.sleep(1)
+    countdown_time = random.choice([5, 7, 9, 12])
+countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
+
+for i in range(countdown_time, 0, -1):
+    try:
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=countdown_message.message_id,
+            text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
+        )
+    except Exception as e:
+        logging.error(f"Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
+    await asyncio.sleep(1)
+
+# Xóa tin nhắn đếm ngược sau khi kết thúc
+try:
+    await message.bot.delete_message(
+        chat_id=message.chat.id,
+        message_id=countdown_message.message_id
+    )
+except Exception as e:
+    logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
     # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
