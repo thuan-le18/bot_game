@@ -1547,8 +1547,6 @@ import random
 import asyncio
 from aiogram import types, Router, F
 
-router = Router()
-
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
     "🎲 Tài Xỉu": (32, 53),
@@ -1560,6 +1558,7 @@ game_players_default_range = {
 }
 
 game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
+game_limits = {game: game_players_default_range[game] for game in game_players_default_range}  # Lưu min/max từng game
 
 player_lock = False  # Nếu True, số người chơi không thay đổi
 player_fixed_value = None  # Nếu không phải None, số người chơi cố định
@@ -1572,21 +1571,35 @@ async def update_players():
                 for game in game_players:
                     delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
-                    game_players[game] = max(20, min(200, new_value))
+                    min_limit, max_limit = game_limits[game]  # Lấy min/max đã đặt
+                    game_players[game] = max(min_limit, min(max_limit, new_value))  # Giới hạn không vượt quá min/max
             elif player_fixed_value is not None:
                 for game in game_players:
                     game_players[game] = player_fixed_value
-            await asyncio.sleep(4)
+            await asyncio.sleep(5)
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
-# ===================== Xử lý nút số người đang chơi =====================
+# ===================== Người dùng xem số người đang chơi =====================
 @router.message(F.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
-    await message.answer(player_text)
+    
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("🔄 Cập nhật số người chơi")
+    
+    await message.answer(player_text, reply_markup=keyboard)
+
+# ===================== Người dùng cập nhật số người chơi =====================
+@router.message(F.text == "🔄 Cập nhật số người chơi")
+async def refresh_players(message: types.Message):
+    global game_players
+    if not player_lock:  # Chỉ cập nhật nếu không bị khóa
+        game_players = {game: random.randint(*game_limits[game]) for game in game_limits}
+
+    await show_players(message)  # Hiển thị lại số người chơi mới
 
 # ===================== Admin Tùy chỉnh số người chơi =====================
 @router.message(F.text.startswith("/setplayers "))
@@ -1608,6 +1621,7 @@ async def set_players(message: types.Message):
 
     if game_name == "all":
         for game in game_players:
+            game_limits[game] = (min_value, max_value)  # Lưu giới hạn mới
             game_players[game] = random.randint(min_value, max_value)
         await message.answer(f"🔒 Đã đặt số người chơi **tất cả game** trong khoảng {min_value} - {max_value} người.", parse_mode="Markdown")
     else:
@@ -1618,6 +1632,7 @@ async def set_players(message: types.Message):
             return
 
         for game in matched_games:
+            game_limits[game] = (min_value, max_value)  # Lưu giới hạn mới
             game_players[game] = random.randint(min_value, max_value)
 
         game_list = "\n".join([f"🔹 {g}" for g in matched_games])
@@ -1632,6 +1647,7 @@ async def unlock_players(message: types.Message):
 
     # Reset số người chơi về mặc định
     for game in game_players_default_range:
+        game_limits[game] = game_players_default_range[game]  # Đặt lại giới hạn về mặc định
         game_players[game] = random.randint(*game_players_default_range[game])
 
     player_lock = False
