@@ -710,24 +710,28 @@ async def run_crash_game(message: types.Message, user_id: str):
 
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
-    """Người chơi rút tiền"""
     user_id = str(callback.from_user.id)
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        # Chỉ cộng lợi nhuận, vì bet đã bị trừ lúc đầu
-        profit = round(bet * (multiplier - 1))
-        user_balance[user_id] = user_balance.get(user_id, 0) + profit
+        profit = round(bet * (multiplier - 1))  # Chỉ tính lợi nhuận
+        win_amount = profit + bet  # Tổng tiền trả lại (gốc + lợi nhuận)
+
+        # Cộng tiền thắng vào số dư
+        user_balance[user_id] += win_amount
         save_data(user_balance)
 
+        # Lưu lịch sử thắng
         record_bet_history(user_id, "Máy Bay", bet, "win", profit)
-        crash_games[user_id]["running"] = False
 
+        # Dừng game
+        crash_games[user_id]["running"] = False
+        crash_games[user_id]["withdraw_event"].set()
+
+        # Thông báo rút tiền thành công với số tiền cụ thể
         try:
             await callback.message.edit_text(
-                f"🎉 Bạn đã rút tiền thành công!\n"
-                f"💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n"
-                f"📈 Hệ số nhân: x{multiplier}",
+                f"🎉 Bạn đã rút tiền thành công!\n💰 Số tiền nhận được: {profit:,} VNĐ (lợi nhuận)\n📈 Hệ số nhân: x{multiplier}",
                 reply_markup=main_menu
             )
         except Exception as e:
