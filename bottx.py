@@ -1584,30 +1584,35 @@ async def update_players():
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
+# ===================== Người dùng xem số người đang chơi =====================
 @router.message(F.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
+    print("📩 Nhận tin nhắn: 👥 Số người đang chơi")  # Log kiểm tra
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
     
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton("🔄 Load lại số người chơi", callback_data="reload_players"))
-
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("🔄 Load lại số người chơi")
+    
     await message.answer(player_text, reply_markup=keyboard)
 
-@router.callback_query(F.data == "reload_players")
-async def refresh_players(callback: types.CallbackQuery):
+# ===================== Người dùng cập nhật số người chơi =====================
+@router.message()
+async def debug_message(message: types.Message):
+    print(f"📩 Tin nhắn nhận được: {message.text}")  # Log kiểm tra toàn bộ tin nhắn
+
+@router.message(F.text == "🔄 Load lại số người chơi")
+async def refresh_players(message: types.Message):
+    print("📩 Nhận tin nhắn: 🔄 Load lại số người chơi")  # Log kiểm tra
     global game_players
-    if not player_lock:
+    if not player_lock:  # Chỉ cập nhật nếu không bị khóa
         for game in game_players:
             min_value, max_value = game_players_limit[game]
             game_players[game] = random.randint(min_value, max_value)
 
-    await show_players(callback.message)
-    await callback.answer()  # Đóng phản hồi
-    
+    await show_players(message)  # Hiển thị lại số người chơi mới
+
 # ===================== Admin Tùy chỉnh số người chơi =====================
 @router.message(F.text.startswith("/setplayers "))
 async def set_players(message: types.Message):
