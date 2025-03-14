@@ -607,7 +607,7 @@ async def initiate_crash_game(message: types.Message):
          "withdraw_event": withdraw_event,
          "message_id": None
     }
-await countdown_and_delete(message)
+ asyncio.create_task(countdown_and_delete(message))
 
 async def countdown_and_delete(message: types.Message):
     countdown_time = random.choice([5, 7, 9, 12])
