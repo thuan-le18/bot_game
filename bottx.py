@@ -560,8 +560,6 @@ import logging
 from aiogram import types, Router
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
-from aiogram import F
-router = Router()
 
 # --- GAME: Máy Bay (Crash Game) ---
 crash_states = {}
@@ -575,8 +573,8 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     await message.answer(
-        "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
-        reply_markup=ReplyKeyboardRemove()
+         "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
+         reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id), False) and msg.text.isdigit())
