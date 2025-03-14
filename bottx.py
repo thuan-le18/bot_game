@@ -639,6 +639,8 @@ async def run_crash_game(message: types.Message, user_id: str):
     except Exception as e:
         logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
+   # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
          [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
     ])
@@ -648,6 +650,7 @@ async def run_crash_game(message: types.Message, user_id: str):
     )
     crash_games[user_id]["message_id"] = sent_message.message_id
 
+    # Vòng lặp cập nhật hệ số nhân mượt mà
     while crash_games[user_id]["running"]:
         try:
             await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=1)
@@ -660,22 +663,35 @@ async def run_crash_game(message: types.Message, user_id: str):
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
                         text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
-                        reply_markup=None
+                        reply_markup=main_menu
                     )
                 except Exception as e:
                     logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
                 record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
+                crash_games[user_id]["running"] = False
                 break
         except asyncio.TimeoutError:
-            new_multiplier = round(crash_games[user_id]["current_multiplier"] + random.uniform(0.1, 0.5), 2)
-            crash_games[user_id]["current_multiplier"] = min(new_multiplier, 15.0)
+            current_multiplier = crash_games[user_id]["current_multiplier"]
+
+            if current_multiplier < 2.0:
+                increment = round(random.uniform(0.1, 0.15), 2)
+            elif current_multiplier < 5.0:
+                increment = round(random.uniform(0.2, 0.35), 2)
+            else:
+                increment = round(random.uniform(0.4, 0.5), 2)
+
+            new_multiplier = round(current_multiplier + increment, 2)
+            if new_multiplier > 15.0:
+                new_multiplier = 15.0
+            crash_games[user_id]["current_multiplier"] = new_multiplier
 
             if new_multiplier >= crash_games[user_id]["crash_point"]:
+                loss_amount = bet
                 try:
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
                         message_id=crash_games[user_id]["message_id"],
-                        text=f"💥 <b>Máy bay rơi tại</b> x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {bet:,} VNĐ!",
+                        text=f"💥 <b>Máy bay rơi tại</b> x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
                         parse_mode="HTML",
                         reply_markup=None
                     )
