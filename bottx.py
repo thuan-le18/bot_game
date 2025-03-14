@@ -1584,27 +1584,13 @@ async def update_players():
         except Exception as e:
             print(f"🔥 Lỗi trong update_players(): {e}")
 
+# ===================== Xử lý nút số người đang chơi =====================
 @router.message(F.text == "👥 Số người đang chơi")
 async def show_players(message: types.Message):
-    print("✅ Handler được gọi: 👥 Số người đang chơi")
     player_text = "📊 Số người đang chơi mỗi game:\n\n"
     for game, count in game_players.items():
         player_text += f"{game}: {count} người chơi\n"
-
-    keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton("🔄 Load lại", callback_data="reload_players"))
-    await message.answer(player_text, reply_markup=keyboard)
-
-@router.callback_query(F.data == "reload_players")
-async def refresh_players_callback(callback: types.CallbackQuery):
-    print("✅ Handler được gọi: Callback 🔄 Load lại số người chơi")
-    global game_players
-    if not player_lock:
-        for game in game_players:
-            min_value, max_value = game_players_limit[game]
-            game_players[game] = random.randint(min_value, max_value)
-
-    await show_players(callback.message)
-    await callback.answer()
+    await message.answer(player_text)
 
 # ===================== Admin Tùy chỉnh số người chơi =====================
 @router.message(F.text.startswith("/setplayers "))
