@@ -570,7 +570,7 @@ user_balance = {}  # Lưu số dư người dùng
 
 # Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
 
-@router.message(Text("✈️ Máy Bay"))
+@router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
