@@ -556,6 +556,9 @@ async def jackpot_bet(message: types.Message):
 
 import random
 import asyncio
+import logging
+from aiogram import types
+from aiogram.types import ReplyKeyboardRemove
 
 # --- GAME: Máy Bay (Crash Game) ---
 
@@ -571,8 +574,8 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     await message.answer(
-         "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
-         reply_markup=ReplyKeyboardRemove()
+        "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
+        reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id), False) and msg.text.isdigit())
@@ -600,14 +603,15 @@ async def initiate_crash_game(message: types.Message):
     withdraw_event = asyncio.Event()
 
     crash_games[user_id] = {
-         "bet": bet,
-         "current_multiplier": 1.0,
-         "running": True,
-         "crash_point": crash_point,
-         "withdraw_event": withdraw_event,
-         "message_id": None
+        "bet": bet,
+        "current_multiplier": 1.0,
+        "running": True,
+        "crash_point": crash_point,
+        "withdraw_event": withdraw_event,
+        "message_id": None
     }
- asyncio.create_task(countdown_and_delete(message))
+
+    asyncio.create_task(countdown_and_delete(message))
 
 async def countdown_and_delete(message: types.Message):
     countdown_time = random.choice([5, 7, 9, 12])
