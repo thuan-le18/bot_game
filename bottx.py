@@ -109,14 +109,8 @@ async def add_commission(user_id: str, bet_amount: int):
     """
     logging.info(f"📌 Hàm add_commission được gọi - user_id: {user_id}, bet_amount: {bet_amount}")
 
-    # Log toàn bộ danh sách referrals để kiểm tra
-    logging.info(f"📌 referrals hiện tại: {referrals}")
-
     referrer_id = None
     for ref_id, referred_list in referrals.items():
-        logging.info(f"🔍 Kiểm tra referrer {ref_id} - Danh sách đã giới thiệu: {referred_list}")
-
-        # Tìm user_id trong danh sách (danh sách này chứa dictionary)
         if any(ref["user_id"] == user_id for ref in referred_list):
             referrer_id = ref_id
             break
@@ -124,21 +118,18 @@ async def add_commission(user_id: str, bet_amount: int):
     if not referrer_id:
         logging.warning(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
         return
-    
+
     commission = int(bet_amount * 0.02)
-    logging.info(f"📌 Referrer {referrer_id} - Số dư trước khi cộng: {user_balance.get(referrer_id, 0)}")
-
-    # Cộng hoa hồng
     user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
+
+    # Cập nhật số tiền hoa hồng trong danh sách mời
+    for ref in referrals[referrer_id]:
+        if ref["user_id"] == user_id:
+            ref["commission"] = ref.get("commission", 0) + commission  # Cộng dồn hoa hồng
+            break
+
     save_data(data)
-
-    logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}. Số dư mới: {user_balance[referrer_id]}")
-
-    # Gửi tin nhắn thông báo hoa hồng
-    try:
-        await bot.send_message(referrer_id, f"🎉 Bạn nhận được hoa hồng 2% ({commission:,} VNĐ) từ cược của {user_id}!")
-    except Exception as e:
-        logging.error(f"🚨 Không thể gửi tin nhắn cho referrer {referrer_id}: {e}")
+    logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}.")
 
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
@@ -325,9 +316,12 @@ async def list_invited_handler(callback: types.CallbackQuery):
         await callback.answer("❌ Bạn chưa mời ai.", show_alert=True)
         return
 
-    invited_list = "\n".join(f"- {ref['user_id']}" for ref in records)
+    invited_list = "\n".join(
+        f"- {ref['user_id']} (+{ref.get('commission', 0):,} VNĐ)" for ref in records
+    )
+    
     await callback.message.answer(f"📋 **Danh sách ID đã mời:**\n{invited_list}")
-
+    
 # ===================== Danh sách game Handler =====================
 @router.message(F.text == "🎮 Danh sách game")
 async def show_games(message: types.Message):
