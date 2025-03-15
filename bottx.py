@@ -732,12 +732,10 @@ async def withdraw_crash(callback: types.CallbackQuery):
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        profit = round(bet * (multiplier - 1))
-        win_amount = profit + bet  # Tổng số tiền nhận được
+        profit = round(bet * (multiplier - 1))  # Chỉ cộng tiền thắng
 
-        # Kiểm tra nếu đã rút tiền trước đó thì không cộng nữa
-        if not crash_games[user_id].get("withdrawn", False):
-            user_balance[user_id] += win_amount
+        if not crash_games[user_id]["withdrawn"]:
+            user_balance[user_id] += profit  # Chỉ cộng phần lợi nhuận, không cộng lại tiền cược
             save_data(user_balance)
             record_bet_history(user_id, "Máy Bay", bet, "win", profit)
 
@@ -759,8 +757,6 @@ async def withdraw_crash(callback: types.CallbackQuery):
 
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-
-    # ❌ Không gọi lại `run_crash_game()` để tránh lỗi nhân đôi
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
