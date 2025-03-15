@@ -193,6 +193,9 @@ async def set_bot_commands(user_id: str):
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
+        BotCommand(command="ban", description="Admin ban người dùng"),
+        BotCommand(command="unban", description="Admin mở ban người dùng"),
+        BotCommand(command="listban", description="Danh sách ban người dùng"),
         BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
         BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
@@ -1994,7 +1997,7 @@ async def ban_user(message: types.Message):
     await message.answer(f"✅ Đã khóa tài khoản của người chơi {user_id}.")
     
     try:
-        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa bởi admin.")
+        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa vui lòng liên hệ:hoanganh11829 để mở nếu bạn nghĩ nhầm lẫn")
     except Exception:
         logging.warning(f"Không thể gửi tin nhắn cho {user_id} (có thể họ đã chặn bot).")
 
@@ -2019,10 +2022,21 @@ async def unban_user(message: types.Message):
     await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
     
     try:
-        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
+        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở ")
     except Exception:
         logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
-        
+# ===================== Lệnh /listban để kiểm tra danh sách ban =====================
+@router.message(Command("listban"))
+async def list_banned_users(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("🚫 Bạn không có quyền sử dụng lệnh này.")
+
+    if not banned_users:
+        return await message.answer("✅ Không có người chơi nào đang bị ban.")
+
+    banned_list = "\n".join(banned_users)
+    await message.answer(f"📋 Danh sách người chơi bị ban:\n```\n{banned_list}\n```", parse_mode="Markdown")
+    
 # ===================== Chạy bot =====================
 async def main():
     # Chạy update_players() trong background
@@ -2033,6 +2047,9 @@ async def main():
         BotCommand(command="start", description="Bắt đầu bot"),
         BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
         BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
+        BotCommand(command="ban", description="Admin ban người dùng"),
+        BotCommand(command="unban", description="Admin mở ban người dùng"),
+        BotCommand(command="listban", description="Danh sách ban người dùng"),
         BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
         BotCommand(command="tracuu", description="Xem người chơi (Admin)")
     ])
