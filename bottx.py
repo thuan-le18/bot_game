@@ -76,6 +76,8 @@ def load_data():
 
 def save_data():
     """Lưu toàn bộ dữ liệu vào file (bao gồm cả danh sách ban)"""
+    global data  # Thêm dòng này để dùng biến toàn cục
+
     data["balances"] = user_balance
     data["history"] = user_history
     data["deposits"] = deposits
