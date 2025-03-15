@@ -467,133 +467,68 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     await state.clear()
     
 # ===================== GAME: Tài Xỉu =====================
-import random
-import asyncio
-from datetime import datetime, timedelta
-
-# Quỹ nổ hũ và giới hạn
-jackpot_pool = 1000000  # Quỹ khởi điểm
-last_jackpot_winner = None  # Lưu người thắng gần nhất
-last_bet_time = datetime.now()  # Thời gian cược gần nhất
-JACKPOT_MAX = 25000000  # Giới hạn tối đa 25 triệu
-JACKPOT_MIN = 500000  # Mức tối thiểu trước khi bơm lại
-bet_processing = set()  # Lưu user đang cược (ngăn spam)
-
-async def auto_increase_jackpot():
-    """Tự động tăng quỹ nổ hũ nếu không có ai cược trong 10 phút."""
-    global jackpot_pool, last_bet_time
-
-    while True:
-        await asyncio.sleep(600)  # Kiểm tra mỗi 10 phút
-
-        if (datetime.now() - last_bet_time).total_seconds() > 600:  # Không ai cược trong 10 phút
-            increase_amount = random.randint(10000, 50000)
-            new_jackpot = jackpot_pool + increase_amount
-
-            if new_jackpot > JACKPOT_MAX:
-                jackpot_pool = JACKPOT_MAX  # Không vượt 25 triệu
-            else:
-                jackpot_pool = new_jackpot
-
-            print(f"💰 Quỹ nổ hũ tự động tăng +{increase_amount} VNĐ (Quỹ hiện tại: {jackpot_pool:,} VNĐ)")
-
-async def fake_jackpot_winner():
-    """Tạo người thắng giả nếu quỹ quá cao và không ai trúng trong 3 giờ."""
-    global jackpot_pool, last_jackpot_winner
-
-    while True:
-        await asyncio.sleep(10800)  # Kiểm tra mỗi 3 giờ
-
-        if jackpot_pool >= JACKPOT_MAX:
-            fake_user_id = random.randint(1000000000, 9999999999)  # User ảo có 10 số
-            win_amount = int(jackpot_pool * 0.6)  # Chỉ nhận 60% quỹ
-            jackpot_pool *= 0.4  # Giữ lại 40%
-
-            last_jackpot_winner = f"User {fake_user_id} thắng {win_amount:,} VNĐ!"
-            print(f"🎉 Fake Nổ Hũ: {last_jackpot_winner} (Quỹ còn: {jackpot_pool:,} VNĐ)")
-
-async def play_taixiu(message: types.Message):
-    global jackpot_pool, last_jackpot_winner, last_bet_time, bet_processing
-
+@router.message(F.text == "🎲 Tài Xỉu")
+async def start_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
+    taixiu_states[user_id] = "awaiting_choice"
+    await message.answer(
+        "Vui lòng chọn Tài hoặc Xỉu:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="Tài"), KeyboardButton(text="Xỉu")]],
+            resize_keyboard=True
+        )
+    )
 
-    if user_id in bet_processing:
-        await message.answer("⚠️ Vui lòng đợi ván trước hoàn thành trước khi cược tiếp.")
-        return
-    bet_processing.add(user_id)
+@router.message(lambda msg: taixiu_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["Tài", "Xỉu"])
+async def choose_taixiu(message: types.Message):
+    user_id = str(message.from_user.id)
+    taixiu_states[user_id] = {"choice": message.text, "state": "awaiting_bet"}
+    await message.answer(f"Bạn đã chọn {message.text}. Vui lòng nhập số tiền cược:", reply_markup=ReplyKeyboardRemove())
 
+@router.message(lambda msg: isinstance(taixiu_states.get(str(msg.from_user.id)), dict)
+                          and taixiu_states[str(msg.from_user.id)].get("state") == "awaiting_bet"
+                          and msg.text.isdigit())
+async def play_taixiu(message: types.Message):
+    user_id = str(message.from_user.id)
     bet_amount = int(message.text)
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
-        bet_processing.remove(user_id)
+        taixiu_states[user_id] = None
         return
 
-    last_bet_time = datetime.now()
-
-    # Trừ tiền cược và cộng vào quỹ nổ hũ (2%)
+    # Trừ tiền cược và tính hoa hồng nếu có
     user_balance[user_id] -= bet_amount
-    jackpot_pool += int(bet_amount * 0.02)
+    save_data(data)
+    await add_commission(user_id, bet_amount)
+
+    dice_values = []
+    for i in range(3):
+        dice_msg = await message.answer_dice(emoji="🎲")
+        dice_values.append(dice_msg.dice.value)
+        await asyncio.sleep(2)
     
-    # Đảm bảo quỹ không vượt 25 triệu
-    if jackpot_pool > JACKPOT_MAX:
-        jackpot_pool = JACKPOT_MAX
-
-    save_data(user_balance)
-
-    # Lăn xúc xắc
-    dice_values = [await message.answer_dice(emoji="🎲").dice.value for _ in range(3)]
     total = sum(dice_values)
     result = "Tài" if total >= 11 else "Xỉu"
     user_choice = taixiu_states[user_id]["choice"]
 
     win_amount = 0
-    jackpot_win = False
-
+    outcome_text = ""
     if user_choice == result:
         win_amount = int(bet_amount * 1.98)
         user_balance[user_id] += win_amount
-
-    # Kiểm tra điều kiện nổ hũ
-    if dice_values[0] == dice_values[1] == dice_values[2] or total in [9, 18]:
-        if jackpot_pool >= JACKPOT_MIN:
-            jackpot_win = True
-            win_amount += int(jackpot_pool * 0.6)  # Chỉ nhận 60% quỹ nổ hũ
-            jackpot_pool *= 0.4  # Giữ lại 40%
-
-            last_jackpot_winner = f"{message.from_user.full_name} thắng {win_amount:,} VNĐ!"
-
-    # Nếu quỹ giảm dưới mức tối thiểu, bơm lại 500k
-    if jackpot_pool < JACKPOT_MIN:
-        jackpot_pool += JACKPOT_MIN
-        print(f"💰 Quỹ nổ hũ được bơm lại lên {jackpot_pool:,} VNĐ")
-
-    jackpot_pool = max(jackpot_pool, 0)
-
-    save_data(user_balance)
-
-    outcome_text = f"Bạn thắng {win_amount:,} VNĐ!" if win_amount else f"Bạn thua {bet_amount:,} VNĐ!"
-    if jackpot_win:
-        outcome_text += "\n🎰 CHÚC MỪNG! Bạn đã TRÚNG NỔ HŨ!"
+        save_data(data)
+        outcome_text = f"Bạn thắng {win_amount} VNĐ!"
+    else:
+        outcome_text = f"Bạn thua {bet_amount} VNĐ!"
 
     await message.answer(
-        f"🎲 Kết quả xúc xắc: {dice_values}\n"
-        f"✨ Tổng điểm: {total} ({result})\n"
-        f"{outcome_text}\n"
-        f"💰 Quỹ nổ hũ hiện tại: {jackpot_pool:,} VNĐ\n"
-        f"🏆 Người thắng gần đây: {last_jackpot_winner if last_jackpot_winner else 'Chưa có ai'}",
+        f"🎉 Kết quả xúc xắc: {dice_values[0]}, {dice_values[1]}, {dice_values[2]}\n"
+        f"✨ Tổng điểm: {total} ({result})\n{outcome_text}",
         reply_markup=main_menu
     )
-
+    # Lưu lịch sử cược cho Tài Xỉu
     record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
-
-    bet_processing.remove(user_id)
     taixiu_states[user_id] = None
-
-# Chạy các tiến trình nền tự động
-async def start_background_tasks():
-    asyncio.create_task(auto_increase_jackpot())
-    asyncio.create_task(fake_jackpot_winner())
-
 # ===================== GAME: Jackpot =====================
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
