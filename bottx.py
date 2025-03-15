@@ -203,11 +203,19 @@ async def set_bot_commands(user_id: str):
         await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
 
 # ===================== /start Handler =====================
+# ========== CẬP NHẬT /START ĐỂ CHẶN NGƯỜI BỊ BAN ==========
+
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
+
+    # Kiểm tra nếu người dùng bị ban
+    if user_id in banned_users:
+        await message.answer("⚠️ Tài khoản của bạn đã bị admin khóa và không thể truy cập Mega6 Casino.")
+        return
+
     await set_bot_commands(user_id)
-    # Kiểm tra tham số referral từ deep link, ví dụ: "/start 123456789"
+
     parts = message.text.split()
     referrer_id = parts[1] if len(parts) > 1 else None
 
@@ -220,7 +228,6 @@ async def start_cmd(message: types.Message):
         save_data(data)
         new_user = True
 
-        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho người giới thiệu
         if referrer_id and referrer_id != user_id:
             if referrer_id not in referrals:
                 referrals[referrer_id] = []
@@ -239,7 +246,6 @@ async def start_cmd(message: types.Message):
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
 
-    # Sửa lỗi thụt lề cho if new_user:
     if new_user:
         welcome_text = (
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
@@ -250,7 +256,7 @@ async def start_cmd(message: types.Message):
             "• Rồng Hổ\n"
             "• Đào Vàng\n"
             "• Mini Poker\n\n"
-            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
+            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn! 🎉"
         )
         await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
     else:
@@ -1808,6 +1814,76 @@ async def unlock_players(message: types.Message):
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
 
+BAN_FILE = "banned_users.json"  # Lưu danh sách người bị ban
+
+# Tải danh sách người bị ban từ file (nếu có)
+try:
+    with open(BAN_FILE, "r") as f:
+        banned_users = set(json.load(f))
+except FileNotFoundError:
+    banned_users = set()
+
+# Hàm lưu danh sách ban vào file
+def save_ban_list():
+    with open(BAN_FILE, "w") as f:
+        json.dump(list(banned_users), f)
+
+
+@router.message(Command("ban"))
+async def ban_user(message: types.Message):
+    """Lệnh ban người dùng - Chỉ admin mới có thể dùng"""
+    if str(message.from_user.id) not in ADMIN_IDS:
+        await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await message.answer("⚠️ Vui lòng nhập ID người dùng hợp lệ.\nVí dụ: `/ban 123456789`", parse_mode="Markdown")
+        return
+
+    user_to_ban = parts[1]
+
+    if user_to_ban in banned_users:
+        await message.answer("⚠️ Người dùng này đã bị ban trước đó.")
+        return
+
+    banned_users.add(user_to_ban)
+    save_ban_list()
+
+    await message.answer(f"✅ Đã ban người dùng `{user_to_ban}`.", parse_mode="Markdown")
+    try:
+        await bot.send_message(user_to_ban, "⚠️ Tài khoản của bạn đã bị admin khóa và không thể truy cập Mega6 Casino.")
+    except Exception as e:
+        logging.error(f"Không thể gửi tin nhắn ban đến {user_to_ban}: {e}")
+
+
+@router.message(Command("unban"))
+async def unban_user(message: types.Message):
+    """Lệnh gỡ ban người dùng - Chỉ admin mới có thể dùng"""
+    if str(message.from_user.id) not in ADMIN_IDS:
+        await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        await message.answer("⚠️ Vui lòng nhập ID người dùng hợp lệ.\nVí dụ: `/unban 123456789`", parse_mode="Markdown")
+        return
+
+    user_to_unban = parts[1]
+
+    if user_to_unban not in banned_users:
+        await message.answer("⚠️ Người này không bị ban.")
+        return
+
+    banned_users.remove(user_to_unban)
+    save_ban_list()
+
+    await message.answer(f"✅ Đã gỡ ban người dùng `{user_to_unban}`.", parse_mode="Markdown")
+    try:
+        await bot.send_message(user_to_unban, "✅ Tài khoản của bạn đã được mở khóa, bạn có thể truy cập Mega6 Casino!")
+    except Exception as e:
+        logging.error(f"Không thể gửi tin nhắn gỡ ban đến {user_to_unban}: {e}")
+        
 # ===================== Chạy bot =====================
 async def main():
     # Chạy update_players() trong background
