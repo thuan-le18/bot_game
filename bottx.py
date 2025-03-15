@@ -94,19 +94,9 @@ user_history = data["history"]
 deposits = data["deposits"]
 withdrawals = data["withdrawals"]
 referrals = data["referrals"]
-banned_users = set(data["banned_users"])  # Chuyển về set để dễ xử lý
-current_id = data["current_id"]
+banned_users = set(data.get("banned_users", []))  # Đảm bảo banned_users luôn là set
+current_id = data.get("current_id", 1)  # Đảm bảo current_id có giá trị mặc định là 1]
 
-# ===================== Hàm Ban/Gỡ Ban =====================
-def ban_user(user_id):
-    """Thêm người dùng vào danh sách bị ban"""
-    banned_users.add(user_id)
-    save_data()
-
-def unban_user(user_id):
-    """Gỡ người dùng khỏi danh sách bị ban"""
-    banned_users.discard(user_id)
-    save_data()
 # ===================== Hàm lưu lịch sử cược chung =====================
 def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     """
