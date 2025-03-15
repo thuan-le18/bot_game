@@ -244,6 +244,71 @@ withdrawals = data["withdrawals"]
 referrals = data["referrals"]
 current_id = data["current_id"]
 
+try:
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+except FileNotFoundError:
+    data = {"user_balance": {}, "banned_users": []}
+
+user_balance = data.get("user_balance", {})
+banned_users = set(data.get("banned_users", []))  # Lưu danh sách người bị ban
+
+def save_data():
+    """Lưu dữ liệu vào file"""
+    data["user_balance"] = user_balance
+    data["banned_users"] = list(banned_users)
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+        # ===================== Lệnh Ban/Gỡ Ban =====================
+@router.message(Command("ban"))
+async def ban_user(message: types.Message):
+    """Admin khóa tài khoản người chơi"""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("❌ Sai cú pháp! Dùng: `/ban [ID người chơi]`", parse_mode="Markdown")
+        return
+
+    user_id = parts[1]
+    if user_id in banned_users:
+        await message.answer(f"⚠️ Người chơi {user_id} đã bị ban trước đó.")
+        return
+
+    banned_users.add(user_id)
+    save_data()
+    await message.answer(f"✅ Đã khóa tài khoản của người chơi {user_id}.")
+    
+    try:
+        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa bởi admin.")
+    except Exception:
+        logging.warning(f"Không thể gửi tin nhắn cho {user_id} (có thể họ đã chặn bot).")
+
+@router.message(Command("unban"))
+async def unban_user(message: types.Message):
+    """Admin mở khóa tài khoản người chơi"""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("❌ Sai cú pháp! Dùng: `/unban [ID người chơi]`", parse_mode="Markdown")
+        return
+
+    user_id = parts[1]
+    if user_id not in banned_users:
+        await message.answer(f"⚠️ Người chơi {user_id} chưa bị ban.")
+        return
+
+    banned_users.remove(user_id)
+    save_data()
+    await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
+    
+    try:
+        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
+    except Exception:
+        logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
 # ===================== Hàm lưu lịch sử cược chung =====================
 def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     """
@@ -369,53 +434,26 @@ async def set_bot_commands(user_id: str):
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
-    await set_bot_commands(user_id)
-    # Kiểm tra tham số referral từ deep link, ví dụ: "/start 123456789"
-    parts = message.text.split()
-    referrer_id = parts[1] if len(parts) > 1 else None
 
+    # Kiểm tra nếu người chơi bị ban
+    if user_id in banned_users:
+        await message.answer("⛔ Tài khoản của bạn đã bị khóa bởi admin.")
+        return
+
+    # Khởi tạo người chơi mới nếu chưa có dữ liệu
     new_user = False
     if user_id not in user_balance:
-        user_balance[user_id] = NEW_USER_BONUS
-        user_history[user_id] = []
-        deposits[user_id] = []
-        withdrawals[user_id] = []
-        save_data(data)
+        user_balance[user_id] = 5000  # Tặng 5.000 VNĐ cho người mới
+        save_data()
         new_user = True
 
-        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho người giới thiệu
-        if referrer_id and referrer_id != user_id:
-            if referrer_id not in referrals:
-                referrals[referrer_id] = []
-            if user_id not in [ref.get("user_id") for ref in referrals[referrer_id]]:
-                referrals[referrer_id].append({
-                    "user_id": user_id,
-                    "timestamp": datetime.now().isoformat()
-                })
-                user_balance[referrer_id] = user_balance.get(referrer_id, 0) + 2000
-                save_data(data)
-                try:
-                    await bot.send_message(referrer_id, "🎉 Bạn vừa nhận 2.000 VNĐ vì mời được một người chơi mới!")
-                except Exception as e:
-                    logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
-
-    deposit_states[user_id] = None
-    jackpot_states[user_id] = False
-
-    # Sửa lỗi thụt lề cho if new_user:
+    # Hiển thị menu chính (giả sử có biến main_menu)
     if new_user:
-        welcome_text = (
+        await message.answer(
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
-            "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
-            "• Tài Xỉu\n"
-            "• Jackpot\n"
-            "• Máy Bay\n"
-            "• Rồng Hổ\n"
-            "• Đào Vàng\n"
-            "• Mini Poker\n\n"
-            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
+            "Bạn vừa nhận 5.000 VNĐ vào số dư. Chúc bạn may mắn!",
+            reply_markup=main_menu, parse_mode="Markdown"
         )
-        await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
     else:
         await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
 
