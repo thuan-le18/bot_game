@@ -110,26 +110,27 @@ async def add_commission(user_id: str, bet_amount: int):
     """
     logging.info(f"📌 Hàm add_commission được gọi - user_id: {user_id}, bet_amount: {bet_amount}")
 
+    # Log toàn bộ danh sách referrals để kiểm tra
+    logging.info(f"📌 referrals hiện tại: {referrals}")
+
     referrer_id = None
     for ref_id, referred_list in referrals.items():
+        logging.info(f"🔍 Kiểm tra referrer {ref_id} - Danh sách đã giới thiệu: {referred_list}")
         if user_id in referred_list:
             referrer_id = ref_id
             break
 
     if not referrer_id:
-        logging.info(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
+        logging.warning(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
         return
     
     commission = int(bet_amount * 0.02)
-    
-    # Log trước khi cập nhật số dư
     logging.info(f"📌 Referrer {referrer_id} - Số dư trước khi cộng: {user_balance.get(referrer_id, 0)}")
-    
+
     # Cộng hoa hồng
     user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
     save_data(data)
 
-    # Log sau khi cập nhật số dư
     logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}. Số dư mới: {user_balance[referrer_id]}")
 
     # Gửi tin nhắn thông báo hoa hồng
