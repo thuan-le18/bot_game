@@ -162,12 +162,13 @@ daovang_states = {}
 
 # ===================== Hệ thống VIP & Bonus =====================
 vip_levels = {
-    "VIP 1": 100000,
-    "VIP 2": 500000,
-    "VIP 3": 1000000,
-    "VIP 4": 5000000,
-    "VIP 5": 10000000,
+    "VIP 1": (100000, "🟢"),  # Xanh lá
+    "VIP 2": (500000, "🔵"),  # Xanh dương
+    "VIP 3": (1000000, "🟣"),  # Tím
+    "VIP 4": (5000000, "🟠"),  # Cam
+    "VIP 5": (10000000, "🔴"),  # Đỏ
 }
+
 NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
 MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
 
