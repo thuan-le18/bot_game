@@ -202,20 +202,175 @@ async def set_bot_commands(user_id: str):
     else:
         await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
 
-# ===================== /start Handler =====================
-# ========== CẬP NHẬT /START ĐỂ CHẶN NGƯỜI BỊ BAN ==========
+# ===================== Cấu hình bot =====================
+TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
+ADMIN_ID = 1985817060  # Thay ID admin của bạn
+DATA_FILE = "user_data.json"
 
+# Khởi tạo bot và dispatcher trước khi include router
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+router = Router()
+dp.include_router(router)
+
+# ===================== Hàm load/save dữ liệu =====================
+def load_data():
+    try:
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {
+            "balances": {},
+            "history": {},
+            "deposits": {},
+            "withdrawals": {},
+            "referrals": {},    # Thêm key cho referrals
+            "current_id": 1
+        }
+    for key in ["balances", "history", "deposits", "withdrawals", "referrals"]:
+        if key not in data:
+            data[key] = {}  # Khởi tạo rỗng cho các key nếu chưa có
+    return data
+
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+data = load_data()
+user_balance = data["balances"]
+user_history = data["history"]
+deposits = data["deposits"]
+withdrawals = data["withdrawals"]
+referrals = data["referrals"]
+current_id = data["current_id"]
+
+# ===================== Hàm lưu lịch sử cược chung =====================
+def record_bet_history(user_id, game_name, bet_amount, result, winnings):
+    """
+    Lưu lại lịch sử cược của người chơi.
+    - user_id: ID người chơi (str)
+    - game_name: Tên game (ví dụ "Tài Xỉu", "Máy Bay", "Rồng Hổ", "Đào Vàng", "Mini Poker")
+    - bet_amount: Số tiền cược
+    - result: Kết quả (ví dụ "win", "lose", hoặc "rong - win")
+    - winnings: Số tiền thắng (0 nếu thua)
+    """
+    record = {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "game": game_name,
+        "bet_amount": bet_amount,
+        "result": result,
+        "winnings": winnings
+    }
+    if user_id not in user_history:
+        user_history[user_id] = []
+    user_history[user_id].append(record)
+    save_data(data)
+# ===================== Hàm tính hoa hồng 2% =====================
+async def add_commission(user_id: str, bet_amount: int):
+    """
+    Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
+    """
+    logging.info(f"📌 Hàm add_commission được gọi - user_id: {user_id}, bet_amount: {bet_amount}")
+
+    referrer_id = None
+    for ref_id, referred_list in referrals.items():
+        if any(ref["user_id"] == user_id for ref in referred_list):
+            referrer_id = ref_id
+            break
+
+    if not referrer_id:
+        logging.warning(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
+        return
+
+    commission = int(bet_amount * 0.02)
+    user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
+
+    # Cập nhật số tiền hoa hồng trong danh sách mời
+    for ref in referrals[referrer_id]:
+        if ref["user_id"] == user_id:
+            ref["commission"] = ref.get("commission", 0) + commission  # Cộng dồn hoa hồng
+            break
+
+    save_data(data)
+    logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}.")
+
+# ===================== Các biến trạng thái =====================
+taixiu_states = {}    # Trạng thái game Tài Xỉu
+jackpot_states = {}   # Trạng thái game Jackpot
+crash_states = {}     # Trạng thái game Máy Bay (Crash)
+rongho_states = {}    # Trạng thái game Rồng Hổ
+gold_states = {}      # Không dùng, vì game Đào Vàng dùng daovang_states
+poker_states = {}     # Trạng thái game Mini Poker
+
+# Các biến trạng thái cho giao dịch và game Đào Vàng
+deposit_states = {}
+daovang_states = {}
+
+# ===================== Hệ thống VIP & Bonus =====================
+vip_levels = {
+    "VIP 1": 100000,
+    "VIP 2": 500000,
+    "VIP 3": 1000000,
+    "VIP 4": 5000000,
+    "VIP 5": 10000000,
+}
+NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
+MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
+
+# ===================== Hàm tính hệ số nhân cho game Đào Vàng =====================
+def calculate_multiplier(safe_count, bomb_count):
+    total_safe = 25 - bomb_count
+    if safe_count >= total_safe:
+        # Khi đã chọn hết ô an toàn, trả về hệ số tối đa (bằng tổng ô an toàn)
+        return total_safe
+    return total_safe / (total_safe - safe_count)
+
+# ===================== Menus =====================
+main_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎮 Danh sách game"), KeyboardButton(text="💰 Xem số dư")],
+        [KeyboardButton(text="📜 Lịch sử cược"), KeyboardButton(text="🏧 Nạp tiền")],
+        [KeyboardButton(text="💸 Rút tiền"), KeyboardButton(text="🌹 Hoa hồng")],
+        [KeyboardButton(text="🏆 VIP"), KeyboardButton(text="💬 Hỗ trợ")]
+    ],
+    resize_keyboard=True
+)
+
+games_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎲 Tài Xỉu"), KeyboardButton(text="🎰 Jackpot")],
+        [KeyboardButton(text="✈️ Máy Bay"), KeyboardButton(text="🐉 Rồng Hổ")],
+        [KeyboardButton(text="⛏️ Đào Vàng"), KeyboardButton(text="🃏 Mini Poker")],
+        [KeyboardButton(text="👥 Số người đang chơi")],  # Nút hiển thị số người đang chơi
+        [KeyboardButton(text="🔙 Quay lại")]
+    ],
+    resize_keyboard=True
+)
+
+# ===================== Hàm set_bot_commands =====================
+async def set_bot_commands(user_id: str):
+    user_commands = [
+        BotCommand(command="start", description="Bắt đầu bot"),
+    ]
+    admin_commands = user_commands + [
+        BotCommand(command="naptien", description="Admin duyệt nạp tiền"),
+        BotCommand(command="xacnhan", description="Admin duyệt rút tiền"),
+        BotCommand(command="congtien", description="Cộng tiền cho người dùng (Admin)"),
+        BotCommand(command="setplayers", description="Chỉnh số người chơi ảo"),
+        BotCommand(command="unlockplayers", description="Mở khóa số người chơi"),
+        BotCommand(command="tracuu", description="Xem người chơi (Admin)")
+    ]
+    if user_id == str(ADMIN_ID):
+        await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
+    else:
+        await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
+
+# ===================== /start Handler =====================
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
-
-    # Kiểm tra nếu người dùng bị ban
-    if user_id in banned_users:
-        await message.answer("⚠️ Tài khoản của bạn đã bị admin khóa và không thể truy cập Mega6 Casino.")
-        return
-
     await set_bot_commands(user_id)
-
+    # Kiểm tra tham số referral từ deep link, ví dụ: "/start 123456789"
     parts = message.text.split()
     referrer_id = parts[1] if len(parts) > 1 else None
 
@@ -228,6 +383,7 @@ async def start_cmd(message: types.Message):
         save_data(data)
         new_user = True
 
+        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho người giới thiệu
         if referrer_id and referrer_id != user_id:
             if referrer_id not in referrals:
                 referrals[referrer_id] = []
@@ -246,6 +402,7 @@ async def start_cmd(message: types.Message):
     deposit_states[user_id] = None
     jackpot_states[user_id] = False
 
+    # Sửa lỗi thụt lề cho if new_user:
     if new_user:
         welcome_text = (
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
@@ -256,7 +413,7 @@ async def start_cmd(message: types.Message):
             "• Rồng Hổ\n"
             "• Đào Vàng\n"
             "• Mini Poker\n\n"
-            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn! 🎉"
+            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
         )
         await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
     else:
@@ -1813,76 +1970,6 @@ async def unlock_players(message: types.Message):
 
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
-
-BAN_FILE = "banned_users.json"  # Lưu danh sách người bị ban
-
-# Tải danh sách người bị ban từ file (nếu có)
-try:
-    with open(BAN_FILE, "r") as f:
-        banned_users = set(json.load(f))
-except FileNotFoundError:
-    banned_users = set()
-
-# Hàm lưu danh sách ban vào file
-def save_ban_list():
-    with open(BAN_FILE, "w") as f:
-        json.dump(list(banned_users), f)
-
-
-@router.message(Command("ban"))
-async def ban_user(message: types.Message):
-    """Lệnh ban người dùng - Chỉ admin mới có thể dùng"""
-    if str(message.from_user.id) not in ADMIN_ID:
-        await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
-        return
-
-    parts = message.text.split()
-    if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("⚠️ Vui lòng nhập ID người dùng hợp lệ.\nVí dụ: `/ban 123456789`", parse_mode="Markdown")
-        return
-
-    user_to_ban = parts[1]
-
-    if user_to_ban in banned_users:
-        await message.answer("⚠️ Người dùng này đã bị ban trước đó.")
-        return
-
-    banned_users.add(user_to_ban)
-    save_ban_list()
-
-    await message.answer(f"✅ Đã ban người dùng `{user_to_ban}`.", parse_mode="Markdown")
-    try:
-        await bot.send_message(user_to_ban, "⚠️ Tài khoản của bạn đã bị admin khóa và không thể truy cập Mega6 Casino.")
-    except Exception as e:
-        logging.error(f"Không thể gửi tin nhắn ban đến {user_to_ban}: {e}")
-
-
-@router.message(Command("unban"))
-async def unban_user(message: types.Message):
-    """Lệnh gỡ ban người dùng - Chỉ admin mới có thể dùng"""
-    if str(message.from_user.id) not in ADMIN_ID:
-        await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
-        return
-
-    parts = message.text.split()
-    if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("⚠️ Vui lòng nhập ID người dùng hợp lệ.\nVí dụ: `/unban 123456789`", parse_mode="Markdown")
-        return
-
-    user_to_unban = parts[1]
-
-    if user_to_unban not in banned_users:
-        await message.answer("⚠️ Người này không bị ban.")
-        return
-
-    banned_users.remove(user_to_unban)
-    save_ban_list()
-
-    await message.answer(f"✅ Đã gỡ ban người dùng `{user_to_unban}`.", parse_mode="Markdown")
-    try:
-        await bot.send_message(user_to_unban, "✅ Tài khoản của bạn đã được mở khóa, bạn có thể truy cập Mega6 Casino!")
-    except Exception as e:
-        logging.error(f"Không thể gửi tin nhắn gỡ ban đến {user_to_unban}: {e}")
         
 # ===================== Chạy bot =====================
 async def main():
