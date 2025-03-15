@@ -162,26 +162,12 @@ daovang_states = {}
 
 # ===================== Hệ thống VIP & Bonus =====================
 vip_levels = {
-    "VIP 1": (100000, "🥈 bạc"),  # Xanh lá - Kim cương nhỏ
-    "VIP 2": (500000, "🥇 vàng"),  # Xanh dương - 2 Kim cương
-    "VIP 3": (1000000, "💎 kim cương"),  # Tím - Vương miện
-    "VIP 4": (5000000, "🟢 Ngọc Lục Bảo"),  # Cam - Lửa, cấp cao
-    "VIP 5": (10000000, "👑"),  # Đỏ - Tên lửa, VIP cao nhất
+    "VIP 1🥈": 100000,
+    "VIP 2🥇": 500000,
+    "VIP 3💎": 1000000,
+    "VIP 4🔷": 5000000,
+    "VIP 5👑": 10000000,
 }
-
-def get_vip_level(balance):
-    for level, (min_balance, emoji) in reversed(vip_levels.items()):
-        if balance >= min_balance:  
-            return f"{emoji} {level}"
-    return "👤 Thành viên thường"
-
-@router.message(Command("vip"))
-async def check_vip_status(message: types.Message):
-    user_id = str(message.from_user.id)
-    balance = user_balance.get(user_id, 0)  
-    vip_status = get_vip_level(balance)
-
-    await message.answer(f"💎 Hạng VIP của bạn: {vip_status}\n💰 Số dư: {balance:,} VNĐ")
 
 NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
 MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
