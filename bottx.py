@@ -471,7 +471,6 @@ from aiogram import Router, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 import asyncio
 
-router = Router()
 taixiu_states = {}
 user_balance = {}  # Giả sử có hệ thống lưu số dư
 data = {}  # Dữ liệu tổng hợp
