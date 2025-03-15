@@ -233,7 +233,7 @@ async def start_cmd(message: types.Message):
 
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        await message.answer("⚠️ Tài khoản của bạn đã bị khóa vì gian lận vui nhắn cho hỗ trợ @hoanganh11829 để mở nếu bạn nghĩ đây là nhầm lẫn ", reply_markup=ReplyKeyboardRemove())
+        await message.answer("⚠️ Tài khoản Mega6casino của bạn đã bị khóa vui lòng nhắn cho hỗ trợ @hoanganh11829 để mở nếu bạn nghĩ đây là nhầm lẫn ", reply_markup=ReplyKeyboardRemove())
         return
 
     # Khởi tạo người chơi mới nếu chưa có dữ liệu
@@ -1850,7 +1850,7 @@ async def unban_user(message: types.Message):
     logging.info(f"Admin đã UNBAN người chơi {user_id}")
 
     try:
-        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
+        await bot.send_message(user_id, "✅ Tài khoản Mega6casino của bạn đã được mở vui lòng bấm /start để hoạt động lại")
     except Exception:
         logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
 
