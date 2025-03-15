@@ -225,17 +225,15 @@ async def set_bot_commands(user_id: str):
 # ===================== /start Handler =====================
 from aiogram.types import ReplyKeyboardRemove
 
+banned_users = set()  # Danh sách người chơi bị ban
+
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
 
-    # Ghi log khi người chơi nhấn /start
-    logging.info(f"Người chơi {user_id} đã nhấn /start")
-
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        await message.answer("⛔ Tài khoản của bạn đã bị khóa bởi admin.", reply_markup=ReplyKeyboardRemove())
-        logging.warning(f"Người chơi {user_id} bị BAN đã cố gắng vào bot.")
+        await message.answer("⚠️ Tài khoản của bạn đã bị khóa vì gian  vui lòng nhắn hỗ trợ @hoanganh11829 để mở nếu bạn nghĩ đây là nhầm lẫn ", reply_markup=ReplyKeyboardRemove())
         return
 
     # Khởi tạo người chơi mới nếu chưa có dữ liệu
@@ -244,9 +242,7 @@ async def start_cmd(message: types.Message):
         user_balance[user_id] = 5000  # Tặng 5.000 VNĐ cho người mới
         save_data()
         new_user = True
-        logging.info(f"Người chơi mới {user_id} đã được tạo tài khoản với 5000 VNĐ.")
 
-    # Sửa lỗi thụt lề cho if new_user:
     if new_user:
         welcome_text = (
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
@@ -262,7 +258,7 @@ async def start_cmd(message: types.Message):
         await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
     else:
         await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
-
+        
 # ===================== VIP Handler =====================
 @router.message(F.text == "🏆 VIP")
 async def vip_info(message: types.Message):
@@ -1814,56 +1810,40 @@ async def unlock_players(message: types.Message):
 
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
- # ===================== Lệnh Ban/Gỡ Ban =====================
+
+# ===================== Lệnh /ban và /unban =====================
 @router.message(Command("ban"))
 async def ban_user(message: types.Message):
-    """Admin khóa tài khoản người chơi"""
     if message.from_user.id != ADMIN_ID:
-        return
+        return await message.answer("🚫 Bạn không có quyền sử dụng lệnh này.")
 
-    parts = message.text.split()
-    if len(parts) < 2:
-        await message.answer("❌ Sai cú pháp! Dùng: `/ban [ID người chơi]`", parse_mode="Markdown")
-        return
+    args = message.text.split()
+    if len(args) < 2:
+        return await message.answer("⚠️ Vui lòng nhập ID người chơi cần ban.\nVí dụ: `/ban 123456789`")
 
-    user_id = parts[1]
-    if user_id in banned_users:
-        await message.answer(f"⚠️ Người chơi {user_id} đã bị ban trước đó.")
-        return
+    target_id = args[1]
+    if target_id in banned_users:
+        return await message.answer(f"⚠️ Người chơi {target_id} đã bị ban trước đó.")
 
-    banned_users.add(user_id)
-    save_data()
-    await message.answer(f"✅ Đã khóa tài khoản của người chơi {user_id}.")
-    
-    try:
-        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa vui lòng liên hệ:hoanganh11829 để mở nếu bạn nghĩ nhầm lẫn")
-    except Exception:
-        logging.warning(f"Không thể gửi tin nhắn cho {user_id} (có thể họ đã chặn bot).")
+    banned_users.add(target_id)
+    await message.answer(f"✅ Đã ban người chơi {target_id}. Họ sẽ không thể sử dụng bot nữa.")
 
 @router.message(Command("unban"))
 async def unban_user(message: types.Message):
-    """Admin mở khóa tài khoản người chơi"""
     if message.from_user.id != ADMIN_ID:
-        return
+        return await message.answer("🚫 Bạn không có quyền sử dụng lệnh này.")
 
-    parts = message.text.split()
-    if len(parts) < 2:
-        await message.answer("❌ Sai cú pháp! Dùng: `/unban [ID người chơi]`", parse_mode="Markdown")
-        return
+    args = message.text.split()
+    if len(args) < 2:
+        return await message.answer("⚠️ Vui lòng nhập ID người chơi cần gỡ ban.\nVí dụ: `/unban 123456789`")
 
-    user_id = parts[1]
-    if user_id not in banned_users:
-        await message.answer(f"⚠️ Người chơi {user_id} chưa bị ban.")
-        return
+    target_id = args[1]
+    if target_id not in banned_users:
+        return await message.answer(f"⚠️ Người chơi {target_id} không bị ban.")
 
-    banned_users.remove(user_id)
-    save_data()
-    await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
-    
-    try:
-        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở ")
-    except Exception:
-        logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
+    banned_users.remove(target_id)
+    await message.answer(f"✅ Đã gỡ ban cho người chơi {target_id}. Họ có thể sử dụng bot trở lại.")
+
 # ===================== Lệnh /listban để kiểm tra danh sách ban =====================
 @router.message(Command("listban"))
 async def list_banned_users(message: types.Message):
