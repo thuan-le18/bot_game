@@ -233,7 +233,7 @@ async def start_cmd(message: types.Message):
 
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        await message.answer("⚠️ Tài khoản của bạn đã bị khóa vì gian  vui lòng nhắn hỗ trợ @hoanganh11829 để mở nếu bạn nghĩ đây là nhầm lẫn ", reply_markup=ReplyKeyboardRemove())
+        await message.answer("⚠️ Tài khoản của bạn đã bị khóa vì gian lận vui nhắn cho hỗ trợ @hoanganh11829 để mở nếu bạn nghĩ đây là nhầm lẫn ", reply_markup=ReplyKeyboardRemove())
         return
 
     # Khởi tạo người chơi mới nếu chưa có dữ liệu
