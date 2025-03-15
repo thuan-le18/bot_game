@@ -243,7 +243,7 @@ deposits = data["deposits"]
 withdrawals = data["withdrawals"]
 referrals = data["referrals"]
 current_id = data["current_id"]
-
+ # ===================== Lệnh Ban/Gỡ Ban =====================
 try:
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -259,56 +259,6 @@ def save_data():
     data["banned_users"] = list(banned_users)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
-        # ===================== Lệnh Ban/Gỡ Ban =====================
-@router.message(Command("ban"))
-async def ban_user(message: types.Message):
-    """Admin khóa tài khoản người chơi"""
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    parts = message.text.split()
-    if len(parts) < 2:
-        await message.answer("❌ Sai cú pháp! Dùng: `/ban [ID người chơi]`", parse_mode="Markdown")
-        return
-
-    user_id = parts[1]
-    if user_id in banned_users:
-        await message.answer(f"⚠️ Người chơi {user_id} đã bị ban trước đó.")
-        return
-
-    banned_users.add(user_id)
-    save_data()
-    await message.answer(f"✅ Đã khóa tài khoản của người chơi {user_id}.")
-    
-    try:
-        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa bởi admin.")
-    except Exception:
-        logging.warning(f"Không thể gửi tin nhắn cho {user_id} (có thể họ đã chặn bot).")
-
-@router.message(Command("unban"))
-async def unban_user(message: types.Message):
-    """Admin mở khóa tài khoản người chơi"""
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    parts = message.text.split()
-    if len(parts) < 2:
-        await message.answer("❌ Sai cú pháp! Dùng: `/unban [ID người chơi]`", parse_mode="Markdown")
-        return
-
-    user_id = parts[1]
-    if user_id not in banned_users:
-        await message.answer(f"⚠️ Người chơi {user_id} chưa bị ban.")
-        return
-
-    banned_users.remove(user_id)
-    save_data()
-    await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
-    
-    try:
-        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
-    except Exception:
-        logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
 # ===================== Hàm lưu lịch sử cược chung =====================
 def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     """
@@ -431,13 +381,19 @@ async def set_bot_commands(user_id: str):
         await bot.set_my_commands(user_commands, scope=BotCommandScopeChat(chat_id=int(user_id)))
 
 # ===================== /start Handler =====================
+from aiogram.types import ReplyKeyboardRemove
+
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
 
+    # Ghi log khi người chơi nhấn /start
+    logging.info(f"Người chơi {user_id} đã nhấn /start")
+
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        await message.answer("⛔ Tài khoản của bạn đã bị khóa bởi admin.")
+        await message.answer("⛔ Tài khoản của bạn đã bị khóa bởi admin.", reply_markup=ReplyKeyboardRemove())
+        logging.warning(f"Người chơi {user_id} bị BAN đã cố gắng vào bot.")
         return
 
     # Khởi tạo người chơi mới nếu chưa có dữ liệu
@@ -446,14 +402,22 @@ async def start_cmd(message: types.Message):
         user_balance[user_id] = 5000  # Tặng 5.000 VNĐ cho người mới
         save_data()
         new_user = True
+        logging.info(f"Người chơi mới {user_id} đã được tạo tài khoản với 5000 VNĐ.")
 
-    # Hiển thị menu chính (giả sử có biến main_menu)
+    # Sửa lỗi thụt lề cho if new_user:
     if new_user:
-        await message.answer(
+        welcome_text = (
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
-            "Bạn vừa nhận 5.000 VNĐ vào số dư. Chúc bạn may mắn!",
-            reply_markup=main_menu, parse_mode="Markdown"
+            "Bot game an toàn và bảo mật, nơi bạn có thể trải nghiệm 6 trò chơi hấp dẫn:\n"
+            "• Tài Xỉu\n"
+            "• Jackpot\n"
+            "• Máy Bay\n"
+            "• Rồng Hổ\n"
+            "• Đào Vàng\n"
+            "• Mini Poker\n\n"
+            "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
         )
+        await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
     else:
         await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
 
@@ -2008,6 +1972,56 @@ async def unlock_players(message: types.Message):
 
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
+ # ===================== Lệnh Ban/Gỡ Ban =====================
+@router.message(Command("ban"))
+async def ban_user(message: types.Message):
+    """Admin khóa tài khoản người chơi"""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("❌ Sai cú pháp! Dùng: `/ban [ID người chơi]`", parse_mode="Markdown")
+        return
+
+    user_id = parts[1]
+    if user_id in banned_users:
+        await message.answer(f"⚠️ Người chơi {user_id} đã bị ban trước đó.")
+        return
+
+    banned_users.add(user_id)
+    save_data()
+    await message.answer(f"✅ Đã khóa tài khoản của người chơi {user_id}.")
+    
+    try:
+        await bot.send_message(user_id, "⚠️ Tài khoản của bạn đã bị khóa bởi admin.")
+    except Exception:
+        logging.warning(f"Không thể gửi tin nhắn cho {user_id} (có thể họ đã chặn bot).")
+
+@router.message(Command("unban"))
+async def unban_user(message: types.Message):
+    """Admin mở khóa tài khoản người chơi"""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("❌ Sai cú pháp! Dùng: `/unban [ID người chơi]`", parse_mode="Markdown")
+        return
+
+    user_id = parts[1]
+    if user_id not in banned_users:
+        await message.answer(f"⚠️ Người chơi {user_id} chưa bị ban.")
+        return
+
+    banned_users.remove(user_id)
+    save_data()
+    await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
+    
+    try:
+        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
+    except Exception:
+        logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
         
 # ===================== Chạy bot =====================
 async def main():
