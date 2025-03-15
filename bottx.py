@@ -479,13 +479,24 @@ MIN_BET = 1_000  # Cược tối thiểu 1,000 VNĐ
 MAX_BET = 10_000_000  # Cược tối đa 10 triệu VNĐ
 COMBO_MULTIPLIERS = {"triple": 30, "specific": 3}  # Tỷ lệ thưởng
 
+@router.message(F.text == "/huy")
+async def cancel_bet(message: types.Message):
+    """Cho phép người chơi hủy ván cược nếu bị kẹt"""
+    user_id = str(message.from_user.id)
+
+    if user_id in taixiu_states:
+        del taixiu_states[user_id]
+        await message.answer("✅ Bạn đã hủy ván cược! Bây giờ bạn có thể đặt cược mới.")
+    else:
+        await message.answer("❌ Bạn không có ván cược nào đang chờ.")
+        
 @router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
 
     # Chặn spam cược liên tục
     if user_id in taixiu_states:
-        await message.answer("⏳ Bạn đang có một ván cược chưa hoàn tất. Vui lòng đợi kết quả trước khi cược tiếp!")
+        await message.answer("⏳ Bạn đang có một ván cược chưa hoàn tất. Nhập /huy để hủy cược trước khi chơi lại!")
         return
     
     taixiu_states[user_id] = "awaiting_choice"
