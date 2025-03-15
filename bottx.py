@@ -1830,19 +1830,29 @@ async def ban_user(message: types.Message):
 
 @router.message(Command("unban"))
 async def unban_user(message: types.Message):
+    """Admin mở khóa tài khoản người chơi"""
     if message.from_user.id != ADMIN_ID:
-        return await message.answer("🚫 Bạn không có quyền sử dụng lệnh này.")
+        return
 
-    args = message.text.split()
-    if len(args) < 2:
-        return await message.answer("⚠️ Vui lòng nhập ID người chơi cần gỡ ban.\nVí dụ: `/unban 123456789`")
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("❌ Sai cú pháp! Dùng: `/unban [ID người chơi]`", parse_mode="Markdown")
+        return
 
-    target_id = args[1]
-    if target_id not in banned_users:
-        return await message.answer(f"⚠️ Người chơi {target_id} không bị ban.")
+    user_id = parts[1]
+    if user_id not in banned_users:
+        await message.answer(f"⚠️ Người chơi {user_id} chưa bị ban.")
+        return
 
-    banned_users.remove(target_id)
-    await message.answer(f"✅ Đã gỡ ban cho người chơi {target_id}. Họ có thể sử dụng bot trở lại.")
+    banned_users.remove(user_id)
+    save_data()
+    await message.answer(f"✅ Đã mở khóa tài khoản của người chơi {user_id}.")
+    logging.info(f"Admin đã UNBAN người chơi {user_id}")
+
+    try:
+        await bot.send_message(user_id, "✅ Tài khoản của bạn đã được mở khóa!")
+    except Exception:
+        logging.warning(f"Không thể gửi tin nhắn cho {user_id}.")
 
 # ===================== Lệnh /listban để kiểm tra danh sách ban =====================
 @router.message(Command("listban"))
