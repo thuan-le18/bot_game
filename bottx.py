@@ -392,7 +392,7 @@ async def support_handler(message: types.Message):
     support_text = (
         "📞 **Hỗ trợ Mega6casino**\n\n"
         "Nếu bạn gặp khó khăn hoặc cần trợ giúp, vui lòng liên hệ:\n"
-        "- Liên hệ admin: @hoanganh11829\n\n"
+        "- Liên hệ: @hoanganh11829\n\n"
     )
     await message.answer(support_text, reply_markup=main_menu)
 
@@ -593,8 +593,14 @@ async def initiate_crash_game(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
 
-    if bet < 1000 or bet > 10000000:
-        await message.answer("❌ Cược hợp lệ từ 1.000 VNĐ đến 10.000.000 VNĐ!", reply_markup=main_menu)
+    # Giới hạn số tiền cược từ 1.000 VNĐ đến 10.000.000 VNĐ
+    if bet < 1000:
+        await message.answer("❌ Số tiền cược tối thiểu là 1.000 VNĐ!", reply_markup=main_menu)
+        crash_states[user_id] = False
+        return
+
+    if bet > 10000000:
+        await message.answer("⚠️ Tối đa chỉ được đặt cược 10.000.000 VNĐ!", reply_markup=main_menu)
         crash_states[user_id] = False
         return
 
@@ -608,7 +614,7 @@ async def initiate_crash_game(message: types.Message):
     save_data(user_balance)
     await add_commission(user_id, bet)
 
-    # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
+    # Xác định điểm rơi ngẫu nhiên (1.1 - 15.0)
     crash_point = round(random.uniform(1.1, 15.0), 2)
     withdraw_event = asyncio.Event()
 
