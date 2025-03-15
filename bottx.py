@@ -1832,7 +1832,7 @@ def save_ban_list():
 @router.message(Command("ban"))
 async def ban_user(message: types.Message):
     """Lệnh ban người dùng - Chỉ admin mới có thể dùng"""
-    if str(message.from_user.id) not in ADMIN_IDS:
+    if str(message.from_user.id) not in ADMIN_ID:
         await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
         return
 
@@ -1860,7 +1860,7 @@ async def ban_user(message: types.Message):
 @router.message(Command("unban"))
 async def unban_user(message: types.Message):
     """Lệnh gỡ ban người dùng - Chỉ admin mới có thể dùng"""
-    if str(message.from_user.id) not in ADMIN_IDS:
+    if str(message.from_user.id) not in ADMIN_ID:
         await message.answer("❌ Bạn không có quyền thực hiện lệnh này.")
         return
 
