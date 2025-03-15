@@ -102,7 +102,6 @@ def record_bet_history(user_id, game_name, bet_amount, result, winnings):
         user_history[user_id] = []
     user_history[user_id].append(record)
     save_data(data)
-
 # ===================== Hàm tính hoa hồng 2% =====================
 async def add_commission(user_id: str, bet_amount: int):
     """
@@ -116,7 +115,9 @@ async def add_commission(user_id: str, bet_amount: int):
     referrer_id = None
     for ref_id, referred_list in referrals.items():
         logging.info(f"🔍 Kiểm tra referrer {ref_id} - Danh sách đã giới thiệu: {referred_list}")
-        if user_id in referred_list:
+
+        # Tìm user_id trong danh sách (danh sách này chứa dictionary)
+        if any(ref["user_id"] == user_id for ref in referred_list):
             referrer_id = ref_id
             break
 
