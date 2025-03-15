@@ -62,7 +62,7 @@ def load_data():
             "history": {},
             "deposits": {},
             "withdrawals": {},
-            "referrals": {},    # Danh sách người giới thiệu
+            "referrals": {},  # Danh sách người giới thiệu
             "banned_users": [],  # Danh sách user bị ban
             "current_id": 1
         }
@@ -72,6 +72,12 @@ def load_data():
 
     return data
 
+def save_data(data):
+    data["banned_users"] = list(banned_users)  # Chuyển set thành list để lưu JSON
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+# Load dữ liệu
 data = load_data()
 user_balance = data["balances"]
 user_history = data["history"]
@@ -80,16 +86,6 @@ withdrawals = data["withdrawals"]
 referrals = data["referrals"]
 banned_users = set(data["banned_users"])  # Chuyển thành set để dễ xử lý
 current_id = data["current_id"]
-
-# ===================== Load dữ liệu từ file =====================
-data = load_data()
-user_balance = data["balances"]
-user_history = data["history"]
-deposits = data["deposits"]
-withdrawals = data["withdrawals"]
-referrals = data["referrals"]
-banned_users = set(data.get("banned_users", []))  # Đảm bảo banned_users luôn là set
-current_id = data.get("current_id", 1)  # Đảm bảo current_id có giá trị mặc định là 1]
 
 # ===================== Hàm lưu lịch sử cược chung =====================
 def record_bet_history(user_id, game_name, bet_amount, result, winnings):
