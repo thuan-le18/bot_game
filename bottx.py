@@ -162,23 +162,23 @@ daovang_states = {}
 
 # ===================== Hệ thống VIP & Bonus =====================
 vip_levels = {
-    "VIP 1": (100000, "🟢"),  # Xanh lá
-    "VIP 2": (500000, "🔵"),  # Xanh dương
-    "VIP 3": (1000000, "🟣"),  # Tím
-    "VIP 4": (5000000, "🟠"),  # Cam
-    "VIP 5": (10000000, "🔴"),  # Đỏ
+    "VIP 1": (100000, "🥈 bạc"),  # Xanh lá - Kim cương nhỏ
+    "VIP 2": (500000, "🥇 vàng"),  # Xanh dương - 2 Kim cương
+    "VIP 3": (1000000, "💎 kim cương"),  # Tím - Vương miện
+    "VIP 4": (5000000, "🟢 Ngọc Lục Bảo"),  # Cam - Lửa, cấp cao
+    "VIP 5": (10000000, "👑"),  # Đỏ - Tên lửa, VIP cao nhất
 }
 
 def get_vip_level(balance):
     for level, (min_balance, emoji) in reversed(vip_levels.items()):
-        if balance >= min_balance:  # 🔹 Sửa lỗi: So sánh đúng kiểu dữ liệu
+        if balance >= min_balance:  
             return f"{emoji} {level}"
     return "👤 Thành viên thường"
 
 @router.message(Command("vip"))
 async def check_vip_status(message: types.Message):
     user_id = str(message.from_user.id)
-    balance = user_balance.get(user_id, 0)  # 🔹 Lấy số dư người dùng
+    balance = user_balance.get(user_id, 0)  
     vip_status = get_vip_level(balance)
 
     await message.answer(f"💎 Hạng VIP của bạn: {vip_status}\n💰 Số dư: {balance:,} VNĐ")
