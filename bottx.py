@@ -593,14 +593,8 @@ async def initiate_crash_game(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
 
-    # Giới hạn số tiền cược từ 1.000 VNĐ đến 10.000.000 VNĐ
-    if bet < 1000:
-        await message.answer("❌ Số tiền cược tối thiểu là 1.000 VNĐ!", reply_markup=main_menu)
-        crash_states[user_id] = False
-        return
-
-    if bet > 10000000:
-        await message.answer("⚠️ Tối đa chỉ được đặt cược 10.000.000 VNĐ!", reply_markup=main_menu)
+    if bet < 1000 or bet > 10000000:
+        await message.answer("❌ Cược hợp lệ từ 1.000 VNĐ tối đa đến 10.000.000 VNĐ!", reply_markup=main_menu)
         crash_states[user_id] = False
         return
 
@@ -614,7 +608,7 @@ async def initiate_crash_game(message: types.Message):
     save_data(user_balance)
     await add_commission(user_id, bet)
 
-    # Xác định điểm rơi ngẫu nhiên (1.1 - 15.0)
+    # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
     crash_point = round(random.uniform(1.1, 15.0), 2)
     withdraw_event = asyncio.Event()
 
