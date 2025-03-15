@@ -40,7 +40,7 @@ def add_referral(referrer_id, new_user_id):
     save_json(REFERRAL_FILE, referrals)
 
 # ===================== Cấu hình bot =====================
-TOKEN = "7871599492:AAHrGk7113CdPABqudiuVeQ22djr0CydPIo"
+TOKEN = "7688044384:AAHi3Klk4-saK-_ouJ2E5y0l7TztKpUXEF0"
 ADMIN_ID = 1985817060  # Thay ID admin của bạn
 DATA_FILE = "user_data.json"
 
