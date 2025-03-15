@@ -74,7 +74,7 @@ def load_data():
 
     return data
 
-def save_data():
+def save_data(data):
     """Lưu toàn bộ dữ liệu vào file (bao gồm cả danh sách ban)"""
     data["balances"] = user_balance
     data["history"] = user_history
