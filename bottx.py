@@ -169,6 +169,20 @@ vip_levels = {
     "VIP 5": (10000000, "🔴"),  # Đỏ
 }
 
+def get_vip_level(balance):
+    for level, (min_balance, emoji) in reversed(vip_levels.items()):
+        if balance >= min_balance:  # 🔹 Sửa lỗi: So sánh đúng kiểu dữ liệu
+            return f"{emoji} {level}"
+    return "👤 Thành viên thường"
+
+@router.message(Command("vip"))
+async def check_vip_status(message: types.Message):
+    user_id = str(message.from_user.id)
+    balance = user_balance.get(user_id, 0)  # 🔹 Lấy số dư người dùng
+    vip_status = get_vip_level(balance)
+
+    await message.answer(f"💎 Hạng VIP của bạn: {vip_status}\n💰 Số dư: {balance:,} VNĐ")
+
 NEW_USER_BONUS = 5000  # Tặng 5k cho người mới
 MIN_BET = 1000         # Số tiền cược tối thiểu trong game Đào Vàng
 
