@@ -728,37 +728,39 @@ async def run_crash_game(message: types.Message, user_id: str):
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
-    
+
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        profit = round(bet * (multiplier - 1))  
-        win_amount = profit + bet  
+        profit = round(bet * (multiplier - 1))
+        win_amount = profit + bet  # Tổng số tiền nhận được
 
-        user_balance[user_id] += win_amount
-        save_data(user_balance)
+        # Kiểm tra nếu đã rút tiền trước đó thì không cộng nữa
+        if not crash_games[user_id].get("withdrawn", False):
+            user_balance[user_id] += win_amount
+            save_data(user_balance)
+            record_bet_history(user_id, "Máy Bay", bet, "win", profit)
 
-        record_bet_history(user_id, "Máy Bay", bet, "win", profit)
+            crash_games[user_id]["running"] = False
+            crash_games[user_id]["withdraw_event"].set()
+            crash_games[user_id]["withdrawn"] = True  # Đánh dấu đã rút tiền
 
-        crash_games[user_id]["running"] = False
-        crash_games[user_id]["withdraw_event"].set()
+            try:
+                await callback.message.edit_text(
+                    f"🎉 Bạn đã rút tiền thành công!\n💰 Nhận: {profit:,} VNĐ!\n📈 Hệ số nhân: x{multiplier}",
+                    reply_markup=None
+                )
+            except Exception as e:
+                logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
 
-        try:
-            await callback.message.edit_text(
-                f"🎉 Bạn đã rút tiền thành công!\n💰 Nhận: {profit:,} VNĐ!\n📈 Hệ số nhân: x{multiplier}",
-                reply_markup=None
-            )
-        except Exception as e:
-            logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
-
-        await callback.answer(f"💸 Bạn đã rút {profit:,} VNĐ lợi nhuận thành công!")
+            await callback.answer(f"💸 Bạn đã rút {profit:,} VNĐ lợi nhuận thành công!")
+        else:
+            await callback.answer("⚠️ Bạn đã rút tiền rồi!", show_alert=True)
 
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
 
-    # Fix lỗi KeyError nếu user không còn trong crash_games
-    if user_id in crash_games and crash_games[user_id]["running"]:
-        await run_crash_game(callback.message, user_id)
+    # ❌ Không gọi lại `run_crash_game()` để tránh lỗi nhân đôi
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
