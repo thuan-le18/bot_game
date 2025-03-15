@@ -108,19 +108,35 @@ async def add_commission(user_id: str, bet_amount: int):
     """
     Tìm người giới thiệu của user_id và cộng hoa hồng 2% từ tiền cược.
     """
+    logging.info(f"📌 Hàm add_commission được gọi - user_id: {user_id}, bet_amount: {bet_amount}")
+
     referrer_id = None
     for ref_id, referred_list in referrals.items():
         if user_id in referred_list:
             referrer_id = ref_id
             break
-    if referrer_id:
-        commission = int(bet_amount * 0.02)
-        user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
-        save_data(data)
-        try:
-            await bot.send_message(referrer_id, f"🎉 Hoa hồng 2% từ cược của người chơi {user_id}: {commission} VNĐ!")
-        except Exception as e:
-            logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
+
+    if not referrer_id:
+        logging.info(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
+        return
+    
+    commission = int(bet_amount * 0.02)
+    
+    # Log trước khi cập nhật số dư
+    logging.info(f"📌 Referrer {referrer_id} - Số dư trước khi cộng: {user_balance.get(referrer_id, 0)}")
+    
+    # Cộng hoa hồng
+    user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
+    save_data(data)
+
+    # Log sau khi cập nhật số dư
+    logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}. Số dư mới: {user_balance[referrer_id]}")
+
+    # Gửi tin nhắn thông báo hoa hồng
+    try:
+        await bot.send_message(referrer_id, f"🎉 Bạn nhận được hoa hồng 2% ({commission:,} VNĐ) từ cược của {user_id}!")
+    except Exception as e:
+        logging.error(f"🚨 Không thể gửi tin nhắn cho referrer {referrer_id}: {e}")
 
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
