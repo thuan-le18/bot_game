@@ -58,36 +58,28 @@ def load_data():
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         data = {
-            "balances": {}, 
-            "history": {}, 
-            "deposits": {}, 
-            "withdrawals": {}, 
-            "referrals": {}, 
-            "banned_users": [],  # Thêm danh sách ban vào
+            "balances": {},
+            "history": {},
+            "deposits": {},
+            "withdrawals": {},
+            "referrals": {},    # Danh sách người giới thiệu
+            "banned_users": [],  # Danh sách user bị ban
             "current_id": 1
         }
-
-    # Đảm bảo tất cả key quan trọng đều có mặt
     for key in ["balances", "history", "deposits", "withdrawals", "referrals", "banned_users"]:
         if key not in data:
-            data[key] = {} if key != "banned_users" else []  # banned_users là danh sách, không phải dict
+            data[key] = {} if key != "banned_users" else []  # banned_users là list
 
     return data
 
-def save_data():
-    """Lưu toàn bộ dữ liệu vào file (bao gồm cả danh sách ban)"""
-    global data  # Thêm dòng này để dùng biến toàn cục
-
-    data["balances"] = user_balance
-    data["history"] = user_history
-    data["deposits"] = deposits
-    data["withdrawals"] = withdrawals
-    data["referrals"] = referrals
-    data["banned_users"] = list(banned_users)  # Giữ danh sách người bị ban
-    data["current_id"] = current_id
-
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+data = load_data()
+user_balance = data["balances"]
+user_history = data["history"]
+deposits = data["deposits"]
+withdrawals = data["withdrawals"]
+referrals = data["referrals"]
+banned_users = set(data["banned_users"])  # Chuyển thành set để dễ xử lý
+current_id = data["current_id"]
 
 # ===================== Load dữ liệu từ file =====================
 data = load_data()
