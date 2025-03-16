@@ -862,36 +862,36 @@ async def withdraw_crash(callback: types.CallbackQuery):
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 rongho_states = {}
-
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🐉 Rồng", callback_data="rongho_rong"),
-            InlineKeyboardButton(text="⚖️ Hòa", callback_data="rongho_hoa"),
-            InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")
-        ]
-    ])
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🐉 Rồng"), KeyboardButton(text="⚖️ Hòa"), KeyboardButton(text="🐅 Hổ")]
+        ],
+        resize_keyboard=True
+    )
+
+    rongho_states[user_id] = "awaiting_choice"
     await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
 
 # ===================== Handler chọn cửa cược =====================
-@router.callback_query(lambda c: c.data.startswith("rongho_"))
-async def choose_rongho(callback_query: types.CallbackQuery):
-    user_id = str(callback_query.from_user.id)
-    choice = callback_query.data.split("_")[1]
+@router.message(lambda msg: rongho_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["🐉 Rồng", "⚖️ Hòa", "🐅 Hổ"])
+async def choose_rongho(message: types.Message):
+    user_id = str(message.from_user.id)
+    choice_map = {"🐉 Rồng": "rong", "⚖️ Hòa": "hoa", "🐅 Hổ": "ho"}
+    choice = choice_map[message.text]
 
     logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
 
-    await callback_query.message.answer("💰 Nhập số tiền cược (từ 1,000 VNĐ đến 10,000,000 VNĐ):")
-    await callback_query.answer()
+    await message.answer("💰 Nhập số tiền cược (từ 1,000 VNĐ đến 10,000,000 VNĐ):", reply_markup=ReplyKeyboardRemove())
 
 # ===================== Handler nhập số tiền cược =====================
-@router.message(lambda msg: rongho_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True)
+@router.message(lambda msg: isinstance(rongho_states.get(str(msg.from_user.id)), dict) and rongho_states[str(msg.from_user.id)].get("awaiting_bet") == True)
 async def bet_rongho_amount(message: types.Message):
     user_id = str(message.from_user.id)
     bet_text = message.text.strip()
