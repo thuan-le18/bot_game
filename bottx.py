@@ -53,7 +53,7 @@ dp.include_router(router)
 # ===================== Hàm load/save dữ liệu =====================
 def load_data():
     try:
-        with open(DATA_FILE, "r") as f:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         data = {
@@ -61,24 +61,29 @@ def load_data():
             "history": {},
             "deposits": {},
             "withdrawals": {},
-            "referrals": {},    # Thêm key cho referrals
+            "referrals": {},  # Danh sách người giới thiệu
+            "banned_users": [],  # Danh sách user bị ban
             "current_id": 1
         }
-    for key in ["balances", "history", "deposits", "withdrawals", "referrals"]:
+    for key in ["balances", "history", "deposits", "withdrawals", "referrals", "banned_users"]:
         if key not in data:
-            data[key] = {}  # Khởi tạo rỗng cho các key nếu chưa có
+            data[key] = {} if key != "banned_users" else []  # banned_users là list
+
     return data
 
 def save_data(data):
-    with open(DATA_FILE, "w") as f:
+    data["banned_users"] = list(banned_users)  # Chuyển set thành list để lưu JSON
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
+# Load dữ liệu
 data = load_data()
 user_balance = data["balances"]
 user_history = data["history"]
 deposits = data["deposits"]
 withdrawals = data["withdrawals"]
 referrals = data["referrals"]
+banned_users = set(data["banned_users"])  # Chuyển thành set để dễ xử lý
 current_id = data["current_id"]
 
 # ===================== Hàm lưu lịch sử cược chung =====================
