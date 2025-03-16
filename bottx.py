@@ -864,7 +864,7 @@ async def withdraw_crash(callback: types.CallbackQuery):
 rongho_states = {}
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
-@router.message(types.F.text == "🐉 Rồng Hổ")
+@router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
