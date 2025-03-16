@@ -868,30 +868,29 @@ async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     logging.info(f"[start_rongho] Called for user {user_id}")
 
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🐉 Rồng"), KeyboardButton(text="⚖️ Hòa"), KeyboardButton(text="🐅 Hổ")]
-        ],
-        resize_keyboard=True
-    )
-
-    rongho_states[user_id] = "awaiting_choice"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🐉 Rồng", callback_data="rongho_rong"),
+            InlineKeyboardButton(text="⚖️ Hòa", callback_data="rongho_hoa"),
+            InlineKeyboardButton(text="🐅 Hổ", callback_data="rongho_ho")
+        ]
+    ])
     await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
 
-# ===================== Handler chọn cửa cược =====================
-@router.message(lambda msg: rongho_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["🐉 Rồng", "⚖️ Hòa", "🐅 Hổ"])
-async def choose_rongho(message: types.Message):
-    user_id = str(message.from_user.id)
-    choice_map = {"🐉 Rồng": "rong", "⚖️ Hòa": "hoa", "🐅 Hổ": "ho"}
-    choice = choice_map[message.text]
+# ===================== 🃏 CHỌN CỬA CƯỢC =====================
+@router.callback_query(lambda c: c.data.startswith("rongho_"))
+async def choose_rongho(callback_query: types.CallbackQuery):
+    user_id = str(callback_query.from_user.id)
+    choice = callback_query.data.split("_")[1]
 
     logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
 
-    await message.answer("💰 Nhập số tiền cược (từ 1,000 VNĐ đến 10,000,000 VNĐ):", reply_markup=ReplyKeyboardRemove())
+    await callback_query.message.answer("💰 Nhập số tiền cược (từ 1,000 VNĐ đến 10,000,000 VNĐ):")
+    await callback_query.answer()
 
-# ===================== Handler nhập số tiền cược =====================
-@router.message(lambda msg: isinstance(rongho_states.get(str(msg.from_user.id)), dict) and rongho_states[str(msg.from_user.id)].get("awaiting_bet") == True)
+# ===================== 💰 ĐẶT CƯỢC =====================
+@router.message(lambda msg: rongho_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True)
 async def bet_rongho_amount(message: types.Message):
     user_id = str(message.from_user.id)
     bet_text = message.text.strip()
@@ -901,7 +900,6 @@ async def bet_rongho_amount(message: types.Message):
         return
 
     bet_amount = int(bet_text)
-
     if bet_amount < 1000 or bet_amount > 10000000:
         await message.answer("⚠️ Số tiền cược phải từ 1,000 VNĐ đến 10,000,000 VNĐ!")
         return
@@ -921,8 +919,24 @@ async def bet_rongho_amount(message: types.Message):
     save_data(data)
     await add_commission(user_id, bet_amount)
 
-    # Lấy kết quả ngẫu nhiên
-    result = random.choice(["rong", "hoa", "ho"])
+    # 🎲 Lật bài - Hiển thị hiệu ứng
+    await message.answer("🔄 Đang chia bài...")
+    await asyncio.sleep(3)
+
+    # Chia bài cho Rồng & Hổ (ngẫu nhiên từ 1 đến 13)
+    rong_card = random.randint(1, 13)
+    ho_card = random.randint(1, 13)
+
+    # Emoji bài tây tương ứng
+    card_emoji = {1: "🂡", 2: "🂢", 3: "🂣", 4: "🂤", 5: "🂥", 6: "🂦", 7: "🂧", 8: "🂨", 9: "🂩", 10: "🂪", 11: "🂫", 12: "🂭", 13: "🂮"}
+    rong_card_emoji = card_emoji[rong_card]
+    ho_card_emoji = card_emoji[ho_card]
+
+    # 🃏 Hiển thị bài của Rồng & Hổ
+    await message.answer(f"🎴 Lật bài:\n🐉 Rồng: {rong_card} {rong_card_emoji}\n🐅 Hổ: {ho_card} {ho_card_emoji}")
+
+    # 🔥 Xác định kết quả
+    result = "rong" if rong_card > ho_card else "ho" if ho_card > rong_card else "hoa"
     chosen = state.get("choice")
     logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
@@ -950,7 +964,7 @@ async def bet_rongho_amount(message: types.Message):
 
     await message.answer(f"🎉 Kết quả: {outcome_text}", reply_markup=main_menu)
 
-    # Lưu lịch sử cược
+    # 📜 Lưu lịch sử cược
     record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
 
     rongho_states.pop(user_id, None)
