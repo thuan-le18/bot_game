@@ -212,9 +212,12 @@ async def set_bot_commands(user_id: str):
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
 
-    # Kiểm tra nếu user bị ban
+    # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        await message.answer("❌ Tài khoản của bạn đã bị khóa bởi admin.")
+        await message.answer(
+            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa,Liên hệ hỗ trợ nếu có nhầm lẫn.", 
+            parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove()
+        )
         return
 
     await set_bot_commands(user_id)
@@ -1856,7 +1859,7 @@ async def unban_user(message: types.Message):
     await message.answer(f"✅ Đã gỡ ban cho người dùng `{target_id}`.", parse_mode="Markdown")
 
     try:
-        await bot.send_message(target_id, "✅ Tài khoản của bạn đã được mở vui lòng nhắn /start để hoạt động lại")
+        await bot.send_message(target_id, "✅ tài khoản Mega6casino của bạn đã được mở vui lòng nhắn /start để hoạt động lại")
     except Exception:
         pass  # Người đó có thể đã chặn bot
 
