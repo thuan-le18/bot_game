@@ -1853,7 +1853,7 @@ async def unban_user(message: types.Message):
         banned_users.remove(user_id)
         await message.answer(f"✅ Đã mở khóa tài khoản {user_id}!")
         try:
-            await bot.send_message(user_id, "✅ Tài khoản Mega6casino của bạn đã được mở vui lòng nhắn /start để khởi động lại", reply_markup=main_menu)
+            await bot.send_message(user_id, "✅ Tài khoản Mega6casino của bạn đã được mở lại", reply_markup=main_menu)
         except:
             pass
     else:
