@@ -861,12 +861,6 @@ async def withdraw_crash(callback: types.CallbackQuery):
         await run_crash_game(callback.message, user_id)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
-import random
-import logging
-from datetime import datetime
-from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 rongho_states = {}
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
