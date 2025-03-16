@@ -215,8 +215,9 @@ async def start_cmd(message: types.Message):
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
         await message.answer(
-            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa,Liên hệ hỗ trợ nếu có nhầm lẫn.", 
-            parse_mode="Markdown", reply_markup=types.ReplyKeyboardRemove()
+            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa. Liên hệ hỗ trợ nếu có nhầm lẫn.",
+            parse_mode="Markdown", 
+            reply_markup=types.ReplyKeyboardRemove()  # Xóa toàn bộ nút
         )
         return
 
@@ -262,9 +263,9 @@ async def start_cmd(message: types.Message):
             "• Mini Poker\n\n"
             "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
         )
-        await message.answer(welcome_text, parse_mode="Markdown")
+        await message.answer(welcome_text, parse_mode="Markdown", reply_markup=main_menu)
     else:
-        await message.answer("👋 Chào mừng bạn quay lại!")
+        await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
 
 # ===================== VIP Handler =====================
 @router.message(F.text == "🏆 VIP")
