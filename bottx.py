@@ -114,43 +114,28 @@ async def add_commission(user_id: str, bet_amount: int):
     """
     logging.info(f"📌 Hàm add_commission được gọi - user_id: {user_id}, bet_amount: {bet_amount}")
 
-    # Kiểm tra dữ liệu referrals có tồn tại
-    if not referrals:
-        logging.warning("⚠️ Dữ liệu referrals bị rỗng hoặc chưa được tải.")
-        return
+    referrer_id = None
+    for ref_id, referred_list in referrals.items():
+        if any(ref["user_id"] == user_id for ref in referred_list):
+            referrer_id = ref_id
+            break
 
-    # Kiểm tra user_id có tồn tại trong referrals không
-    if user_id not in referrals:
-        logging.warning(f"⚠️ User {user_id} không có người giới thiệu. Bỏ qua hoa hồng.")
-        return
-
-    # Lấy ID của người giới thiệu
-    referrer_id = referrals.get(user_id)
-    
-    # Kiểm tra lại referrer_id có hợp lệ không
     if not referrer_id:
         logging.warning(f"⚠️ Không tìm thấy referrer của user {user_id}. Không thể cộng hoa hồng.")
         return
 
-    # Kiểm tra referrer_id có tồn tại trong user_balance không
-    if referrer_id not in user_balance:
-        logging.warning(f"⚠️ Người giới thiệu {referrer_id} không có trong user_balance. Khởi tạo số dư = 0.")
-        user_balance[referrer_id] = 0  # Tạo số dư nếu chưa có
-
-    # Tính hoa hồng 10%
-    commission = int(bet_amount * 0.1)
-    user_balance[referrer_id] += commission
+    commission = int(bet_amount * 0.07)
+    user_balance[referrer_id] = user_balance.get(referrer_id, 0) + commission
 
     # Cập nhật số tiền hoa hồng trong danh sách mời
-    if referrer_id in referrals and isinstance(referrals[referrer_id], list):
-        for ref in referrals[referrer_id]:
-            if isinstance(ref, dict) and ref.get("user_id") == user_id:
-                ref["commission"] = ref.get("commission", 0) + commission  # Cộng dồn hoa hồng
-                break
+    for ref in referrals[referrer_id]:
+        if ref["user_id"] == user_id:
+            ref["commission"] = ref.get("commission", 0) + commission  # Cộng dồn hoa hồng
+            break
 
-    # Lưu lại dữ liệu chính xác
-    save_data(user_balance)  
-    logging.info(f"✅ Hoa hồng {commission:,} VNĐ đã cộng cho {referrer_id}.")
+    save_data(data)
+    logging.info(f"✅ Hoa hồng {commission} VNĐ đã cộng cho {referrer_id}.")
+    
 # ===================== Các biến trạng thái =====================
 taixiu_states = {}    # Trạng thái game Tài Xỉu
 jackpot_states = {}   # Trạng thái game Jackpot
@@ -329,7 +314,7 @@ async def referral_handler(message: types.Message):
          f"Tổng lượt mời: {len(records)}\n"
          f"Lượt mời hôm nay: {today_count}\n"
          f"Lượt mời tháng này: {month_count}\n\n"
-         "💰 Bạn nhận 2000 VNĐ và 10% hoa hồng từ số tiền cược của người được mời.",
+         "💰 Bạn nhận 2000 VNĐ và 7% hoa hồng từ số tiền cược của người được mời.",
          reply_markup=keyboard
     )
 
