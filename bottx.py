@@ -832,8 +832,10 @@ async def withdraw_crash(callback: types.CallbackQuery):
     if user_id in crash_games and crash_games[user_id]["running"]:
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
-        profit = round(bet * (multiplier - 1))  
-        win_amount = profit + bet  
+        
+        # Tính lại số tiền thắng để tránh lỗi nhận cả tiền cược
+        win_amount = round(bet * multiplier)  # Thắng đúng theo hệ số
+        profit = win_amount - bet  # Lợi nhuận thực tế
 
         user_balance[user_id] += win_amount
         save_data(user_balance)
