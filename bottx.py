@@ -211,25 +211,30 @@ async def set_bot_commands(user_id: str):
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
+
+    # Kiểm tra nếu user bị ban
+    if user_id in banned_users:
+        await message.answer("❌ Tài khoản của bạn đã bị khóa bởi admin.")
+        return
+
     await set_bot_commands(user_id)
-    # Kiểm tra tham số referral từ deep link, ví dụ: "/start 123456789"
     parts = message.text.split()
     referrer_id = parts[1] if len(parts) > 1 else None
 
     new_user = False
     if user_id not in user_balance:
-        user_balance[user_id] = NEW_USER_BONUS
+        user_balance[user_id] = 5000  # Tặng 5.000 VNĐ khi đăng ký mới
         user_history[user_id] = []
         deposits[user_id] = []
         withdrawals[user_id] = []
         save_data(data)
         new_user = True
 
-        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho người giới thiệu
+        # Nếu có referral và người giới thiệu hợp lệ, cộng bonus 2k cho họ
         if referrer_id and referrer_id != user_id:
             if referrer_id not in referrals:
                 referrals[referrer_id] = []
-            if user_id not in [ref.get("user_id") for ref in referrals[referrer_id]]:
+            if user_id not in [ref["user_id"] for ref in referrals[referrer_id]]:
                 referrals[referrer_id].append({
                     "user_id": user_id,
                     "timestamp": datetime.now().isoformat()
@@ -241,10 +246,7 @@ async def start_cmd(message: types.Message):
                 except Exception as e:
                     logging.error(f"Không thể gửi tin nhắn đến referrer_id {referrer_id}: {e}")
 
-    deposit_states[user_id] = None
-    jackpot_states[user_id] = False
-
-    # Sửa lỗi thụt lề cho if new_user:
+    # Hiển thị giao diện
     if new_user:
         welcome_text = (
             "👋 Chào mừng bạn đến với *Mega6 Casino*!\n"
@@ -257,9 +259,9 @@ async def start_cmd(message: types.Message):
             "• Mini Poker\n\n"
             "Bạn vừa được tặng 5.000 VNĐ vào số dư để bắt đầu. Chúc bạn may mắn!"
         )
-        await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
+        await message.answer(welcome_text, parse_mode="Markdown")
     else:
-        await message.answer("👋 Chào mừng bạn quay lại!", reply_markup=main_menu)
+        await message.answer("👋 Chào mừng bạn quay lại!")
 
 # ===================== VIP Handler =====================
 @router.message(F.text == "🏆 VIP")
@@ -1812,6 +1814,51 @@ async def unlock_players(message: types.Message):
 
     player_lock = False
     await message.answer("🔓 Đã mở khóa số người chơi, hệ thống sẽ tự động cập nhật.")
+# ===================== Lệnh BAN người dùng =====================
+@router.message(Command("ban"))
+async def ban_user(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("⚠️ Vui lòng nhập ID người dùng cần ban. Ví dụ: `/ban 123456789`", parse_mode="Markdown")
+        return
+
+    target_id = parts[1]
+    if target_id in banned_users:
+        await message.answer(f"⚠️ Người dùng `{target_id}` đã bị khóa trước đó.", parse_mode="Markdown")
+        return
+
+    banned_users.add(target_id)
+    save_data(data)
+    await message.answer(f"✅ Đã khóa tài khoản `{target_id}`.", parse_mode="Markdown")
+    # ===================== Lệnh GỠ BAN người dùng =====================
+@router.message(Command("unban"))
+async def unban_user(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ Bạn không có quyền sử dụng lệnh này.")
+        return
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("⚠️ Vui lòng nhập ID người dùng cần gỡ ban. Ví dụ: `/unban 123456789`", parse_mode="Markdown")
+        return
+
+    target_id = parts[1]
+    if target_id not in banned_users:
+        await message.answer(f"⚠️ Người dùng `{target_id}` không nằm trong danh sách bị khóa.", parse_mode="Markdown")
+        return
+
+    banned_users.remove(target_id)
+    save_data(data)
+    await message.answer(f"✅ Đã gỡ ban cho người dùng `{target_id}`.", parse_mode="Markdown")
+
+    try:
+        await bot.send_message(target_id, "✅ Tài khoản của bạn đã được mở vui lòng nhắn /start để hoạt động lại")
+    except Exception:
+        pass  # Người đó có thể đã chặn bot
 
 # ===================== Chạy bot =====================
 async def main():
