@@ -866,7 +866,6 @@ import logging
 from datetime import datetime
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from data_manager import save_data
 
 rongho_states = {}
 
