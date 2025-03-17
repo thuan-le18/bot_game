@@ -917,7 +917,7 @@ async def bet_rongho_amount(message: types.Message):
         rongho_states.pop(user_id, None)
         return
 
-    # Trừ tiền cược, lưu số dư & tính hoa hồng
+    # Trừ tiền cược và lưu lại dữ liệu
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
@@ -926,16 +926,22 @@ async def bet_rongho_amount(message: types.Message):
     await message.answer("🔄 Đang chia bài...")
     await asyncio.sleep(3)
 
-    # Chia bài cho Rồng & Hổ
+    # Chia bài cho Rồng & Hổ (ngẫu nhiên từ 1 đến 13)
     rong_card = random.randint(1, 13)
     ho_card = random.randint(1, 13)
 
-    # Hiển thị bài
-    await message.answer(f"🎴 Lật bài:\n🐉 Rồng: {rong_card}\n🐅 Hổ: {ho_card}")
+    # Emoji bài tây tương ứng
+    card_emoji = {1: "🂡", 2: "🂢", 3: "🂣", 4: "🂤", 5: "🂥", 6: "🂦", 7: "🂧", 8: "🂨", 9: "🂩", 10: "🂪", 11: "🂫", 12: "🂭", 13: "🂮"}
+    rong_card_emoji = card_emoji[rong_card]
+    ho_card_emoji = card_emoji[ho_card]
 
-    # Xác định kết quả
+    # 🃏 Hiển thị bài của Rồng & Hổ
+    await message.answer(f"🎴 Lật bài:\n🐉 Rồng: {rong_card} {rong_card_emoji}\n🐅 Hổ: {ho_card} {ho_card_emoji}")
+
+    # 🔥 Xác định kết quả
     result = "rong" if rong_card > ho_card else "ho" if ho_card > rong_card else "hoa"
     chosen = state.get("choice")
+    logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
     win_amount = 0
     outcome_text = ""
@@ -959,24 +965,8 @@ async def bet_rongho_amount(message: types.Message):
         else:
             outcome_text = f"{result_text} thắng! Bạn thua {bet_amount:,} VNĐ. 😞"
 
-    # Gửi kết quả & menu chính
     await message.answer(f"🎉 Kết quả: {outcome_text}", reply_markup=main_menu)
 
-   # Thêm nút "Chơi tiếp 🎲"
-    play_again_keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🎲 Chơi lại", callback_data="play_rongho_again")]
-        ]
-    )
-    await message.answer("🔄 Bạn có muốn chơi lại?", reply_markup=play_again_keyboard)
-
-# ===================== 🔄 Handler "Chơi tiếp" =====================
-@router.callback_query(F.data == "play_rongho_again")
-async def play_rongho_again(callback: CallbackQuery):
-    await callback.answer()  # Trả lời callback để tránh lỗi "Loading..."
-    await start_rongho(callback.message)
-    rongho_states.pop(user_id, None)
- 
     # 📜 Lưu lịch sử cược
     record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
 
