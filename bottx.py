@@ -987,12 +987,11 @@ async def withdraw_crash(callback: types.CallbackQuery):
         await run_crash_game(callback.message, user_id)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
-rongho_states = {}
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
-    logging.info(f"[start_rongho] Called for user {user_id}")
+    log_action(user_id, "Bắt đầu chơi", "Chờ chọn cửa cược")
 
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -1010,10 +1009,9 @@ async def choose_rongho(message: types.Message):
     user_id = str(message.from_user.id)
     choice_map = {"🐉 Rồng": "rong", "⚖️ Hòa": "hoa", "🐅 Hổ": "ho"}
     choice = choice_map[message.text]
+    log_action(user_id, "Chọn cửa cược", choice)
 
-    logging.info(f"[choose_rongho] User {user_id} chọn {choice}")
     rongho_states[user_id] = {"choice": choice, "awaiting_bet": True}
-
     await message.answer("💰 Nhập số tiền cược (từ 1,000 VNĐ đến 10,000,000 VNĐ):", reply_markup=ReplyKeyboardRemove())
 
 # ===================== 💰 ĐẶT CƯỢC =====================
@@ -1024,20 +1022,26 @@ async def bet_rongho_amount(message: types.Message):
 
     if not bet_text.isdigit():
         await message.answer("⚠️ Vui lòng nhập số tiền hợp lệ!")
+        log_action(user_id, "Lỗi cược", "Số tiền không hợp lệ")
         return
 
     bet_amount = int(bet_text)
+    log_action(user_id, "Đặt cược", f"{bet_amount:,} VNĐ")
+
     if bet_amount < 1000 or bet_amount > 10000000:
         await message.answer("⚠️ Số tiền cược phải từ 1,000 VNĐ đến 10,000,000 VNĐ!")
+        log_action(user_id, "Lỗi cược", "Số tiền ngoài phạm vi hợp lệ")
         return
 
     state = rongho_states.get(user_id)
     if state is None:
         await message.answer("⚠️ Lỗi: Không tìm thấy trạng thái game!")
+        log_action(user_id, "Lỗi game", "Không tìm thấy trạng thái")
         return
 
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
+        log_action(user_id, "Lỗi cược", "Số dư không đủ")
         rongho_states.pop(user_id, None)
         return
 
@@ -1065,7 +1069,6 @@ async def bet_rongho_amount(message: types.Message):
     # 🔥 Xác định kết quả
     result = "rong" if rong_card > ho_card else "ho" if ho_card > rong_card else "hoa"
     chosen = state.get("choice")
-    logging.info(f"[bet_rongho_amount] Kết quả: {result}, Người chọn: {chosen}")
 
     win_amount = 0
     outcome_text = ""
@@ -1080,7 +1083,6 @@ async def bet_rongho_amount(message: types.Message):
             outcome_text = f"⚖️ Hòa! Bạn thua {bet_amount:,} VNĐ. 😞"
     else:
         result_text = "🐉 Rồng" if result == "rong" else "🐅 Hổ"
-
         if chosen == result:
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
@@ -1089,18 +1091,20 @@ async def bet_rongho_amount(message: types.Message):
         else:
             outcome_text = f"{result_text} thắng! Bạn thua {bet_amount:,} VNĐ. 😞"
 
-    await message.answer(f"🎉 Kết quả: {outcome_text}", reply_markup=main_menu)
+    log_action(user_id, "Kết quả", f"Kết quả: {result}, Người chọn: {chosen}, {outcome_text}")
+    await message.answer(f"🎉 Kết quả: {outcome_text}")
 
     # 📜 Lưu lịch sử cược
     record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
 
     rongho_states.pop(user_id, None)
-    logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
+    log_action(user_id, "Kết thúc game", "Đã xóa trạng thái game")
     
 # ===================== GAME: Đào Vàng (Mines Gold style) =====================
 @router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
     user_id = str(message.from_user.id)
+    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
     await message.answer(
         f"Nhập số tiền cược (tối thiểu {MIN_BET} VNĐ):",
         reply_markup=ReplyKeyboardRemove()
@@ -1111,17 +1115,23 @@ async def start_daovang(message: types.Message):
 async def daovang_set_bet(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
+    log_action(user_id, "Đặt cược", f"{bet:,} VNĐ")
+
     if bet < MIN_BET:
         await message.answer(f"❌ Số tiền cược phải tối thiểu {MIN_BET} VNĐ. Vui lòng nhập lại:")
+        log_action(user_id, "Lỗi cược", f"Số tiền dưới mức tối thiểu {MIN_BET} VNĐ")
         return
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
+        log_action(user_id, "Lỗi cược", "Số dư không đủ")
         daovang_states.pop(user_id, None)
         return
+
     user_balance[user_id] -= bet
     data["balances"] = user_balance
     save_data(data)
     await add_commission(user_id, bet)
+
     daovang_states[user_id] = {
         "bet": bet,
         "awaiting_bomb_count": True
@@ -1142,8 +1152,11 @@ async def daovang_set_bomb_count(message: types.Message):
             bomb_count = chosen
         else:
             await message.answer("Số bom không hợp lệ. Sử dụng mặc định: 3 bom.")
+            log_action(user_id, "Số bom không hợp lệ", f"Chọn: {chosen}, Sử dụng mặc định: 3 bom")
     else:
         await message.answer("Không nhận dạng được số bom. Sử dụng mặc định: 3 bom.")
+        log_action(user_id, "Số bom không hợp lệ", "Không nhận dạng được, Sử dụng mặc định: 3 bom")
+
     bomb_positions = random.sample(range(1, 26), bomb_count)
     daovang_states[user_id] = {
         "bet": daovang_states[user_id]["bet"],
@@ -1153,6 +1166,7 @@ async def daovang_set_bomb_count(message: types.Message):
         "active": True,
         "multiplier": 1.0
     }
+    log_action(user_id, "Bắt đầu game", f"Số bom: {bomb_count}")
     await message.answer(
         f"Game Đào Vàng bắt đầu với {bomb_count} bom!\nChọn một ô từ 1 đến 25:",
         reply_markup=ReplyKeyboardRemove()
@@ -1162,15 +1176,22 @@ async def daovang_set_bomb_count(message: types.Message):
 async def daovang_choose_cell(message: types.Message):
     user_id = str(message.from_user.id)
     cell = int(message.text)
+    log_action(user_id, "Chọn ô", f"Ô: {cell}")
+
     if cell < 1 or cell > 25:
         await message.answer("❌ Vui lòng chọn một ô từ 1 đến 25!")
+        log_action(user_id, "Lỗi chọn ô", "Ô ngoài phạm vi hợp lệ")
         return
+
     state = daovang_states[user_id]
     if cell in state["chosen"]:
         await message.answer(f"❌ Ô {cell} đã được chọn rồi, hãy chọn ô khác!")
+        log_action(user_id, "Lỗi chọn ô", f"Ô {cell} đã được chọn")
         return
+
     if cell in state["bomb_positions"]:
-        await message.answer("💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.", reply_markup=main_menu)
+        await message.answer("💣 Bạn đã chọn ô chứa BOM! Bạn mất hết tiền cược.")
+        log_action(user_id, "Thua game", f"Chọn ô chứa bom: {cell}, Mất: {state['bet']:,} VNĐ")
         record_bet_history(user_id, "Đào Vàng", state["bet"], "bomb", 0)
         daovang_states.pop(user_id, None)
         return
@@ -1184,6 +1205,8 @@ async def daovang_choose_cell(message: types.Message):
     chosen_cells = sorted(list(state["chosen"]))
     chosen_str = ", ".join(str(x) for x in chosen_cells)
     total_safe = 25 - bomb_count
+
+    log_action(user_id, "Chọn ô thành công", f"Ô: {cell}, Hệ số: x{current_multiplier:.2f}, Tiền thắng: {win_amount:,} VNĐ")
 
     if safe_count == total_safe:
         keyboard = ReplyKeyboardMarkup(
@@ -1218,14 +1241,18 @@ async def daovang_choose_cell(message: types.Message):
 async def daovang_withdraw(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
-        await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
+        await message.answer("Bạn không có game Đào Vàng nào đang chạy!")
+        log_action(user_id, "Lỗi rút tiền", "Không có game đang chạy")
         return
+
     state = daovang_states[user_id]
     win_amount = int(state["bet"] * state["multiplier"])
     user_balance[user_id] = user_balance.get(user_id, 0) + win_amount
     data["balances"] = user_balance
     save_data(data)
-    await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
+
+    log_action(user_id, "Rút tiền thành công", f"Nhận: {win_amount:,} VNĐ, Hệ số: x{state['multiplier']:.2f}")
+    await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!")
     record_bet_history(user_id, "Đào Vàng", state["bet"], "win", win_amount)
     daovang_states.pop(user_id, None)
 
@@ -1233,8 +1260,11 @@ async def daovang_withdraw(message: types.Message):
 async def daovang_continue(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
-        await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
+        await message.answer("Bạn không có game Đào Vàng nào đang chạy!")
+        log_action(user_id, "Lỗi chơi tiếp", "Không có game đang chạy")
         return
+
+    log_action(user_id, "Chơi tiếp", "Tiếp tục chọn ô")
     await message.answer(
         "Hãy chọn một ô từ 1 đến 25 (các ô đã chọn sẽ không được chọn lại):",
         reply_markup=ReplyKeyboardRemove()
@@ -1255,8 +1285,8 @@ PRIZES = {
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
 
 def danh_gia_bo_bai(cards):
-    values = [card[:-1] for card in cards]
-    suits = [card[-1] for card in cards]
+    values = [card[1:] for card in cards]  # Lấy giá trị (bỏ chất)
+    suits = [card[0] for card in cards]    # Lấy chất
     value_counts = {value: values.count(value) for value in set(values)}
 
     if len(set(suits)) == 1 and sorted(values) == ["10", "J", "Q", "K", "A"]:
@@ -1276,6 +1306,7 @@ def danh_gia_bo_bai(cards):
 @router.message(F.text == "🃏 Mini Poker")
 async def start_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
+    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
     poker_states[user_id] = {"awaiting_bet": True}
     await message.answer(
         "💰 Nhập số tiền cược Mini Poker:",
@@ -1286,13 +1317,15 @@ async def start_minipoker(message: types.Message):
 async def play_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
+    log_action(user_id, "Đặt cược", f"{bet:,} VNĐ")
 
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
+        log_action(user_id, "Lỗi cược", "Số dư không đủ")
         poker_states.pop(user_id, None)
         return
-    
+
     # Lưu số tiền cược vào trạng thái của game
     poker_states[user_id]["bet"] = bet
 
@@ -1300,22 +1333,22 @@ async def play_minipoker(message: types.Message):
     user_balance[user_id] -= bet
     save_data(data)
     await add_commission(user_id, bet)
-    
+
     # Rút bài
     cards = random.sample(CARD_DECK, 5)
     hand_type = danh_gia_bo_bai(cards)
-    
+
     # Áp dụng house edge: 30% trường hợp nếu bài thắng sẽ ép về "Mậu Thầu"
     if hand_type != "Mậu Thầu" and random.random() < 0.3:
-         hand_type = "Mậu Thầu"
-    
+        hand_type = "Mậu Thầu"
+
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
-    
+
     if win_amount > 0:
         user_balance[user_id] += win_amount
         save_data(data)
-    
+
     result_text = (
         f"🃏 **Bài của bạn:** {' '.join(cards)}\n"
         f"🎯 **Kết quả:** {hand_type}\n"
@@ -1325,7 +1358,8 @@ async def play_minipoker(message: types.Message):
     else:
         result_text += "😢 **Chúc may mắn lần sau!**"
 
-    from aiogram.utils.keyboard import InlineKeyboardBuilder  # Đảm bảo import đúng chỗ
+    log_action(user_id, "Kết quả", f"Bài: {' '.join(cards)}, Kết quả: {hand_type}, {'Thắng: ' + str(win_amount) + ' VNĐ' if win_amount > 0 else 'Thua'}")
+
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
     keyboard.button(text="🔙 Quay lại", callback_data="poker_back")
@@ -1336,16 +1370,18 @@ async def play_minipoker(message: types.Message):
 
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
-    await callback.message.delete()
     user_id = str(callback.from_user.id)
-    # Khởi tạo lại trạng thái mini poker, lưu bet = 0 để đảm bảo nếu dùng trong forceall
+    log_action(user_id, "Chơi lại", "Người chơi bấm 'Chơi lại'")
+    await callback.message.delete()
     poker_states[user_id] = {"awaiting_bet": True, "bet": 0}
     await bot.send_message(user_id, "💰 Nhập số tiền cược Mini Poker:", reply_markup=ReplyKeyboardRemove())
 
 @router.callback_query(lambda c: c.data == "poker_back")
 async def poker_back(callback: types.CallbackQuery):
+    user_id = str(callback.from_user.id)
+    log_action(user_id, "Quay lại", "Người chơi bấm 'Quay lại'")
     await callback.message.delete()
-    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
+    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.")
     
 # ===================== Nạp tiền =====================
 import time
