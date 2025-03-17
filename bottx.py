@@ -638,39 +638,125 @@ async def play_taixiu(message: types.Message):
     del taixiu_states[user_id]
 
 # ===================== GAME: Jackpot =====================
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+jackpot_states = {}
+
+# 🏆 Các biểu tượng Jackpot
+slot_symbols = ["🍒", "🍏", "🍇", "🍉", "7️⃣", "⭐"]
+
+# 🎰 Tỷ lệ thưởng Jackpot
+jackpot_rewards = {
+    "🍒🍒🍒": 3,
+    "🍏🍏🍏": 5,
+    "🍇🍇🍇": 5,
+    "🍉🍉🍉": 10,
+    "⭐⭐⭐": 10,
+    "7️⃣7️⃣7️⃣": 15  # 🎰 Jackpot lớn nhất!
+}
+
+async def spin_effect(message, slots):
+    """ 🌀 Hiệu ứng quay chậm dần """
+    display = ["❔", "❔", "❔"]
+    for i in range(3):
+        for _ in range(3):  # Quay nhanh trước
+            display[i] = random.choice(slot_symbols)
+            await message.edit_text(f"🎰 Kết quả: {display[0]} | {display[1]} | {display[2]}")
+            await asyncio.sleep(0.2)
+        display[i] = slots[i]  # Chốt kết quả ô này
+        await message.edit_text(f"🎰 Kết quả: {display[0]} | {display[1]} | {display[2]}")
+        await asyncio.sleep(0.6)  # Quay chậm lại từng ô
+
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
+    """ Bắt đầu trò chơi Jackpot với hướng dẫn cho người mới """
     user_id = str(message.from_user.id)
+    logging.info(f"🎰 [{user_id}] Bắt đầu chơi Jackpot.")
+    
     jackpot_states[user_id] = True
     await message.answer(
-        "💰 Nhập số tiền bạn muốn cược:",
+        "🎰 **HƯỚNG DẪN CHƠI JACKPOT** 🎰\n\n"
+        "📌 **Luật chơi:**\n"
+        "🔹 Nhập số tiền cược để quay.\n"
+        "🔹 Nếu **3 biểu tượng giống nhau**, bạn nhận tiền thưởng.\n"
+        "🔹 Nếu ra **777**, bạn **trúng lớn x15**!\n\n"
+        "💰 **Tỷ lệ thưởng:**\n"
+        "🍒🍒🍒 - x3\n"
+        "🍏🍏🍏 - x5\n"
+        "🍉🍉🍉 - x10\n"
+        "⭐⭐⭐ - x10\n"
+        "7️⃣7️⃣7️⃣ - 🎉 x15 🎉\n\n"
+        "💰 Hãy nhập số tiền bạn muốn cược:",
         reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: jackpot_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
 async def jackpot_bet(message: types.Message):
+    """ Người chơi nhập số tiền cược và quay Jackpot """
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
+    
+    logging.info(f"💰 [{user_id}] Đặt cược {bet_amount:,} VNĐ vào Jackpot.")
+
+    # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
+        logging.warning(f"❌ [{user_id}] Không đủ số dư (Hiện có: {user_balance.get(user_id, 0):,} VNĐ).")
         await message.answer("❌ Số dư không đủ!")
         jackpot_states[user_id] = False
         return
-    user_balance[user_id] -= bet_amount
-    save_data(data)
-    await add_commission(user_id, bet_amount)
-    await message.answer("🎰 Đang quay Jackpot...")
-    await asyncio.sleep(2)
+
+    # Trừ tiền cược
+    user_balance[user_id] = user_balance.get(user_id, 0) - bet_amount
+    save_data()
+
+    # Bắt đầu hiệu ứng quay
+    spin_message = await message.answer("🎰 Đang quay Jackpot...")
+    await asyncio.sleep(1)
+
+    # Quay ngẫu nhiên 3 ô
+    slot_result = [random.choice(slot_symbols) for _ in range(3)]
+    await spin_effect(spin_message, slot_result)
+
+    # Xác định kết quả thắng/thua
     win_amount = 0
-    if random.randint(1, 100) <= 10:
-        win_amount = bet_amount * 15
+    result_text = "😢 Rất tiếc, bạn không trúng Jackpot."
+    slot_str = "".join(slot_result)  # Ghép chuỗi kết quả
+
+    if slot_str in jackpot_rewards:
+        multiplier = jackpot_rewards[slot_str]
+        win_amount = bet_amount * multiplier
         user_balance[user_id] += win_amount
-        save_data(data)
-        await message.answer(f"🎉 Chúc mừng! Bạn trúng Jackpot x15! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
-        record_bet_history(user_id, "Jackpot", bet_amount, "win", win_amount)
+        save_data()
+        result_text = f"🎉 Chúc mừng! Bạn trúng x{multiplier}!\n💰 Nhận được: {win_amount:,} VNĐ!"
+        logging.info(f"🎉 [{user_id}] Trúng Jackpot! Kết quả: {slot_result} - Nhận {win_amount:,} VNĐ.")
+
     else:
-        await message.answer("😢 Rất tiếc, bạn không trúng Jackpot. Mất hết tiền cược.", reply_markup=main_menu)
-        record_bet_history(user_id, "Jackpot", bet_amount, "lose", 0)
+        logging.info(f"😢 [{user_id}] Không trúng Jackpot. Kết quả: {slot_result}.")
+
+    # Gửi kết quả
+    await spin_message.edit_text(
+        f"🎰 Kết quả cuối:\n{slot_result[0]} | {slot_result[1]} | {slot_result[2]}\n\n{result_text}\n💰 Số dư hiện tại: {user_balance[user_id]:,} VNĐ",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🎲 Chơi tiếp", callback_data="play_jackpot_again")]
+            ]
+        )
+    )
+
+    # Lưu lịch sử cược
+    record_bet_history(user_id, "Jackpot", bet_amount, slot_str, win_amount)
     jackpot_states[user_id] = False
+
+@router.callback_query(F.data == "play_jackpot_again")
+async def play_again_jackpot(callback: types.CallbackQuery):
+    """ Xử lý khi người chơi chọn 'Chơi tiếp' """
+    user_id = str(callback.from_user.id)
+    logging.info(f"🔄 [{user_id}] Bấm 'Chơi tiếp' trong Jackpot.")
+    
+    await callback.answer()  # Tránh lỗi callback bị spam
+    await jackpot_game(callback.message)
+
 
 import random
 import asyncio
