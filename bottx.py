@@ -635,15 +635,6 @@ async def play_taixiu(message: types.Message):
     del taixiu_states[user_id]
 
 # ===================== GAME: Jackpot =====================
-# Cấu hình logging để lưu log vào file
-logging.basicConfig(
-    filename="jackpot_log.txt",
-    level=logging.INFO,
-    format="%(asctime)s - %(message)s",
-    encoding="utf-8"
-)
-
-
 jackpot_states = {}
 
 # 🏆 Các biểu tượng Jackpot
