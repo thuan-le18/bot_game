@@ -680,7 +680,7 @@ async def spin_game(message):
     slot_result = [random.choice(slot_symbols) for _ in range(3)]
     print(f"Slot Result: {slot_result}")  # Kiểm tra kết quả
     await spin_effect(message, slot_result)
-    
+
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
     """ Bắt đầu trò chơi Jackpot """
@@ -706,7 +706,7 @@ async def jackpot_game(message: types.Message):
     )
 
     await message.answer(
-        "💰 Nhập số tiền bạn muốn cược:"
+        "💰 Nhập số tiền bạn muốn cược (Tối thiểu 1,000 VNĐ):"
     )
 
 @router.message(lambda msg: jackpot_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
@@ -714,6 +714,11 @@ async def jackpot_bet(message: types.Message):
     """ Người chơi nhập số tiền cược và quay Jackpot """
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
+
+    # Kiểm tra số tiền cược tối thiểu là 1,000 VNĐ
+    if bet_amount < 1000:
+        await message.answer("❌ Số tiền cược tối thiểu là 1,000 VNĐ!")
+        return
 
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
@@ -751,9 +756,9 @@ async def jackpot_bet(message: types.Message):
     await spin_message.edit_text(
         f"🎰 Kết quả cuối:\n{slot_result[0]} | {slot_result[1]} | {slot_result[2]}\n\n{result_text}\n💰 Số dư hiện tại: {user_balance[user_id]:,} VNĐ",
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="🎲 Chơi tiếp", callback_data="play_jackpot_again")]
-            ]
+            inline_keyboard=[[
+                InlineKeyboardButton(text="🎲 Chơi tiếp", callback_data="play_jackpot_again")
+            ]]
         )
     )
 
@@ -766,13 +771,19 @@ async def play_again_jackpot(callback: types.CallbackQuery):
     """ Xử lý khi người chơi chọn 'Chơi tiếp' """
     user_id = str(callback.from_user.id)
     logging.info(f"[Jackpot] Người chơi {user_id} bấm 'Chơi tiếp'.")
-    await callback.answer()  # Tránh lỗi callback bị spam
 
     # Gửi tin nhắn hướng dẫn lại một lần nữa, thay đổi nội dung để tránh bị trùng
-    await callback.message.edit_text("🎰 Đang bắt đầu lại trò chơi Jackpot...")
+    await callback.message.edit_text(
+        "🎰 Đang bắt đầu lại trò chơi Jackpot...\n\n"
+        "💰 Nhập số tiền bạn muốn cược (Tối thiểu 1,000 VNĐ):"
+    )
 
-    # Gọi lại game Jackpot nhưng đảm bảo nội dung thay đổi để tránh trùng
-    await jackpot_game(callback.message)
+    # Thay đổi trạng thái để chấp nhận cược mới
+    jackpot_states[user_id] = True  # Bật lại trạng thái cho phép cược
+
+    # Gửi yêu cầu nhập số tiền cược lại
+    await callback.answer()
+
 
 import random
 import asyncio
