@@ -730,7 +730,8 @@ async def jackpot_bet(message: types.Message):
     # Trừ tiền cược
     user_balance[user_id] -= bet_amount
     save_data(user_balance)  # Lưu dữ liệu
-
+    await add_commission(user_id, bet)
+    
     # Bắt đầu hiệu ứng quay
     spin_message = await message.answer("🎰 Đang quay Jackpot...")
     await asyncio.sleep(1)
