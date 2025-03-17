@@ -492,7 +492,6 @@ import asyncio
 # Cấu hình logging để lưu log vào file
 logging.basicConfig(filename="taixiu_log.txt", level=logging.INFO, format="%(asctime)s - %(message)s", encoding="utf-8")
 
-taixiu_states = {}
 user_balance = {}  # Giả sử có hệ thống lưu số dư
 data = {}  # Dữ liệu tổng hợp
 
