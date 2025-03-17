@@ -582,8 +582,11 @@ async def play_taixiu(message: types.Message):
         await message.answer("❌ Số dư không đủ!")
         del taixiu_states[user_id]
         return
-
+    # Trừ tiền cược và tính hoa hồng
     user_balance[user_id] -= bet_amount
+    save_data(data)
+    await add_commission(user_id, bet_amount)
+    
     log_action(user_id, "Đặt cược", f"{taixiu_states[user_id]['choice']} - {bet_amount:,} VNĐ")
 
     dice_values = []
@@ -626,10 +629,6 @@ async def play_taixiu(message: types.Message):
     log_action(user_id, "Kết quả", f"{dice_values} - {total} ({result}) - {outcome}")
 
 record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
-# Trừ tiền cược và tính hoa hồng
-    user_balance[user_id] -= bet_amount
-    save_data(data)
-    await add_commission(user_id, bet_amount)
 
     del taixiu_states[user_id]
 
