@@ -273,15 +273,18 @@ async def vip_info(message: types.Message):
     user_id = str(message.from_user.id)
     total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
     current_vip = "Chưa đạt VIP nào"
-    
+
     for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
         if total_deposit >= req_amount:
             current_vip = vip
 
+    # Định dạng số tiền với dấu phẩy
+    formatted_total_deposit = f"{total_deposit:,}"
+
     await message.answer(
         f"🏆 VIP của bạn: {current_vip}\n"
-        f"👥 ID tài khoản bạn: {user_id}\n"
-        f"💰 Tổng nạp: {total_deposit} VNĐ",
+        f"👥 ID tài khoản: {user_id}\n"
+        f"💰 Tổng nạp: {formatted_total_deposit} VNĐ",
         reply_markup=main_menu
     )
 
@@ -349,14 +352,18 @@ async def back_to_main(message: types.Message):
 async def check_balance(message: types.Message):
     user_id = str(message.from_user.id)
     balance = user_balance.get(user_id, 0)
-    
+
+    # Định dạng số dư với dấu phẩy
+    formatted_balance = f"{balance:,}"
+
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     kb.button(text="💸 Lịch sử rút", callback_data="withdraw_history")
     kb.button(text="📥 Lịch sử nạp", callback_data="deposit_history")
     kb.button(text="👥 Chuyển tiền", callback_data="transfer_money")
     kb.adjust(1)
-    await message.answer(f"💰 Số dư hiện tại của bạn: {balance} VNĐ", reply_markup=kb.as_markup())
+
+    await message.answer(f"💰 Số dư hiện tại của bạn: {formatted_balance} VNĐ", reply_markup=kb.as_markup())
 
 import time
 import pytz
