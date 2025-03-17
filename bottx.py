@@ -656,13 +656,23 @@ jackpot_rewards = {
 async def spin_effect(message, slots):
     """ 🌀 Hiệu ứng quay chậm dần """
     display = ["❔", "❔", "❔"]  # Biểu tượng lúc đầu
+    current_text = ""  # Biến lưu nội dung hiện tại của tin nhắn
+
     for i in range(3):
         for _ in range(5):  # Quay nhanh 5 lần
             display[i] = random.choice(slot_symbols)
-            await message.edit_text(f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}")
+            new_text = f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}"
+            # Kiểm tra xem tin nhắn mới có khác với tin nhắn hiện tại không
+            if new_text != current_text:
+                await message.edit_text(new_text)
+                current_text = new_text
             await asyncio.sleep(0.2)  # Tăng tốc độ quay
         display[i] = slots[i]  # Chốt kết quả sau mỗi lần quay
-        await message.edit_text(f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}")
+        new_text = f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}"
+        # Kiểm tra lại và cập nhật tin nhắn nếu có sự thay đổi
+        if new_text != current_text:
+            await message.edit_text(new_text)
+            current_text = new_text
         await asyncio.sleep(0.6)  # Quay chậm lại sau khi chốt kết quả
 
 async def spin_game(message):
@@ -670,7 +680,7 @@ async def spin_game(message):
     slot_result = [random.choice(slot_symbols) for _ in range(3)]
     print(f"Slot Result: {slot_result}")  # Kiểm tra kết quả
     await spin_effect(message, slot_result)
-
+    
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
     """ Bắt đầu trò chơi Jackpot """
