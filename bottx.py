@@ -496,13 +496,6 @@ MIN_BET = 1_000  # Cược tối thiểu 1,000 VNĐ
 MAX_BET = 10_000_000  # Cược tối đa 10 triệu VNĐ
 COMBO_MULTIPLIERS = {"triple": 30, "specific": 3}  # Tỷ lệ thưởng
 
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🎲 Tài Xỉu"), KeyboardButton(text="🏠 Menu chính")]
-    ],
-    resize_keyboard=True
-)
-
 # ✅ Ghi log chi tiết các hành động của người chơi
 def log_action(user_id, action, details=""):
     log_data = {
