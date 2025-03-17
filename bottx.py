@@ -751,6 +751,11 @@ async def play_again_jackpot(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     logging.info(f"[Jackpot] Người chơi {user_id} bấm 'Chơi tiếp'.")
     await callback.answer()  # Tránh lỗi callback bị spam
+
+    # Gửi tin nhắn hướng dẫn lại một lần nữa, thay đổi nội dung để tránh bị trùng
+    await callback.message.edit_text("🎰 Đang bắt đầu lại trò chơi Jackpot...")
+
+    # Gọi lại game Jackpot nhưng đảm bảo nội dung thay đổi để tránh trùng
     await jackpot_game(callback.message)
 
 import random
