@@ -485,13 +485,14 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     await state.clear()
     
 # ===================== GAME: Tài Xỉu =====================
-# Cấu hình logging để lưu log vào file
-logging.basicConfig(
-    filename="taixiu_log.txt",
-    level=logging.INFO,
-    format="%(asctime)s - %(message)s",
-    encoding="utf-8"
-)
+# ✅ Ghi log chi tiết các hành động của người chơi
+def log_action(user_id, action, details=""):
+    log_data = {
+        "user_id": user_id,
+        "action": action,
+        "details": details
+    }
+    logging.info(json.dumps(log_data, ensure_ascii=False))
 
 MIN_BET = 1_000  # Cược tối thiểu 1,000 VNĐ
 MAX_BET = 10_000_000  # Cược tối đa 10 triệu VNĐ
