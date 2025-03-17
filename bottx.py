@@ -963,20 +963,18 @@ async def bet_rongho_amount(message: types.Message):
     await message.answer(f"🎉 Kết quả: {outcome_text}", reply_markup=main_menu)
 
     # Thêm nút "Chơi tiếp 🎲"
-    play_again_keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🎲 Chơi tiếp", callback_data="play_rongho_again")]
-        ]
-    )
-    await message.answer("🔄 Bạn có muốn chơi tiếp?", reply_markup=play_again_keyboard)
+play_again_keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🎲 Chơi tiếp", callback_data="play_rongho_again")]
+    ]
+)
+await message.answer("🔄 Bạn có muốn chơi tiếp", reply_markup=play_again_keyboard)
 
-    rongho_states.pop(user_id, None)
- 
-    # 📜 Lưu lịch sử cược
-    record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
+# Xóa trạng thái game
+rongho_states.pop(user_id, None)
 
-    rongho_states.pop(user_id, None)
-    logging.info(f"[bet_rongho_amount] Đã xóa trạng thái game của user {user_id}")
+# 📜 Lưu lịch sử cược
+record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
     
 # ===================== GAME: Đào Vàng (Mines Gold style) =====================
 @router.message(F.text == "⛏️ Đào Vàng")
