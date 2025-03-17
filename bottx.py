@@ -629,6 +629,7 @@ async def play_taixiu(message: types.Message):
 
 record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
 
+   if user_id in taixiu_states:
     del taixiu_states[user_id]
 
 # ===================== GAME: Jackpot =====================
