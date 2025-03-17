@@ -629,8 +629,11 @@ async def play_taixiu(message: types.Message):
     else:
         outcome = f"😢 Thua {bet_amount:,} VNĐ!"
 
-    await record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
-    del taixiu_states[user_id]
+    await record_bet_history(
+    user_id, "Tài Xỉu", bet_amount, 
+    f"{result} - {'win' if win_amount > 0 else 'lose'}", 
+    win_amount
+)
 
     await message.answer(f"🎲 Kết quả: {dice_values} | Tổng: {total} ({result})\n{outcome}")
 
