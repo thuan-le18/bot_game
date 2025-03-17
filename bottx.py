@@ -657,12 +657,12 @@ async def spin_effect(message, slots):
     """ 🌀 Hiệu ứng quay chậm dần """
     display = ["❔", "❔", "❔"]  # Biểu tượng lúc đầu
     for i in range(3):
-        for _ in range(3):  # Quay nhanh 5 lần
+        for _ in range(5):  # Quay nhanh 5 lần
             display[i] = random.choice(slot_symbols)
-            await message.edit_text(f"🎰 Kết quả: {display[0]} | {display[1]} | {display[2]}")
+            await message.edit_text(f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}")
             await asyncio.sleep(0.2)  # Tăng tốc độ quay
         display[i] = slots[i]  # Chốt kết quả sau mỗi lần quay
-        await message.edit_text(f"🎰 Kết quả: {display[0]} | {display[1]} | {display[2]}")
+        await message.edit_text(f"🎰 Kết quả: {display[0]} {display[1]} {display[2]}")
         await asyncio.sleep(0.6)  # Quay chậm lại sau khi chốt kết quả
 
 async def spin_game(message):
