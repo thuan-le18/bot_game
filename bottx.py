@@ -635,6 +635,15 @@ async def play_taixiu(message: types.Message):
     del taixiu_states[user_id]
 
 # ===================== GAME: Jackpot =====================
+# Cấu hình logging để lưu log vào file
+logging.basicConfig(
+    filename="jackpot_log.txt",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+    encoding="utf-8"
+)
+
+
 jackpot_states = {}
 
 # 🏆 Các biểu tượng Jackpot
@@ -649,6 +658,15 @@ jackpot_rewards = {
     "⭐⭐⭐": 10,
     "7️⃣7️⃣7️⃣": 15  # 🎰 Jackpot lớn nhất!
 }
+
+# Hàm ghi log chi tiết
+def log_action(user_id, action, details=""):
+    log_data = {
+        "user_id": user_id,
+        "action": action,
+        "details": details
+    }
+    logging.info(json.dumps(log_data, ensure_ascii=False))
 
 async def spin_effect(message, slots):
     """ 🌀 Hiệu ứng quay chậm dần """
@@ -677,13 +695,14 @@ async def spin_game(message):
     slot_result = [random.choice(slot_symbols) for _ in range(3)]
     print(f"Slot Result: {slot_result}")  # Kiểm tra kết quả
     await spin_effect(message, slot_result)
+    return slot_result  # Trả về kết quả quay
 
 @router.message(F.text == "🎰 Jackpot")
 async def jackpot_game(message: types.Message):
     """ Bắt đầu trò chơi Jackpot """
     user_id = str(message.from_user.id)
+    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
     jackpot_states[user_id] = True
-    logging.info(f"[Jackpot] Người chơi {user_id} bắt đầu chơi.")
 
     # Gửi tin nhắn hướng dẫn trước khi yêu cầu nhập tiền cược
     await message.answer(
@@ -711,31 +730,32 @@ async def jackpot_bet(message: types.Message):
     """ Người chơi nhập số tiền cược và quay Jackpot """
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
+    log_action(user_id, "Đặt cược", f"{bet_amount:,} VNĐ")
 
     # Kiểm tra số tiền cược tối thiểu là 1,000 VNĐ
     if bet_amount < 1000:
         await message.answer("❌ Số tiền cược tối thiểu là 1,000 VNĐ!")
+        log_action(user_id, "Lỗi cược", "Số tiền cược dưới mức tối thiểu")
         return
 
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
+        log_action(user_id, "Lỗi cược", "Số dư không đủ")
         jackpot_states[user_id] = False
-        logging.warning(f"[Jackpot] Người chơi {user_id} không đủ tiền cược ({bet_amount:,} VNĐ).")
         return
 
     # Trừ tiền cược
     user_balance[user_id] -= bet_amount
     save_data(user_balance)  # Lưu dữ liệu
     await add_commission(user_id, bet_amount)
-    
+
     # Bắt đầu hiệu ứng quay
     spin_message = await message.answer("🎰 Đang quay Jackpot...")
     await asyncio.sleep(1)
 
     # Quay ngẫu nhiên 3 ô
-    slot_result = [random.choice(slot_symbols) for _ in range(3)]
-    await spin_effect(spin_message, slot_result)
+    slot_result = await spin_game(spin_message)
 
     # Xác định kết quả thắng/thua
     win_amount = 0
@@ -748,7 +768,9 @@ async def jackpot_bet(message: types.Message):
         user_balance[user_id] += win_amount
         save_data(user_balance)
         result_text = f"🎉 Chúc mừng! Bạn trúng x{multiplier}!\n💰 Nhận được: {win_amount:,} VNĐ!"
-        logging.info(f"[Jackpot] Người chơi {user_id} thắng {win_amount:,} VNĐ ({slot_str}).")
+
+    # Ghi log kết quả
+    log_action(user_id, "Kết quả quay", f"Kết quả: {slot_str}, {result_text}")
 
     # Gửi kết quả
     await spin_message.edit_text(
@@ -768,7 +790,7 @@ async def jackpot_bet(message: types.Message):
 async def play_again_jackpot(callback: types.CallbackQuery):
     """ Xử lý khi người chơi chọn 'Chơi tiếp' """
     user_id = str(callback.from_user.id)
-    logging.info(f"[Jackpot] Người chơi {user_id} bấm 'Chơi tiếp'.")
+    log_action(user_id, "Chơi lại", "Người chơi bấm 'Chơi tiếp'")
 
     # Gửi tin nhắn hướng dẫn lại một lần nữa, thay đổi nội dung để tránh bị trùng
     await callback.message.edit_text(
@@ -781,7 +803,6 @@ async def play_again_jackpot(callback: types.CallbackQuery):
 
     # Gửi yêu cầu nhập số tiền cược lại
     await callback.answer()
-
 
 import random
 import asyncio
