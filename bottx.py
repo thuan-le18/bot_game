@@ -485,39 +485,46 @@ async def enter_transfer_amount(message: types.Message, state: FSMContext, bot: 
     await state.clear()
     
 # ===================== GAME: Tài Xỉu =====================
-# ===================== GAME: Tài Xỉu =====================
-from aiogram import Router, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-import asyncio
-
-taixiu_states = {}
-user_balance = {}  # Giả sử có hệ thống lưu số dư
-data = {}  # Dữ liệu tổng hợp
+# Cấu hình logging để lưu log vào file
+logging.basicConfig(
+    filename="taixiu_log.txt",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+    encoding="utf-8"
+)
 
 MIN_BET = 1_000  # Cược tối thiểu 1,000 VNĐ
 MAX_BET = 10_000_000  # Cược tối đa 10 triệu VNĐ
 COMBO_MULTIPLIERS = {"triple": 30, "specific": 3}  # Tỷ lệ thưởng
 
+# Hàm ghi log chi tiết
+def log_action(user_id, action, details=""):
+    log_data = {
+        "user_id": user_id,
+        "action": action,
+        "details": details
+    }
+    logging.info(json.dumps(log_data, ensure_ascii=False))
+
 @router.message(F.text == "/huy")
 async def cancel_bet(message: types.Message):
     """Cho phép người chơi hủy ván cược nếu bị kẹt"""
     user_id = str(message.from_user.id)
-
+    log_action(user_id, "Hủy cược")
     if user_id in taixiu_states:
         del taixiu_states[user_id]
         await message.answer("✅ Bạn đã hủy ván cược! Bây giờ bạn có thể đặt cược mới.")
     else:
         await message.answer("❌ Bạn không có ván cược nào đang chờ.")
-        
+
 @router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
-
+    log_action(user_id, "Bắt đầu chơi", "Chờ chọn loại cược")
     # Chặn spam cược liên tục
     if user_id in taixiu_states:
         await message.answer("⏳ Bạn đang có một ván cược chưa hoàn tất. Nhập /huy để hủy cược trước khi chơi lại!")
         return
-    
     taixiu_states[user_id] = "awaiting_choice"
     await message.answer(
         "🎲 Vui lòng chọn loại cược:\n"
@@ -536,12 +543,11 @@ async def start_taixiu(message: types.Message):
 @router.message(lambda msg: taixiu_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["Tài", "Xỉu", "Bộ Ba 🎲", "Cược Số 🎯"])
 async def choose_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
-
+    log_action(user_id, "Chọn loại cược", message.text)
     # Chặn chọn lại nhiều lần
     if isinstance(taixiu_states.get(user_id), dict):
         await message.answer("⏳ Bạn đã đặt cược. Vui lòng nhập số tiền cược!")
         return
-
     if message.text in ["Bộ Ba 🎲", "Cược Số 🎯"]:
         taixiu_states[user_id] = {"choice": message.text, "state": "awaiting_combo_choice"}
         await message.answer("🔢 Hãy chọn một số từ 1 đến 6 để đặt cược:", reply_markup=ReplyKeyboardMarkup(
@@ -555,12 +561,12 @@ async def choose_taixiu(message: types.Message):
                           and msg.text in [str(i) for i in range(1, 7)])
 async def choose_combo_number(message: types.Message):
     user_id = str(message.from_user.id)
-    taixiu_states[user_id]["number"] = int(message.text)
+    chosen_number = int(message.text)
+    taixiu_states[user_id]["number"] = chosen_number
     taixiu_states[user_id]["state"] = "awaiting_bet"
-
     bet_type = taixiu_states[user_id]["choice"]
     multiplier = 30 if bet_type == "Bộ Ba 🎲" else 3
-
+    log_action(user_id, "Chọn số cược", f"{bet_type} - Số {chosen_number}")
     await message.answer(
         f"✅ Bạn đã chọn số {message.text} cho {bet_type}.\n"
         f"💰 Nếu {message.text} xuất hiện **{'3 lần' if bet_type == 'Bộ Ba 🎲' else 'ít nhất 1 lần'}, bạn sẽ thắng {multiplier}x tiền cược**.\n"
@@ -573,22 +579,19 @@ async def choose_combo_number(message: types.Message):
 async def play_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
-
+    log_action(user_id, "Đặt cược", f"{taixiu_states[user_id]['choice']} - Số {taixiu_states[user_id].get('number', 'N/A')} - {bet_amount:,} VNĐ")
     # Kiểm tra số tiền cược hợp lệ
     if bet_amount < MIN_BET or bet_amount > MAX_BET:
         await message.answer(f"❌ Số tiền cược phải từ {MIN_BET:,} VNĐ đến {MAX_BET:,} VNĐ!")
         return
-
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
         del taixiu_states[user_id]
         return
-
     # Trừ tiền cược và tính hoa hồng
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
-
     # Xúc xắc quay
     dice_values = []
     for i in range(3):
@@ -599,42 +602,34 @@ async def play_taixiu(message: types.Message):
             del taixiu_states[user_id]
             return
         dice_values.append(dice_msg.dice.value)
-
     total = sum(dice_values)
     result = "Tài" if total >= 11 else "Xỉu"
     user_choice = taixiu_states[user_id]["choice"]
-
     # Kiểm tra kết quả
     win_amount = 0
     outcome_text = ""
-
     if user_choice in ["Tài", "Xỉu"]:
         if user_choice == result:
             win_amount = int(bet_amount * 1.98)
-    
     elif user_choice == "Bộ Ba 🎲":
         chosen_number = taixiu_states[user_id]["number"]
         if dice_values.count(chosen_number) == 3:
             win_amount = bet_amount * COMBO_MULTIPLIERS["triple"]
-
     elif user_choice == "Cược Số 🎯":
         chosen_number = taixiu_states[user_id]["number"]
         if chosen_number in dice_values:
             win_amount = bet_amount * COMBO_MULTIPLIERS["specific"]
-
     if win_amount > 0:
         user_balance[user_id] += win_amount
         save_data(data)
         outcome_text = f"🔥 Bạn thắng {win_amount:,} VNĐ!"
     else:
         outcome_text = f"😢 Bạn thua {bet_amount:,} VNĐ!"
-
-    # Gửi kết quả
-    await message.answer(f"🎲 Kết quả: {dice_values}\n✨ Tổng: {total} ({result})\n{outcome_text}", reply_markup=main_menu)
-
+    log_action(user_id, "Kết quả cược", f"Xúc xắc: {dice_values}, Tổng: {total}, Kết quả: {result}, {outcome_text}")
+    # Gửi kết quả (bỏ reply_markup=main_menu)
+    await message.answer(f"🎲 Kết quả: {dice_values}\n✨ Tổng: {total} ({result})\n{outcome_text}")
     # Lưu lịch sử cược
     record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
-
     # Xóa trạng thái cược
     del taixiu_states[user_id]
 
