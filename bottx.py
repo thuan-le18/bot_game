@@ -1271,6 +1271,8 @@ async def daovang_continue(message: types.Message):
     )
 
 # ===================== GAME: Mini Poker =====================
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 # Giảm hệ số thưởng để game "khó ăn tiền" hơn
 PRIZES = {
     "Thùng Phá Sảnh": 20,
