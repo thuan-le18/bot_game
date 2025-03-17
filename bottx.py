@@ -650,15 +650,6 @@ jackpot_rewards = {
     "7️⃣7️⃣7️⃣": 15  # 🎰 Jackpot lớn nhất!
 }
 
-# Hàm ghi log chi tiết
-def log_action(user_id, action, details=""):
-    log_data = {
-        "user_id": user_id,
-        "action": action,
-        "details": details
-    }
-    logging.info(json.dumps(log_data, ensure_ascii=False))
-
 async def spin_effect(message, slots):
     """ 🌀 Hiệu ứng quay chậm dần """
     display = ["❔", "❔", "❔"]  # Biểu tượng lúc đầu
