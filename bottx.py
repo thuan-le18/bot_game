@@ -626,11 +626,10 @@ async def play_taixiu(message: types.Message):
     await message.answer(f"🎲 Kết quả: {dice_values} | Tổng: {total} ({result})\n{outcome}")
 
     log_action(user_id, "Kết quả", f"{dice_values} - {total} ({result}) - {outcome}")
+ 
+await record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
 
-record_bet_history(user_id, "Tài Xỉu", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
-
-   if user_id in taixiu_states:
-    del taixiu_states[user_id]
+    del taixiu_states[user_id]  # ✅ Đúng indent, không lỗi
 
 # ===================== GAME: Jackpot =====================
 jackpot_states = {}
