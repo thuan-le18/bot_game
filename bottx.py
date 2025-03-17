@@ -522,7 +522,7 @@ async def add_commission(user_id, bet_amount):
     # TODO: Lưu hoa hồng vào hệ thống
     log_action(user_id, "Tính hoa hồng", f"{commission:,} VNĐ")
 
-@router.message(types.F.text == "/huy")
+@router.message(F.text == "/huy")
 async def cancel_bet(message: types.Message):
     user_id = str(message.from_user.id)
 
@@ -533,7 +533,7 @@ async def cancel_bet(message: types.Message):
     else:
         await message.answer("❌ Bạn không có ván cược nào đang chờ.")
 
-@router.message(types.F.text == "🎲 Tài Xỉu")
+@router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
 
