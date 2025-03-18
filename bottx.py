@@ -590,14 +590,12 @@ async def play_taixiu(message: types.Message):
         del taixiu_states[user_id]
         return
     
-    # Ghi log trước khi trừ tiền cược
-    logging.info(f"Người dùng {user_id} cược {bet_amount:,} VNĐ. Số dư trước cược: {user_balance.get(user_id, 0):,} VNĐ.")
-    
     # Trừ tiền cược và tính hoa hồng
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
-    logging.info(f"Số dư sau khi trừ cược: {user_balance[user_id]:,} VNĐ.")
+    logging.info(f"Người dùng {user_id} cược {bet_amount:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
+    await message.answer(f"💰 Đã trừ {bet_amount:,} VNĐ. Số dư hiện tại: {user_balance[user_id]:,} VNĐ.")
     
     # Xúc xắc quay
     dice_values = []
@@ -638,7 +636,7 @@ async def play_taixiu(message: types.Message):
     
     log_action(user_id, "Kết quả cược", f"Xúc xắc: {dice_values}, Tổng: {total}, Kết quả: {result}, {outcome_text}")
     
-    # Gửi kết quả (bỏ reply_markup=main_menu)
+    # Gửi kết quả
     await message.answer(f"🎲 Kết quả: {dice_values}\n✨ Tổng: {total} ({result})\n{outcome_text}")
     
     # Lưu lịch sử cược
