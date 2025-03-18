@@ -1393,7 +1393,7 @@ async def poker_back(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     log_action(user_id, "Quay lại", "Người chơi bấm 'Quay lại'")
     await callback.message.delete()
-    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.")
+    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.",reply_markup=main_menu)
     
 # ===================== Nạp tiền =====================
 import time
