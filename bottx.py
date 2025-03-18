@@ -1001,7 +1001,7 @@ async def withdraw_crash(callback: types.CallbackQuery):
 @router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi", "Chờ chọn cửa cược")
+    log_action(user_id, "Bắt đầu chơi 🐉 Rồng Hổ", "Chờ chọn cửa cược")
 
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -1114,7 +1114,7 @@ async def bet_rongho_amount(message: types.Message):
 @router.message(F.text == "⛏️ Đào Vàng")
 async def start_daovang(message: types.Message):
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
+    log_action(user_id, "Bắt đầu chơi ⛏️Đào Vàng", "Chờ nhập số tiền cược")
     await message.answer(
         f"Nhập số tiền cược (tối thiểu {MIN_BET} VNĐ):",
         reply_markup=ReplyKeyboardRemove()
@@ -1318,7 +1318,7 @@ def danh_gia_bo_bai(cards):
 @router.message(F.text == "🃏 Mini Poker")
 async def start_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
+    log_action(user_id, "Bắt đầu chơi 🃏 Mini Poker", "Chờ nhập số tiền cược")
     poker_states[user_id] = {"awaiting_bet": True}
     await message.answer(
         "💰 Nhập số tiền cược Mini Poker:",
