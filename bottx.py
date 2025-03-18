@@ -595,7 +595,6 @@ async def play_taixiu(message: types.Message):
     save_data(data)
     await add_commission(user_id, bet_amount)
     logging.info(f"Người dùng {user_id} cược {bet_amount:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
-    await message.answer(f"💰 Đã trừ {bet_amount:,} VNĐ. Số dư hiện tại: {user_balance[user_id]:,} VNĐ.")
     
     # Xúc xắc quay
     dice_values = []
