@@ -1691,32 +1691,24 @@ async def process_withdraw_request(message: types.Message):
     await message.answer("Nếu quá 15p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
 # LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
-# LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 @router.message(Command("xacnhan"))
+@router.message(lambda message: message.photo and message.caption and message.caption.startswith("/xacnhan"))
 async def admin_confirm_withdraw(message: types.Message):
+    log_action(str(message.from_user.id), "Bắt đầu xử lý /xacnhan", f"Message type: {message.content_type}")
+    
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
         log_action(str(message.from_user.id), "Lỗi quyền truy cập", "Không phải admin")
         return
 
     try:
-        # Lấy nội dung lệnh từ text hoặc caption (ưu tiên caption nếu có ảnh)
-        command_text = None
-        if message.photo and message.caption:
-            command_text = message.caption.strip()
-            logging.info(f"Command from caption: {command_text}")
-        elif message.text:
-            command_text = message.text.strip()
-            logging.info(f"Command from text: {command_text}")
-        else:
-            await message.answer("⚠️ Không tìm thấy nội dung lệnh. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không có text hoặc caption")
-            return
+        # Lấy nội dung lệnh từ caption nếu có ảnh, hoặc từ text
+        command_text = message.caption.strip() if message.photo and message.caption else message.text.strip()
+        log_action(str(message.from_user.id), "Lệnh nhận được", f"Command text: {command_text}")
 
-        # Kiểm tra lệnh có bắt đầu bằng /xacnhan không
-        if not command_text.startswith("/xacnhan"):
-            await message.answer("⚠️ Lệnh không hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền>")
-            log_action(str(message.from_user.id), "Lỗi cú pháp", f"Command: {command_text}")
+        if not command_text or not command_text.startswith("/xacnhan"):
+            await message.answer("⚠️ Không tìm thấy lệnh hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"Command text: {command_text}")
             return
 
         # Phân tích cú pháp
@@ -1782,7 +1774,7 @@ async def admin_confirm_withdraw(message: types.Message):
         photo_id = None
         if message.photo:
             photo_id = message.photo[-1].file_id
-            logging.info(f"Photo ID: {photo_id}")
+            log_action(str(message.from_user.id), "Photo detected", f"Photo ID: {photo_id}")
 
         # Gửi thông báo cho người dùng
         if photo_id:
@@ -1793,7 +1785,7 @@ async def admin_confirm_withdraw(message: types.Message):
                     caption=f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
                 )
             except Exception as e:
-                logging.error(f"Lỗi gửi ảnh đến user {target_user_id}: {e}")
+                log_action(str(message.from_user.id), "Lỗi gửi ảnh", f"Error: {str(e)}")
                 await bot.send_message(
                     target_user_id,
                     f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
@@ -1809,6 +1801,7 @@ async def admin_confirm_withdraw(message: types.Message):
 
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xử lý yêu cầu rút tiền. Cú pháp: /xacnhan <user_id> <số tiền>")
+        log_action(str(message.from_user.id), "Lỗi tổng quát", f"Error: {str(e)}")
         logging.error(f"Lỗi xử lý rút tiền: {e}", exc_info=True)
         
 # ===================== Admin: Xem số dư =====================
