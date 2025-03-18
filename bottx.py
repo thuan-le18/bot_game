@@ -1690,119 +1690,84 @@ async def process_withdraw_request(message: types.Message):
 
     await message.answer("Nếu quá 15p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
-# LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
+#           LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
+# ======================================================================
 @router.message(Command("xacnhan"))
-@router.message(lambda message: message.photo and message.caption and message.caption.startswith("/xacnhan"))
 async def admin_confirm_withdraw(message: types.Message):
-    log_action(str(message.from_user.id), "Bắt đầu xử lý /xacnhan", f"Message type: {message.content_type}")
-    
+    # Chỉ admin mới được phép dùng lệnh này
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
-        log_action(str(message.from_user.id), "Lỗi quyền truy cập", "Không phải admin")
         return
-
     try:
-        # Lấy nội dung lệnh từ caption nếu có ảnh, hoặc từ text
-        command_text = message.caption.strip() if message.photo and message.caption else message.text.strip()
-        log_action(str(message.from_user.id), "Lệnh nhận được", f"Command text: {command_text}")
-
-        if not command_text or not command_text.startswith("/xacnhan"):
-            await message.answer("⚠️ Không tìm thấy lệnh hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"Command text: {command_text}")
-            return
-
-        # Phân tích cú pháp
-        parts = command_text.split()
+        # Cú pháp: /xacnhan <user_id> <số tiền>
+        parts = message.text.split()
         if len(parts) < 3:
-            await message.answer("⚠️ Cú pháp không hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền>")
-            log_action(str(message.from_user.id), "Lỗi cú pháp", f"Parts: {parts}")
+            await message.answer("⚠️ Cú pháp: /xacnhan <user_id> <số tiền>")
             return
-
-        # Lấy target_user_id và amount, kiểm tra None trước
-        target_user_id = parts[1].strip() if len(parts) > 1 and parts[1] else None
-        amount_str = parts[2].strip() if len(parts) > 2 and parts[2] else None
-
-        if target_user_id is None or amount_str is None:
-            await message.answer("⚠️ Thiếu hoặc không hợp lệ: user_id hoặc số tiền.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}, amount_str: {amount_str}")
+        
+        target_user_id = parts[1].strip()
+        if not target_user_id:
+            await message.answer("⚠️ ID người dùng không được để trống.")
             return
-
-        # Kiểm tra định dạng user_id
         if not target_user_id.isdigit():
             await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
-            log_action(str(message.from_user.id), "Lỗi định dạng", f"target_user_id: {target_user_id}")
             return
-
-        # Kiểm tra định dạng và chuyển đổi amount
-        if not amount_str.isdigit():
-            await message.answer("⚠️ Vui lòng nhập số tiền dưới dạng số.")
-            log_action(str(message.from_user.id), "Lỗi định dạng", f"amount_str: {amount_str}")
-            return
-
-        amount = int(amount_str)
-
-        # Kiểm tra số tiền tối thiểu
+        
+        amount = int(parts[2])
+        
+        # Kiểm tra số tiền rút tối thiểu là 50.000 VNĐ
         if amount < 200000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ.")
-            log_action(str(message.from_user.id), "Lỗi số tiền", f"Amount: {amount}")
+            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại.")
             return
 
-        # Kiểm tra yêu cầu rút tiền
-        target_user_id = str(target_user_id)
+        # Tìm yêu cầu rút tiền của target_user_id với số tiền bằng amount và trạng thái "pending"
         if target_user_id not in withdrawals or not withdrawals[target_user_id]:
-            await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền của user này.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}")
+            await message.answer("Không tìm thấy yêu cầu rút tiền của user này.")
             return
-
+        
         request_found = None
         for req in withdrawals[target_user_id]:
             if req["status"] == "pending" and req["amount"] == amount:
                 request_found = req
                 break
-
+        
         if not request_found:
-            await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền phù hợp.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}, amount: {amount}")
+            await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
             return
 
-        # Xác nhận yêu cầu
+        # Tại thời điểm này, số dư của user đã bị trừ khi họ gửi yêu cầu.
+        # Xác nhận yêu cầu: cập nhật trạng thái thành "completed"
         request_found["status"] = "completed"
         save_data(data)
-        log_action(str(message.from_user.id), "Xác nhận rút tiền", f"User {target_user_id}, Amount {amount}")
-
-        # Xử lý gửi ảnh nếu có
+        
+        # Nếu admin gửi kèm ảnh (biên lai), lấy file_id của ảnh có kích thước lớn nhất
         photo_id = None
         if message.photo:
             photo_id = message.photo[-1].file_id
-            log_action(str(message.from_user.id), "Photo detected", f"Photo ID: {photo_id}")
-
-        # Gửi thông báo cho người dùng
+        
+        # Gửi thông báo cho người dùng: "Yêu cầu rút tiền <amount> VNĐ của bạn đã được xử lý. Vui lòng kiểm tra tài khoản."
         if photo_id:
             try:
                 await bot.send_photo(
                     target_user_id,
                     photo=photo_id,
-                    caption=f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                    caption=f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
                 )
             except Exception as e:
-                log_action(str(message.from_user.id), "Lỗi gửi ảnh", f"Error: {str(e)}")
+                logging.error(f"Lỗi gửi ảnh đến user {target_user_id}: {e}")
                 await bot.send_message(
                     target_user_id,
-                    f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                    f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
                 )
         else:
             await bot.send_message(
                 target_user_id,
-                f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
             )
-
-        # Thông báo cho admin
-        await message.answer(f"✅ Đã xác nhận xử lý yêu cầu rút tiền {amount:,} VNĐ cho user {target_user_id}.")
-
+        await message.answer(f"✅ Đã xác nhận xử lý yêu cầu rút tiền {amount} VNĐ cho user {target_user_id}.")
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xử lý yêu cầu rút tiền. Cú pháp: /xacnhan <user_id> <số tiền>")
-        log_action(str(message.from_user.id), "Lỗi tổng quát", f"Error: {str(e)}")
-        logging.error(f"Lỗi xử lý rút tiền: {e}", exc_info=True)
+        logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
 # Dữ liệu game & tài khoản
