@@ -521,7 +521,7 @@ async def cancel_bet(message: types.Message):
 @router.message(F.text == "🎲 Tài Xỉu")
 async def start_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi", "Chờ chọn loại cược")
+    log_action(user_id, "Bắt đầu chơi Tài Xỉu", "Chờ chọn loại cược")
     # Chặn spam cược liên tục
     if user_id in taixiu_states:
         await message.answer("⏳ Bạn đang có một ván cược chưa hoàn tất. Nhập /huy để hủy cược trước khi chơi lại!")
@@ -683,7 +683,7 @@ async def spin_game(message):
 async def jackpot_game(message: types.Message):
     """ Bắt đầu trò chơi Jackpot """
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi", "Chờ nhập số tiền cược")
+    log_action(user_id, "Bắt đầu chơi Jackpot", "Chờ nhập số tiền cược")
     jackpot_states[user_id] = True
 
     # Gửi tin nhắn hướng dẫn trước khi yêu cầu nhập tiền cược
@@ -723,7 +723,7 @@ async def jackpot_bet(message: types.Message):
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
-        log_action(user_id, "Lỗi cược", "Số dư không đủ")
+        logging.warning(f"Người dùng {user_id} không đủ tiền. Số dư: {user_balance.get(user_id, 0)}, Cược: {bet}")
         jackpot_states[user_id] = False
         return
 
