@@ -593,7 +593,6 @@ async def play_taixiu(message: types.Message):
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
-    logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     # Xúc xắc quay
     dice_values = []
     for i in range(3):
@@ -724,7 +723,6 @@ async def jackpot_bet(message: types.Message):
     # Kiểm tra số dư
     if user_balance.get(user_id, 0) < bet_amount:
         await message.answer("❌ Số dư không đủ!")
-        logging.warning(f"Người dùng {user_id} không đủ tiền. Số dư: {user_balance.get(user_id, 0)}, Cược: {bet}")
         jackpot_states[user_id] = False
         return
 
@@ -732,7 +730,6 @@ async def jackpot_bet(message: types.Message):
     user_balance[user_id] -= bet_amount
     save_data(user_balance)  # Lưu dữ liệu
     await add_commission(user_id, bet_amount)
-    logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Bắt đầu hiệu ứng quay
     spin_message = await message.answer("🎰 Đang quay Jackpot...")
@@ -1143,7 +1140,6 @@ async def daovang_set_bet(message: types.Message):
     data["balances"] = user_balance
     save_data(data)
     await add_commission(user_id, bet)
-    logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     daovang_states[user_id] = {
         "bet": bet,
@@ -1348,7 +1344,6 @@ async def play_minipoker(message: types.Message):
     user_balance[user_id] -= bet
     save_data(data)
     await add_commission(user_id, bet)
-    logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Rút bài
     cards = random.sample(CARD_DECK, 5)
