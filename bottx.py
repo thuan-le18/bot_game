@@ -1690,71 +1690,108 @@ async def process_withdraw_request(message: types.Message):
 
     await message.answer("Nếu quá 15p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
+# LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 @router.message(Command("xacnhan"))
 async def admin_confirm_withdraw(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
         return
+
     try:
-        parts = message.text.split()
+        # Lấy phần văn bản của tin nhắn, loại bỏ ảnh nếu có
+        command_text = message.text.strip()
+        parts = command_text.split()
+        
+        # Kiểm tra số lượng tham số
         if len(parts) < 3:
             await message.answer("⚠️ Cú pháp: /xacnhan <user_id> <số tiền>")
-            return
-        
-        target_user_id = parts[1].strip()
-        if not target_user_id.isdigit():
-            await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
-            return
-        
-        amount = int(parts[2])
-        if amount < 200000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ.")
+            log_action(str(message.from_user.id), "Lỗi cú pháp", "Thiếu tham số")
             return
 
-        if target_user_id not in withdrawals or not withdrawals[target_user_id]:
-            await message.answer("Không tìm thấy yêu cầu rút tiền của user này.")
+        # Lấy target_user_id và amount, kiểm tra None trước
+        target_user_id = parts[1].strip() if parts[1] else None
+        amount_str = parts[2].strip() if parts[2] else None
+
+        if target_user_id is None or amount_str is None:
+            await message.answer("⚠️ Thiếu hoặc không hợp lệ: user_id hoặc số tiền.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", "user_id hoặc amount là None")
             return
-        
+
+        # Kiểm tra định dạng user_id
+        if not target_user_id.isdigit():
+            await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
+            log_action(str(message.from_user.id), "Lỗi định dạng", "user_id không phải số")
+            return
+
+        # Kiểm tra định dạng và chuyển đổi amount
+        if not amount_str.isdigit():
+            await message.answer("⚠️ Vui lòng nhập số tiền dưới dạng số.")
+            log_action(str(message.from_user.id), "Lỗi định dạng", "amount không phải số")
+            return
+
+        amount = int(amount_str)
+
+        # Kiểm tra số tiền tối thiểu
+        if amount < 200000:
+            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ.")
+            log_action(str(message.from_user.id), "Lỗi số tiền", "Số tiền dưới 200.000 VNĐ")
+            return
+
+        # Kiểm tra yêu cầu rút tiền
+        target_user_id = str(target_user_id)  # Chuyển sang string để khớp với withdrawals
+        if target_user_id not in withdrawals or not withdrawals[target_user_id]:
+            await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền của user này.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không tìm thấy yêu cầu rút tiền")
+            return
+
         request_found = None
         for req in withdrawals[target_user_id]:
             if req["status"] == "pending" and req["amount"] == amount:
                 request_found = req
                 break
-        
+
         if not request_found:
-            await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
+            await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền phù hợp.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không tìm thấy yêu cầu phù hợp")
             return
 
+        # Xác nhận yêu cầu
         request_found["status"] = "completed"
         save_data(data)
-        
+        log_action(str(message.from_user.id), "Xác nhận rút tiền", f"User {target_user_id}, Amount {amount}")
+
+        # Xử lý gửi ảnh nếu có
         photo_id = None
         if message.photo:
             photo_id = message.photo[-1].file_id
-            logging.info(f"Photo ID được sử dụng: {photo_id}")
-        
+            logging.info(f"Photo ID: {photo_id}")
+
+        # Gửi thông báo cho người dùng
         if photo_id:
             try:
                 await bot.send_photo(
                     target_user_id,
                     photo=photo_id,
-                    caption=f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                    caption=f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
                 )
-            except telegram.error.TelegramError as e:
-                logging.error(f"Lỗi Telegram khi gửi ảnh đến user {target_user_id}: {e}")
+            except Exception as e:
+                logging.error(f"Lỗi gửi ảnh đến user {target_user_id}: {e}")
                 await bot.send_message(
                     target_user_id,
-                    f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                    f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
                 )
         else:
             await bot.send_message(
                 target_user_id,
-                f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                f"✅ Yêu cầu rút tiền {amount:,} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
             )
-        await message.answer(f"✅ Đã xác nhận xử lý yêu cầu rút tiền {amount} VNĐ cho user {target_user_id}.")
+
+        # Thông báo cho admin
+        await message.answer(f"✅ Đã xác nhận xử lý yêu cầu rút tiền {amount:,} VNĐ cho user {target_user_id}.")
+
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xử lý yêu cầu rút tiền. Cú pháp: /xacnhan <user_id> <số tiền>")
-        logging.error(f"Lỗi xử lý rút tiền: {e}")
+        logging.error(f"Lỗi xử lý rút tiền: {e}", exc_info=True)
         
 # ===================== Admin: Xem số dư =====================
 # Dữ liệu game & tài khoản
