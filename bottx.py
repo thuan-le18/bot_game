@@ -1698,16 +1698,18 @@ async def admin_confirm_withdraw(message: types.Message):
         return
 
     try:
-        # Lấy văn bản từ message.text hoặc message.caption nếu có ảnh
-        command_text = message.text.strip() if message.text else (message.caption.strip() if message.caption else "")
-        if not command_text:
-            await message.answer("⚠️ Không tìm thấy nội dung lệnh. Vui lòng nhập /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không có nội dung lệnh")
+        # Lấy nội dung lệnh từ text hoặc caption (ưu tiên caption nếu có ảnh)
+        command_text = message.caption.strip() if message.photo and message.caption else message.text.strip()
+        logging.info(f"Command text received: {command_text}")
+
+        if not command_text or not command_text.startswith("/xacnhan"):
+            await message.answer("⚠️ Không tìm thấy lệnh hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"Command text: {command_text}")
             return
 
         # Phân tích cú pháp
         parts = command_text.split()
-        if len(parts) < 3 or parts[0].lower() != "/xacnhan":
+        if len(parts) < 3:
             await message.answer("⚠️ Cú pháp không hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền>")
             log_action(str(message.from_user.id), "Lỗi cú pháp", f"Parts: {parts}")
             return
@@ -1718,19 +1720,19 @@ async def admin_confirm_withdraw(message: types.Message):
 
         if target_user_id is None or amount_str is None:
             await message.answer("⚠️ Thiếu hoặc không hợp lệ: user_id hoặc số tiền.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", "user_id hoặc amount là None")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}, amount_str: {amount_str}")
             return
 
         # Kiểm tra định dạng user_id
         if not target_user_id.isdigit():
             await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
-            log_action(str(message.from_user.id), "Lỗi định dạng", "user_id không phải số")
+            log_action(str(message.from_user.id), "Lỗi định dạng", f"target_user_id: {target_user_id}")
             return
 
         # Kiểm tra định dạng và chuyển đổi amount
         if not amount_str.isdigit():
             await message.answer("⚠️ Vui lòng nhập số tiền dưới dạng số.")
-            log_action(str(message.from_user.id), "Lỗi định dạng", "amount không phải số")
+            log_action(str(message.from_user.id), "Lỗi định dạng", f"amount_str: {amount_str}")
             return
 
         amount = int(amount_str)
@@ -1738,14 +1740,14 @@ async def admin_confirm_withdraw(message: types.Message):
         # Kiểm tra số tiền tối thiểu
         if amount < 200000:
             await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ.")
-            log_action(str(message.from_user.id), "Lỗi số tiền", "Số tiền dưới 200.000 VNĐ")
+            log_action(str(message.from_user.id), "Lỗi số tiền", f"Amount: {amount}")
             return
 
         # Kiểm tra yêu cầu rút tiền
-        target_user_id = str(target_user_id)  # Chuyển sang string để khớp với withdrawals
+        target_user_id = str(target_user_id)
         if target_user_id not in withdrawals or not withdrawals[target_user_id]:
             await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền của user này.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không tìm thấy yêu cầu rút tiền")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}")
             return
 
         request_found = None
@@ -1756,7 +1758,7 @@ async def admin_confirm_withdraw(message: types.Message):
 
         if not request_found:
             await message.answer("⚠️ Không tìm thấy yêu cầu rút tiền phù hợp.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không tìm thấy yêu cầu phù hợp")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"target_user_id: {target_user_id}, amount: {amount}")
             return
 
         # Xác nhận yêu cầu
