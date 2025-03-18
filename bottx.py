@@ -1691,20 +1691,32 @@ async def process_withdraw_request(message: types.Message):
     await message.answer("Nếu quá 15p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
 # LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
+# LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 @router.message(Command("xacnhan"))
 async def admin_confirm_withdraw(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
+        log_action(str(message.from_user.id), "Lỗi quyền truy cập", "Không phải admin")
         return
 
     try:
         # Lấy nội dung lệnh từ text hoặc caption (ưu tiên caption nếu có ảnh)
-        command_text = message.caption.strip() if message.photo and message.caption else message.text.strip()
-        logging.info(f"Command text received: {command_text}")
+        command_text = None
+        if message.photo and message.caption:
+            command_text = message.caption.strip()
+            logging.info(f"Command from caption: {command_text}")
+        elif message.text:
+            command_text = message.text.strip()
+            logging.info(f"Command from text: {command_text}")
+        else:
+            await message.answer("⚠️ Không tìm thấy nội dung lệnh. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không có text hoặc caption")
+            return
 
-        if not command_text or not command_text.startswith("/xacnhan"):
-            await message.answer("⚠️ Không tìm thấy lệnh hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
-            log_action(str(message.from_user.id), "Lỗi dữ liệu", f"Command text: {command_text}")
+        # Kiểm tra lệnh có bắt đầu bằng /xacnhan không
+        if not command_text.startswith("/xacnhan"):
+            await message.answer("⚠️ Lệnh không hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền>")
+            log_action(str(message.from_user.id), "Lỗi cú pháp", f"Command: {command_text}")
             return
 
         # Phân tích cú pháp
