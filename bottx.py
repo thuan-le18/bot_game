@@ -1262,7 +1262,7 @@ async def daovang_withdraw(message: types.Message):
     save_data(data)
 
     log_action(user_id, "Rút tiền thành công", f"Nhận: {win_amount:,} VNĐ, Hệ số: x{state['multiplier']:.2f}")
-    await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!")
+    await message.answer(f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount} VNĐ!", reply_markup=main_menu)
     record_bet_history(user_id, "Đào Vàng", state["bet"], "win", win_amount)
     daovang_states.pop(user_id, None)
 
@@ -1270,7 +1270,7 @@ async def daovang_withdraw(message: types.Message):
 async def daovang_continue(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id not in daovang_states or not daovang_states[user_id].get("active"):
-        await message.answer("Bạn không có game Đào Vàng nào đang chạy!")
+        await message.answer("Bạn không có game Đào Vàng nào đang chạy!", reply_markup=main_menu)
         log_action(user_id, "Lỗi chơi tiếp", "Không có game đang chạy")
         return
 
