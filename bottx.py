@@ -630,6 +630,7 @@ async def play_taixiu(message: types.Message):
         user_balance[user_id] += win_amount
         save_data(data)
         outcome_text = f"🔥 Bạn thắng {win_amount:,} VNĐ!"
+        logging.info(f"[INFO] Tiền thưởng {win_amount:,} VNĐ đã được cộng. Số dư mới: {user_balance[user_id]:,} VNĐ.")
     else:
         outcome_text = f"😢 Bạn thua {bet_amount:,} VNĐ!"
     
