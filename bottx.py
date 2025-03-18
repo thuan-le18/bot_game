@@ -1061,7 +1061,6 @@ async def bet_rongho_amount(message: types.Message):
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
-    logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # 🎲 Lật bài - Hiển thị hiệu ứng
     await message.answer("🔄 Đang chia bài...")
