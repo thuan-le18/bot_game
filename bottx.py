@@ -1690,15 +1690,12 @@ async def process_withdraw_request(message: types.Message):
 
     await message.answer("Nếu quá 15p tiền chưa được cộng,💬 Bạn vui lòng nhắn tin cho hỗ trợ.", parse_mode="Markdown")
 
-# LỆNH ADMIN XÁC NHẬN XỬ LÝ YÊU CẦU RÚT TIỀN (/xacnhan)
 @router.message(Command("xacnhan"))
 async def admin_confirm_withdraw(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
         return
-
     try:
-        # Cú pháp: /xacnhan <user_id> <số tiền>
         parts = message.text.split()
         if len(parts) < 3:
             await message.answer("⚠️ Cú pháp: /xacnhan <user_id> <số tiền>")
@@ -1708,15 +1705,12 @@ async def admin_confirm_withdraw(message: types.Message):
         if not target_user_id.isdigit():
             await message.answer("⚠️ Vui lòng nhập ID người dùng dưới dạng số.")
             return
-        target_user_id = int(target_user_id)  # Chuyển về số nguyên
-
-        amount = int(parts[2])
         
+        amount = int(parts[2])
         if amount < 200000:
-            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ. Vui lòng nhập lại.")
+            await message.answer("⚠️ Số tiền rút tối thiểu là 200.000 VNĐ.")
             return
 
-        # Kiểm tra xem user có yêu cầu rút tiền không
         if target_user_id not in withdrawals or not withdrawals[target_user_id]:
             await message.answer("Không tìm thấy yêu cầu rút tiền của user này.")
             return
@@ -1731,33 +1725,36 @@ async def admin_confirm_withdraw(message: types.Message):
             await message.answer("Không tìm thấy yêu cầu rút tiền phù hợp.")
             return
 
-        # Cập nhật trạng thái rút tiền
         request_found["status"] = "completed"
-        save_data(data)  # Lưu lại dữ liệu
-
-        # Kiểm tra xem admin có gửi ảnh không
+        save_data(data)
+        
         photo_id = None
         if message.photo:
-            photo_id = message.photo[-1].file_id  # Ảnh lớn nhất
-
-        # Gửi thông báo cho user
-        caption = f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
-
-        try:
-            if photo_id:
-                await bot.send_photo(target_user_id, photo=photo_id, caption=caption)
-            else:
-                await bot.send_message(target_user_id, caption)
-        except Exception as e:
-            logging.error(f"Lỗi khi gửi thông báo rút tiền cho user {target_user_id}: {e}")
-            await message.answer("⚠️ Lỗi khi gửi ảnh. Đã gửi tin nhắn văn bản thay thế.")
-            await bot.send_message(target_user_id, caption)
-
+            photo_id = message.photo[-1].file_id
+            logging.info(f"Photo ID được sử dụng: {photo_id}")
+        
+        if photo_id:
+            try:
+                await bot.send_photo(
+                    target_user_id,
+                    photo=photo_id,
+                    caption=f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                )
+            except telegram.error.TelegramError as e:
+                logging.error(f"Lỗi Telegram khi gửi ảnh đến user {target_user_id}: {e}")
+                await bot.send_message(
+                    target_user_id,
+                    f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+                )
+        else:
+            await bot.send_message(
+                target_user_id,
+                f"✅ Yêu cầu rút tiền {amount} VNĐ của bạn đã được xử lý.\nVui lòng kiểm tra tài khoản."
+            )
         await message.answer(f"✅ Đã xác nhận xử lý yêu cầu rút tiền {amount} VNĐ cho user {target_user_id}.")
-    
     except Exception as e:
-        logging.error(f"Lỗi xử lý rút tiền: {e}")
         await message.answer("⚠️ Lỗi khi xử lý yêu cầu rút tiền. Cú pháp: /xacnhan <user_id> <số tiền>")
+        logging.error(f"Lỗi xử lý rút tiền: {e}")
         
 # ===================== Admin: Xem số dư =====================
 # Dữ liệu game & tài khoản
