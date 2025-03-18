@@ -1698,19 +1698,23 @@ async def admin_confirm_withdraw(message: types.Message):
         return
 
     try:
-        # Lấy phần văn bản của tin nhắn, loại bỏ ảnh nếu có
-        command_text = message.text.strip()
+        # Lấy văn bản từ message.text hoặc message.caption nếu có ảnh
+        command_text = message.text.strip() if message.text else (message.caption.strip() if message.caption else "")
+        if not command_text:
+            await message.answer("⚠️ Không tìm thấy nội dung lệnh. Vui lòng nhập /xacnhan <user_id> <số tiền> hoặc thêm caption khi gửi ảnh.")
+            log_action(str(message.from_user.id), "Lỗi dữ liệu", "Không có nội dung lệnh")
+            return
+
+        # Phân tích cú pháp
         parts = command_text.split()
-        
-        # Kiểm tra số lượng tham số
-        if len(parts) < 3:
-            await message.answer("⚠️ Cú pháp: /xacnhan <user_id> <số tiền>")
-            log_action(str(message.from_user.id), "Lỗi cú pháp", "Thiếu tham số")
+        if len(parts) < 3 or parts[0].lower() != "/xacnhan":
+            await message.answer("⚠️ Cú pháp không hợp lệ. Vui lòng dùng: /xacnhan <user_id> <số tiền>")
+            log_action(str(message.from_user.id), "Lỗi cú pháp", f"Parts: {parts}")
             return
 
         # Lấy target_user_id và amount, kiểm tra None trước
-        target_user_id = parts[1].strip() if parts[1] else None
-        amount_str = parts[2].strip() if parts[2] else None
+        target_user_id = parts[1].strip() if len(parts) > 1 and parts[1] else None
+        amount_str = parts[2].strip() if len(parts) > 2 and parts[2] else None
 
         if target_user_id is None or amount_str is None:
             await message.answer("⚠️ Thiếu hoặc không hợp lệ: user_id hoặc số tiền.")
