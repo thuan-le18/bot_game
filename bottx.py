@@ -818,6 +818,13 @@ user_balance = {}  # Lưu số dư người dùng
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
+    
+    # Kiểm tra nếu người dùng đang trong trạng thái chơi game
+    if crash_states.get(user_id, False):
+        await message.answer("✈️ Bạn đang trong game! Hãy đặt cược nhé!")
+        return
+    
+    # Nếu không đang chơi, tiếp tục logic bắt đầu game
     crash_states[user_id] = True
     logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay.")
     
@@ -826,7 +833,7 @@ async def start_crash(message: types.Message):
     
     await message.answer(
         f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
-        f"👥 Hiện có {players_count} người đang chơi",
+        f"👥 Hiện có {players_count} người đang chơi game này.",
         reply_markup=ReplyKeyboardRemove()
     )
 
