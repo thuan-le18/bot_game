@@ -820,9 +820,14 @@ async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
     crash_states[user_id] = True
     logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay.")
+    
+    # Lấy số người chơi hiện tại cho game "✈️ Máy Bay"
+    players_count = game_players.get("✈️ Máy Bay", "không xác định")
+    
     await message.answer(
-         "💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!",
-         reply_markup=ReplyKeyboardRemove()
+        f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
+        f"👥 Hiện có {players_count} người đang chơi",
+        reply_markup=ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: crash_states.get(str(msg.from_user.id), False) and msg.text.isdigit())
