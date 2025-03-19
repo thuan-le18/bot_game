@@ -1110,21 +1110,39 @@ async def bet_rongho_amount(message: types.Message):
             win_amount = int(bet_amount * 7.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            outcome_text = f"⚖️ Hòa! 🎉 Bạn thắng {win_amount:,} VNĐ! 🏆"
+            outcome_text = (
+                f"⚖️ Kết quả: Hòa!\n"
+                f"🎉 Bạn thắng!\n"
+                f"💰 Số tiền thắng: {win_amount:,} VNĐ\n"
+                f"🏆 Chúc mừng bạn!"
+            )
         else:
-            outcome_text = f"⚖️ Hòa! Bạn thua {bet_amount:,} VNĐ. 😞"
+            outcome_text = (
+                f"⚖️ Kết quả: Hòa!\n"
+                f"😞 Bạn thua!\n"
+                f"💸 Số tiền thua: {bet_amount:,} VNĐ"
+            )
     else:
         result_text = "🐉 Rồng" if result == "rong" else "🐅 Hổ"
         if chosen == result:
             win_amount = int(bet_amount * 1.98)
             user_balance[user_id] += win_amount
             save_data(data)
-            outcome_text = f"{result_text} thắng! 🎉 Bạn thắng {win_amount:,} VNĐ! 🏆"
+            outcome_text = (
+                f"🎲 Kết quả: {result_text} thắng!\n"
+                f"🎉 Bạn thắng!\n"
+                f"💰 Số tiền thắng: {win_amount:,} VNĐ\n"
+                f"🏆 Chúc mừng bạn!"
+            )
         else:
-            outcome_text = f"{result_text} thắng! Bạn thua {bet_amount:,} VNĐ. 😞"
+            outcome_text = (
+                f"🎲 Kết quả: {result_text} thắng!\n"
+                f"😞 Bạn thua!\n"
+                f"💸 Số tiền thua: {bet_amount:,} VNĐ"
+            )
 
     log_action(user_id, "Kết quả", f"Kết quả: {result}, Người chọn: {chosen}, {outcome_text}")
-    await message.answer(f"🎉 Kết quả: {outcome_text}")
+    await message.answer(outcome_text)
 
     # 📜 Lưu lịch sử cược
     record_bet_history(user_id, "Rồng Hổ", bet_amount, f"{result} - {'win' if win_amount > 0 else 'lose'}", win_amount)
