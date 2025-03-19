@@ -1032,9 +1032,20 @@ async def start_rongho(message: types.Message):
         resize_keyboard=True
     )
 
-    rongho_states[user_id] = "awaiting_choice"
-    await message.answer("🎲 Chọn cửa cược của bạn:", reply_markup=keyboard)
+    # Thêm giải thích game
+    game_explanation = (
+        "🎲 **Rồng Hổ - Cách chơi và luật cơ bản**:\n"
+        "1. Chọn 1 trong 3 cửa: 🐉 Rồng, 🐅 Hổ hoặc ⚖️ Hòa.\n"
+        "2. Mỗi bên được chia 1 lá bài, bên nào lớn hơn thì thắng.\n"
+        "3. Nếu hai bên bằng nhau, kết quả là Hòa.\n"
+        "💰 **Tỷ lệ thắng**:\n"
+        "- Rồng/Hổ: x1.98 (cược 1,000 thắng 1,980 VNĐ).\n"
+        "- Hòa: x7.98 (cược 1,000 thắng 7,980 VNĐ).\n"
+        "👉 Chọn cửa cược của bạn dưới đây!"
+    )
 
+    rongho_states[user_id] = "awaiting_choice"
+    await message.answer(game_explanation, parse_mode="Markdown", reply_markup=keyboard)
 # ===================== Handler chọn cửa cược =====================
 @router.message(lambda msg: rongho_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["🐉 Rồng", "⚖️ Hòa", "🐅 Hổ"])
 async def choose_rongho(message: types.Message):
