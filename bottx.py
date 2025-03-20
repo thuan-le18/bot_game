@@ -914,7 +914,6 @@ async def run_crash_game(message: types.Message, user_id: str):
         # Kiểm tra nếu người chơi rút tiền trước khi máy bay rơi
         if crash_games[user_id]["withdraw_event"].is_set():
           win_amount = round(bet * crash_games[user_id]["current_multiplier"])
-                user_balance[user_id] += win_amount
                 save_data(user_balance)
                 logging.info(f"Người dùng {user_id} rút tiền thành công. Hệ số: x{crash_games[user_id]['current_multiplier']}. Nhận: {win_amount:,} VNĐ.")
             try:
