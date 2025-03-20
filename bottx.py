@@ -528,17 +528,19 @@ async def start_taixiu(message: types.Message):
         return
     taixiu_states[user_id] = "awaiting_choice"
     await message.answer(
-        "🎲 Vui lòng chọn loại cược:\n"
-        "- Tài/Xỉu: Thắng khi tổng điểm là Tài (11-18) hoặc Xỉu (3-10).\n"
-        "- Bộ Ba 🎲: Chọn một số từ 1-6, nếu cả 3 viên xúc xắc ra số đó, bạn thắng 30x tiền cược.\n"
-        "- Cược Số 🎯: Chọn một số từ 1-6, nếu số đó xuất hiện trong kết quả, bạn thắng 3x tiền cược.",
+        "🎲 **Tài Xỉu**:\n"
+        "- Tài (11-18) / Xỉu (3-10): x1.98.\n"
+        "- Bộ Ba 🎲 (3 số giống): x30.\n"
+        "- Cược Số 🎯 (số xuất hiện): x3.\n"
+        "👉 Chọn loại cược của bạn!",
         reply_markup=ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="Tài"), KeyboardButton(text="Xỉu")],
                 [KeyboardButton(text="Bộ Ba 🎲"), KeyboardButton(text="Cược Số 🎯")]
             ],
             resize_keyboard=True
-        )
+        ),
+        parse_mode="Markdown"
     )
 
 @router.message(lambda msg: taixiu_states.get(str(msg.from_user.id)) == "awaiting_choice" and msg.text in ["Tài", "Xỉu", "Bộ Ba 🎲", "Cược Số 🎯"])
@@ -699,23 +701,12 @@ async def jackpot_game(message: types.Message):
 
     # Gửi tin nhắn hướng dẫn trước khi yêu cầu nhập tiền cược
     await message.answer(
-        "🎰 **Hướng Dẫn Chơi Jackpot** 🎰\n"
-        "1️⃣ Nhập số tiền bạn muốn cược.\n"
-        "2️⃣ Hệ thống sẽ quay 3 biểu tượng ngẫu nhiên.\n"
-        "3️⃣ Nếu trùng 3 biểu tượng giống nhau, bạn nhận thưởng theo tỷ lệ.\n\n"
-        "💰 **Tỷ Lệ Thưởng:**\n"
-        "🍒🍒🍒 ➝ x3\n"
-        "🍏🍏🍏 ➝ x5\n"
-        "🍇🍇🍇 ➝ x5\n"
-        "🍉🍉🍉 ➝ x10\n"
-        "⭐⭐⭐ ➝ x10\n"
-        "7️⃣7️⃣7️⃣ ➝ x15 (Jackpot lớn nhất!)\n\n"
-        "🎯 Chúc bạn may mắn!",
-        reply_markup=ReplyKeyboardRemove()
-    )
-
-    await message.answer(
-        "💰 Nhập số tiền bạn muốn cược (Tối thiểu 1,000 VNĐ):"
+        "🎰 **Jackpot**:\n"
+        "- Quay 3 biểu tượng, trùng 3 giống nhau để thắng.\n"
+        "- Thưởng: 🍒x3, 🍏x5, 🍇x5, 🍉x10, ⭐x10, 7️⃣x15.\n"
+        "💰 Nhập số tiền cược (tối thiểu 1,000 VNĐ):",
+        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="Markdown"
     )
 
 @router.message(lambda msg: jackpot_states.get(str(msg.from_user.id)) == True and msg.text.isdigit())
