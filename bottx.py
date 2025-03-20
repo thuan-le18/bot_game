@@ -866,15 +866,14 @@ async def initiate_crash_game(message: types.Message):
     }
 
     await run_crash_game(message, user_id)
-
+    
 async def run_crash_game(message: types.Message, user_id: str):
-    bet = crash_games[user_id]["bet"]  # Lấy bet từ crash_games để tránh lỗi
+    bet = crash_games[user_id]["bet"]
 
     countdown_time = random.choice([5, 7, 9, 12])
     countdown_message = await message.answer(
         f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
     )
-    logging.debug(f"Máy bay của {user_id} sẽ cất cánh sau {countdown_time} giây.")
     
     for i in range(countdown_time, 0, -1):
         try:
@@ -888,82 +887,58 @@ async def run_crash_game(message: types.Message, user_id: str):
         await asyncio.sleep(1)
 
     try:
-        await message.bot.delete_message(
-            chat_id=message.chat.id,
-            message_id=countdown_message.message_id
-        )
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=countdown_message.message_id)
     except Exception as e:
         logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
-    # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
          [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
     ])
+
     sent_message = await message.answer(
          f"✈️ Máy bay đang cất cánh...\n📈 Hệ số nhân: x1.00",
          reply_markup=crash_keyboard
     )
     crash_games[user_id]["message_id"] = sent_message.message_id
-    logging.info(f"Máy bay của {user_id} đã cất cánh.")
-    
-    # Vòng lặp cập nhật hệ số nhân mượt mà
+
+    start_time = time.time()
+    base_increment = 0.01  # Giá trị tăng cơ bản
+    acceleration = 1.02  # Hệ số tăng tốc
+
     while crash_games[user_id]["running"]:
-        try:
-            await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=1)
-            if crash_games[user_id]["withdraw_event"].is_set():
-                win_amount = round(bet * crash_games[user_id]["current_multiplier"])
-                user_balance[user_id] += win_amount
-                save_data(user_balance)
-                logging.info(f"Người dùng {user_id} rút tiền thành công. Hệ số: x{crash_games[user_id]['current_multiplier']}. Nhận: {win_amount:,} VNĐ.")
-                try:
-                    await message.bot.edit_message_text(
-                        chat_id=message.chat.id,
-                        message_id=crash_games[user_id]["message_id"],
-                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
-                        reply_markup=main_menu
-                    )
-                except Exception as e:
-                    logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
-                record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
-                crash_games[user_id]["running"] = False
-                break
-        except asyncio.TimeoutError:
-            current_multiplier = crash_games[user_id]["current_multiplier"]
-            # Cơ chế tăng tốc nhanh dần: sử dụng công thức tăng theo hàm mũ nhẹ
-            # Ví dụ: increment = random_base * (1 + (current_multiplier - 1)/2)
-            random_base = random.uniform(0.1, 0.15)
-            increment = round(random_base * (1 + (current_multiplier - 1) / 2), 2)
-            new_multiplier = round(current_multiplier + increment, 2)
-            if new_multiplier > 15.0:
-                new_multiplier = 15.0
-            crash_games[user_id]["current_multiplier"] = new_multiplier
+        elapsed_time = time.time() - start_time
+        current_multiplier = round(1 + elapsed_time * base_increment, 2)
 
-            if new_multiplier >= crash_games[user_id]["crash_point"]:
-                logging.warning(f"Máy bay của {user_id} đã rơi tại x{crash_games[user_id]['crash_point']}!")
-                loss_amount = bet
-                try:
-                    await message.bot.edit_message_text(
-                        chat_id=message.chat.id,
-                        message_id=crash_games[user_id]["message_id"],
-                        text=f"💥 <b>Máy bay rơi tại</b> x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {loss_amount:,} VNĐ!",
-                        parse_mode="HTML",
-                        reply_markup=None
-                    )
-                except Exception as e:
-                    logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
-                record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
-                break
+        # Tăng tốc hệ số sau một thời gian
+        if elapsed_time > 3:
+            base_increment *= acceleration  # Tăng tốc dần
 
+        crash_games[user_id]["current_multiplier"] = current_multiplier
+
+        if current_multiplier >= crash_games[user_id]["crash_point"]:
             try:
                 await message.bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=crash_games[user_id]["message_id"],
-                    text=f"✈️ Máy bay đang bay...\n📈 Hệ số nhân: x{new_multiplier}",
-                    reply_markup=crash_keyboard
+                    text=f"💥 <b>Máy bay rơi tại</b> x{crash_games[user_id]['crash_point']}!\n❌ Bạn đã mất {bet:,} VNĐ!",
+                    parse_mode="HTML",
+                    reply_markup=None
                 )
             except Exception as e:
-                logging.error(f"Lỗi khi cập nhật hệ số nhân: {e}")
+                logging.error(f"Lỗi khi cập nhật tin nhắn thua: {e}")
+            break
+
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=crash_games[user_id]["message_id"],
+                text=f"✈️ Máy bay đang bay...\n📈 Hệ số nhân: x{current_multiplier}",
+                reply_markup=crash_keyboard
+            )
+        except Exception as e:
+            logging.error(f"Lỗi khi cập nhật hệ số nhân: {e}")
+
+        await asyncio.sleep(0.1)  # Cập nhật nhanh hơn để tạo cảm giác mượt
 
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
