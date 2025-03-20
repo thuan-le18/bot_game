@@ -845,7 +845,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 1.0), 2)
+    crash_point = round(random.uniform(1.1, 22.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
