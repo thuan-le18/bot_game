@@ -885,7 +885,7 @@ async def run_crash_game(message: types.Message, user_id: str):
         logging.error(f"[{user_id}] Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-         [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data=f"withdraw_crash_{user_id}")]
+         [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
     ])
 
     sent_message = await message.answer(
