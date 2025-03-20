@@ -852,7 +852,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 15.0), 2)
+    crash_point = round(random.uniform(1.1, 20.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
@@ -938,7 +938,7 @@ async def run_crash_game(message: types.Message, user_id: str):
         except Exception as e:
             logging.error(f"Lỗi khi cập nhật hệ số nhân: {e}")
 
-        await asyncio.sleep(0.1)  # Cập nhật nhanh hơn để tạo cảm giác mượt
+        await asyncio.sleep(0.08)  # Cập nhật nhanh hơn để tạo cảm giác mượt
 
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
