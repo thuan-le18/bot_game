@@ -895,7 +895,7 @@ async def run_crash_game(message: types.Message, user_id: str):
     except Exception as e:
         logging.error(f"Lỗi khi xóa tin nhắn đếm ngược: {e}")
 
-   # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
+    # Gửi tin nhắn status ban đầu với nút "💸 Rút tiền máy bay"
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     crash_keyboard = InlineKeyboardMarkup(inline_keyboard=[
          [InlineKeyboardButton(text="💸 Rút tiền máy bay", callback_data="withdraw_crash")]
@@ -930,14 +930,10 @@ async def run_crash_game(message: types.Message, user_id: str):
                 break
         except asyncio.TimeoutError:
             current_multiplier = crash_games[user_id]["current_multiplier"]
-
-            if current_multiplier < 2.0:
-                increment = round(random.uniform(0.1, 0.15), 2)
-            elif current_multiplier < 5.0:
-                increment = round(random.uniform(0.2, 0.35), 2)
-            else:
-                increment = round(random.uniform(0.4, 0.5), 2)
-
+            # Cơ chế tăng tốc nhanh dần: sử dụng công thức tăng theo hàm mũ nhẹ
+            # Ví dụ: increment = random_base * (1 + (current_multiplier - 1)/2)
+            random_base = random.uniform(0.1, 0.15)
+            increment = round(random_base * (1 + (current_multiplier - 1) / 2), 2)
             new_multiplier = round(current_multiplier + increment, 2)
             if new_multiplier > 15.0:
                 new_multiplier = 15.0
@@ -972,7 +968,7 @@ async def run_crash_game(message: types.Message, user_id: str):
     crash_states[user_id] = False
     crash_games.pop(user_id, None)
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
-    
+
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
