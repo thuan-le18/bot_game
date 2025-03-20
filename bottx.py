@@ -977,34 +977,27 @@ async def withdraw_crash(callback: types.CallbackQuery):
         bet = crash_games[user_id]["bet"]
         multiplier = crash_games[user_id]["current_multiplier"]
 
-        # Lợi nhuận thực tế (không tính lại tiền cược ban đầu)
-        profit = round(bet * (multiplier - 1))  
-
-        # Cộng lại đúng phần lợi nhuận (không cộng lại cả vốn)
-        user_balance[user_id] += profit  
+        # Cộng lần 2: Số tiền thắng bao gồm cả vốn (nhân đôi)
+        win_amount = round(bet * multiplier)
+        user_balance[user_id] += win_amount
         save_data(user_balance)
-        logging.info(f"Người dùng {user_id} rút tiền tại x{multiplier}. Nhận {profit:,} VNĐ.")
-        record_bet_history(user_id, "Máy Bay", bet, "win", profit)
+        logging.info(f"[{user_id}] Rút tiền lần 2 tại x{multiplier}. Nhận {win_amount:,} VNĐ.")
+        record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
 
         crash_games[user_id]["running"] = False
         crash_games[user_id]["withdraw_event"].set()
 
         try:
             await callback.message.edit_text(
-                f"🎉 Bạn đã rút tiền thành công!\n💰 Nhận: {profit:,} VNĐ!\n📈 Hệ số nhân: x{multiplier}",
+                f"🎉 Bạn đã rút tiền thành công lần 2!\n💰 Nhận: {win_amount:,} VNĐ!\n📈 Hệ số nhân: x{multiplier}",
                 reply_markup=None
             )
         except Exception as e:
-            logging.error(f"Lỗi khi cập nhật tin nhắn rút tiền: {e}")
+            logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn rút tiền lần 2: {e}")
 
-        await callback.answer(f"💸 Bạn đã rút {profit:,} VNĐ lợi nhuận thành công!")
-
+        await callback.answer(f"💸 Bạn đã rút {win_amount:,} VNĐ thành công lần 2!")
     else:
         await callback.answer("⚠️ Không thể rút tiền ngay bây giờ!")
-
-    # Fix lỗi KeyError nếu user không còn trong crash_games
-    if user_id in crash_games and crash_games[user_id]["running"]:
-        await run_crash_game(callback.message, user_id)
 
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
