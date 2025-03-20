@@ -962,7 +962,8 @@ async def run_crash_game(message: types.Message, user_id: str):
             logging.error(f"[{user_id}] Lỗi khi cập nhật hệ số nhân: {e}")
 
         await asyncio.sleep(0.1)  # Cập nhật nhanh hơn để tạo cảm giác mượt
-
+    
+    crash_states[user_id] = False
     crash_games.pop(user_id, None)
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
     
