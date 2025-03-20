@@ -529,9 +529,9 @@ async def start_taixiu(message: types.Message):
     taixiu_states[user_id] = "awaiting_choice"
     await message.answer(
         "🎲 Vui lòng chọn loại cược:\n"
-        "- **Tài/Xỉu**: Thắng khi tổng điểm là Tài (11-18) hoặc Xỉu (3-10).\n"
-        "- **Bộ Ba 🎲**: Chọn một số từ 1-6, nếu cả 3 viên xúc xắc ra số đó, bạn thắng **30x tiền cược**.\n"
-        "- **Cược Số 🎯**: Chọn một số từ 1-6, nếu số đó xuất hiện trong kết quả, bạn thắng **3x tiền cược**.",
+        "- Tài/Xỉu: Thắng khi tổng điểm là Tài (11-18) hoặc Xỉu (3-10).\n"
+        "- Bộ Ba 🎲: Chọn một số từ 1-6, nếu cả 3 viên xúc xắc ra số đó, bạn thắng 30x tiền cược.\n"
+        "- Cược Số 🎯: Chọn một số từ 1-6, nếu số đó xuất hiện trong kết quả, bạn thắng 3x tiền cược.",
         reply_markup=ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="Tài"), KeyboardButton(text="Xỉu")],
@@ -1034,14 +1034,11 @@ async def start_rongho(message: types.Message):
 
     # Thêm giải thích game
     game_explanation = (
-        "🎲 **Rồng Hổ - Cách chơi và luật cơ bản**:\n"
-        "1. Chọn 1 trong 3 cửa: 🐉 Rồng, 🐅 Hổ hoặc ⚖️ Hòa.\n"
-        "2. Mỗi bên được chia 1 lá bài, bên nào lớn hơn thì thắng.\n"
-        "3. Nếu hai bên bằng nhau, kết quả là Hòa.\n"
-        "💰 **Tỷ lệ thắng**:\n"
-        "- Rồng/Hổ: x1.98 (cược 1,000 thắng 1,980 VNĐ).\n"
-        "- Hòa: x7.98 (cược 1,000 thắng 7,980 VNĐ).\n"
-        "👉 Chọn cửa cược của bạn dưới đây!"
+        "🎲 **Rồng Hổ**:\n"
+        "- Chọn: 🐉 Rồng, 🐅 Hổ, ⚖️ Hòa.\n"
+        "- Bài lớn hơn thắng, bằng là Hòa.\n"
+        "- Thưởng: Rồng/Hổ x1.98, Hòa x7.98.\n"
+        "👉 Chọn cửa cược của bạn!"
     )
 
     rongho_states[user_id] = "awaiting_choice"
