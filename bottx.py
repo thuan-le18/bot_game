@@ -279,7 +279,7 @@ async def vip_info(message: types.Message):
     full_name = message.from_user.full_name 
     username = message.from_user.username
     
-    total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
+    total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []) if deposit.get("status") == "completed")
     current_vip = "Chưa đạt VIP nào"
 
     for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
@@ -1577,7 +1577,49 @@ async def admin_confirm_deposit(message: types.Message):
         await message.answer("⚠️ Không có yêu cầu nạp tiền nào ở trạng thái chờ của user này.")
     except Exception as e:
         await message.answer("⚠️ Lỗi khi xác nhận nạp tiền. Cú pháp: /naptien <user_id>")
+# ===================== Admin: Hủy yêu cầu nạp tiền =====================
+@router.message(Command("huynaptien"))
+async def admin_cancel_deposit(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⚠️ Bạn không có quyền thực hiện hành động này.")
+        return
+
+    try:
+        parts = message.text.split()
+        if len(parts) < 3:
+            await message.answer("⚠️ Cú pháp: /huynaptien <user_id> <index>")
+            return
+
+        user_id = parts[1]
+        deposit_index = int(parts[2])
+
+        # Lọc ra các giao dịch chưa được duyệt
+        pending_deposits = [d for d in deposits.get(user_id, []) if d["status"] == "pending"]
         
+        if not pending_deposits:
+            await message.answer("⚠️ Không có yêu cầu nạp tiền nào ở trạng thái chờ của user này.")
+            return
+
+        if deposit_index < 1 or deposit_index > len(pending_deposits):
+            await message.answer(f"⚠️ Chỉ có {len(pending_deposits)} yêu cầu, vui lòng chọn lại.")
+            return
+
+        # Lấy yêu cầu cần hủy theo index
+        deposit_to_cancel = pending_deposits[deposit_index - 1]
+        amount = deposit_to_cancel["amount"]
+
+        # Xóa giao dịch khỏi danh sách
+        deposits[user_id].remove(deposit_to_cancel)
+        save_data(data)
+
+        await bot.send_message(user_id, f"⚠️ Yêu cầu nạp {amount:,} VNĐ của bạn đã bị hủy bởi admin.")
+        await message.answer(f"✅ Đã hủy yêu cầu nạp {amount:,} VNĐ của user {user_id}, yêu cầu thứ {deposit_index}.")
+
+        logging.info(f"[Nạp tiền] Hủy yêu cầu nạp {amount:,} VNĐ của user {user_id}, yêu cầu thứ {deposit_index}.")
+
+    except Exception as e:
+        await message.answer("⚠️ Lỗi khi hủy yêu cầu nạp tiền. Cú pháp: /huynaptien <user_id> <index>")
+        logging.error(f"Lỗi khi hủy yêu cầu nạp tiền: {e}")        
 # ===================== Admin: Lệnh cộng tiền =====================
 @router.message(Command("congtien"))
 async def admin_add_money(message: types.Message):
