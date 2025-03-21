@@ -1384,6 +1384,7 @@ PRIZES = {
 }
 
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
+poker_states = {}
 
 def danh_gia_bo_bai(cards):
     values = [card[1:] for card in cards]  # Lấy giá trị (bỏ chất)
@@ -1407,66 +1408,51 @@ def danh_gia_bo_bai(cards):
 @router.message(F.text == "🃏 Mini Poker")
 async def start_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
-    log_action(user_id, "Bắt đầu chơi 🃏 Mini Poker", "Chờ nhập số tiền cược")
     poker_states[user_id] = {"awaiting_bet": True}
     await message.answer(
         "💰 Nhập số tiền cược Mini Poker:",
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove()
     )
 
 @router.message(lambda msg: poker_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True and msg.text.isdigit())
 async def play_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
-    log_action(user_id, "Đặt cược", f"{bet:,} VNĐ")
-
-    # Kiểm tra số dư
-    if user_balance.get(user_id, 0) < bet:
-        await message.answer("❌ Số dư không đủ!")
-        log_action(user_id, "Lỗi cược", "Số dư không đủ")
-        poker_states.pop(user_id, None)
-        return
-
-    # Lưu số tiền cược vào trạng thái của game
     poker_states[user_id]["bet"] = bet
 
-    # Trừ tiền cược và lưu dữ liệu
-    user_balance[user_id] -= bet
-    save_data(data)
-    await add_commission(user_id, bet)
-    
     # Rút bài
     cards = random.sample(CARD_DECK, 5)
     hand_type = danh_gia_bo_bai(cards)
 
-    # Áp dụng house edge: 30% trường hợp nếu bài thắng sẽ ép về "Mậu Thầu"
+    # Áp dụng house edge: 30% ép về "Mậu Thầu"
     if hand_type != "Mậu Thầu" and random.random() < 0.3:
         hand_type = "Mậu Thầu"
 
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
 
-    if win_amount > 0:
-        user_balance[user_id] += win_amount
-        save_data(data)
+    # Hiệu ứng lật bài
+    reveal_text = "🃏 **Lật bài:** `? ? ? ? ?`"
+    reveal_msg = await message.answer(reveal_text)
 
+    revealed_cards = []
+    for i in range(5):
+        revealed_cards.append(cards[i])
+        reveal_text = f"🃏 **Lật bài:** `{' '.join(revealed_cards)}{' ?' * (5 - len(revealed_cards))}`"
+        await reveal_msg.edit_text(reveal_text)
+        await asyncio.sleep(0.7)  # Lật từng lá bài
+
+    # Kết quả
     result_text = (
-        f"🃏 **Bài của bạn:** {' '.join(cards)}\n"
-        f"🎯 **Kết quả:** {hand_type}\n"
+        f"\n🎯 **Kết quả:** {hand_type}\n"
+        f"💰 **Thắng:** {win_amount:,} VNĐ (x{multiplier})" if win_amount > 0 else "😢 **Chúc may mắn lần sau!**"
     )
-    if win_amount > 0:
-        result_text += f"🎉 **Thắng:** {win_amount} VNĐ (x{multiplier})!"
-    else:
-        result_text += "😢 **Chúc may mắn lần sau!**"
-
-    log_action(user_id, "Kết quả", f"Bài: {' '.join(cards)}, Kết quả: {hand_type}, {'Thắng: ' + str(win_amount) + ' VNĐ' if win_amount > 0 else 'Thua'}")
 
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🃏 Chơi lại", callback_data="poker_replay")
     keyboard.button(text="🔙 Quay lại", callback_data="poker_back")
 
-    await message.answer(result_text, reply_markup=keyboard.as_markup())
-    record_bet_history(user_id, "Mini Poker", bet, f"{hand_type} - {'win' if win_amount > 0 else 'lose'}", win_amount)
+    await reveal_msg.edit_text(reveal_text + result_text, reply_markup=keyboard.as_markup())
     poker_states.pop(user_id, None)
 
 @router.callback_query(lambda c: c.data == "poker_replay")
