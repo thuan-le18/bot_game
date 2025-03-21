@@ -216,7 +216,6 @@ async def start_cmd(message: types.Message):
     if user_id in banned_users:
         await message.answer(
             "⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.💰 Số dư tài khoản của bạn: {formatted_balance} VNĐ.Để mở khóa,vui lòng liên hệ hỗ trợ.",
-            parse_mode="Markdown", 
             reply_markup=types.ReplyKeyboardRemove()  # Xóa toàn bộ nút
         )
         return
@@ -271,40 +270,25 @@ async def start_cmd(message: types.Message):
 @router.message(F.text == "🏆 VIP")
 async def vip_info(message: types.Message):
     user_id = str(message.from_user.id)
-    username = message.from_user.username  # Lấy username Telegram (nếu có)
-    full_name = message.from_user.full_name  # Lấy tên đầy đủ của người dùng
-
+    full_name = message.from_user.full_name 
+    
     total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
     current_vip = "Chưa đạt VIP nào"
-    next_vip = None
-    next_vip_amount = None
 
-    # Xác định VIP hiện tại và VIP tiếp theo
     for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
         if total_deposit >= req_amount:
             current_vip = vip
-        elif next_vip is None:
-            next_vip = vip
-            next_vip_amount = req_amount
 
-    # Định dạng số tiền
+    # Định dạng số tiền với dấu phẩy
     formatted_total_deposit = f"{total_deposit:,}"
-
-    # Hiển thị số tiền cần để lên VIP tiếp theo
-    if next_vip:
-        next_vip_text = f"🔼 Bạn Còn {next_vip_amount - total_deposit:,} VNĐ để đạt {next_vip}!"
-    else:
-        next_vip_text = "🎉 Bạn đã đạt VIP cao nhất!"
-
-    # Hiển thị tên tài khoản (nếu có)
-    user_display = f"{username}" if username else full_name
-
+    
+    user_display = full_name
+    
     await message.answer(
-        f"👤 Tài khoản bạn: {user_display}\n"
-        f"👥 ID tài khoản: {user_id}\n"
         f"🏆 VIP của bạn: {current_vip}\n"
-        f"💰 Tổng nạp: {formatted_total_deposit} VNĐ\n"
-        f"{next_vip_text}",
+        f"👤 Tên người dùng: {user_display}\n"
+        f"👥 ID tài khoản: {user_id}\n"
+        f"💰 Tổng nạp: {formatted_total_deposit} VNĐ",
         reply_markup=main_menu
     )
 
