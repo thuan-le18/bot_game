@@ -1377,8 +1377,6 @@ from aiogram import Router, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 import random, asyncio
 
-router = Router()
-
 # Hệ số thưởng
 PRIZES = {"Thùng Phá Sảnh": 20, "Tứ Quý": 5, "Cù Lũ": 2.5, "Thùng": 1.8, "Sảnh": 1.5, "Đôi": 1.3, "Mậu Thầu": 0}
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
