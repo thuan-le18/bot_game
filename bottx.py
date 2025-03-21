@@ -799,6 +799,20 @@ crash_games = {}
 user_balance = {}  # Lưu số dư người dùng
 
 # Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
+# --- GAME: Máy Bay (Crash Game) ---
+crash_states = {}
+crash_games = {}
+user_balance = {}  # Lưu số dư người dùng
+
+# Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
+
+# --- GAME: Máy Bay (Crash Game) ---
+crash_states = {}
+crash_games = {}
+user_balance = {}  # Lưu số dư người dùng
+
+# Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
+
 @router.message(F.text == "✈️ Máy Bay")
 async def start_crash(message: types.Message):
     user_id = str(message.from_user.id)
@@ -845,7 +859,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 22.0), 2)
+    crash_point = round(random.uniform(1.1, 1.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
@@ -864,9 +878,9 @@ async def run_crash_game(message: types.Message, user_id: str):
     bet = crash_games[user_id]["bet"]
 
     countdown_time = random.choice([5, 7, 9, 12])
-    countdown_message = await message.answer(
-        f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
-    )
+    logging.info(f"[{user_id}] Bắt đầu đếm ngược: {countdown_time} giây.")
+
+    countdown_message = await message.answer(f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây...")
     
     for i in range(countdown_time, 0, -1):
         try:
@@ -875,6 +889,7 @@ async def run_crash_game(message: types.Message, user_id: str):
                 message_id=countdown_message.message_id,
                 text=f"⏳ Máy bay sẽ cất cánh trong {i} giây..."
             )
+            logging.info(f"[{user_id}] Cập nhật đếm ngược: {i} giây còn lại.")
         except Exception as e:
             logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn đếm ngược: {e}")
         await asyncio.sleep(1)
@@ -896,9 +911,11 @@ async def run_crash_game(message: types.Message, user_id: str):
 
     start_time = time.time()
     base_increment = 0.01  # Giá trị tăng cơ bản
-    acceleration = 1.02  # Hệ số tăng tốc
+    acceleration = 1.03  # Hệ số tăng tốc
 
-    logging.info(f"[{user_id}] Máy bay bắt đầu bay với cược {bet:,} VNĐ.")
+    last_multiplier = None  # Lưu hệ số trước đó
+
+    logging.info(f"[{user_id}] Máy bay đã cất cánh!")
 
     while crash_games[user_id]["running"]:
         elapsed_time = time.time() - start_time
@@ -910,31 +927,31 @@ async def run_crash_game(message: types.Message, user_id: str):
 
         crash_games[user_id]["current_multiplier"] = current_multiplier
 
-        # Kiểm tra nếu người chơi rút tiền trước khi máy bay rơi
-        if crash_games[user_id]["withdraw_event"].is_set():
-            win_amount = round(bet * current_multiplier)
-            user_balance[user_id] += win_amount
-            save_data(user_balance)
+        # Kiểm tra người chơi có rút tiền không
+        try:
+            await asyncio.wait_for(crash_games[user_id]["withdraw_event"].wait(), timeout=0.1)
+            if crash_games[user_id]["withdraw_event"].is_set():
+                win_amount = round(bet * crash_games[user_id]["current_multiplier"])
+                user_balance[user_id] += win_amount
+                save_data(user_balance)
+                logging.info(f"[{user_id}] Rút tiền thành công! Hệ số: x{crash_games[user_id]['current_multiplier']} - Nhận: {win_amount:,} VNĐ.")
 
-            logging.info(f"[{user_id}] Rút tiền thành công tại x{current_multiplier}. Nhận {win_amount:,} VNĐ.")
-            
-            try:
-                await message.bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=crash_games[user_id]["message_id"],
-                    text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
-                    reply_markup=None
-                )
-            except Exception as e:
-                logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn rút tiền: {e}")
+                try:
+                    await message.bot.edit_message_text(
+                        chat_id=message.chat.id,
+                        message_id=crash_games[user_id]["message_id"],
+                        text=f"🎉 Bạn đã rút tiền thành công! Nhận {win_amount:,} VNĐ!",
+                        reply_markup=None
+                    )
+                except Exception as e:
+                    logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn rút tiền: {e}")
+                break
+        except asyncio.TimeoutError:
+            pass  # Không có ai rút, tiếp tục tăng hệ số
 
-            record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
-            crash_games[user_id]["running"] = False
-            return
-
-        # Nếu máy bay rơi
+        # Kiểm tra xem máy bay có rơi không
         if current_multiplier >= crash_games[user_id]["crash_point"]:
-            logging.warning(f"[{user_id}] Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Mất {bet:,} VNĐ.")
+            logging.info(f"[{user_id}] Máy bay rơi tại x{crash_games[user_id]['crash_point']}! Người chơi mất {bet:,} VNĐ.")
 
             try:
                 await message.bot.edit_message_text(
@@ -946,26 +963,28 @@ async def run_crash_game(message: types.Message, user_id: str):
                 )
             except Exception as e:
                 logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn thua: {e}")
-
-            record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
             break
 
-        # Cập nhật hệ số nhân
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=crash_games[user_id]["message_id"],
-                text=f"✈️ Máy bay đang bay...\n📈 Hệ số nhân: x{current_multiplier}",
-                reply_markup=crash_keyboard
-            )
-        except Exception as e:
-            logging.error(f"[{user_id}] Lỗi khi cập nhật hệ số nhân: {e}")
+        # **Chỉ cập nhật tin nhắn nếu hệ số thay đổi thực sự**
+        if current_multiplier != last_multiplier:
+            try:
+                await message.bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=crash_games[user_id]["message_id"],
+                    text=f"✈️ Máy bay đang bay...\n📈 Hệ số nhân: x{current_multiplier}",
+                    reply_markup=crash_keyboard
+                )
+                logging.info(f"[{user_id}] Cập nhật hệ số nhân: x{current_multiplier}")
+                last_multiplier = current_multiplier  # Cập nhật giá trị cũ
+            except Exception as e:
+                logging.error(f"[{user_id}] Lỗi khi cập nhật hệ số nhân: {e}")
 
         await asyncio.sleep(0.1)  # Cập nhật nhanh hơn để tạo cảm giác mượt
 
+    crash_states[user_id] = False
     crash_games.pop(user_id, None)
     await message.answer("🏠 Quay về menu chính.", reply_markup=main_menu)
-
+    
 @router.callback_query(lambda c: c.data == "withdraw_crash")
 async def withdraw_crash(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
@@ -1002,7 +1021,7 @@ async def withdraw_crash(callback: types.CallbackQuery):
     # Fix lỗi KeyError nếu user không còn trong crash_games
     if user_id in crash_games and crash_games[user_id]["running"]:
         await run_crash_game(callback.message, user_id)
-        
+
 # ===================== Handler bắt đầu game Rồng Hổ =====================
 @router.message(F.text == "🐉 Rồng Hổ")
 async def start_rongho(message: types.Message):
