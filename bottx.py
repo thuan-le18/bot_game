@@ -1382,6 +1382,9 @@ PRIZES = {"Thùng Phá Sảnh": 20, "Tứ Quý": 5, "Cù Lũ": 2.5, "Thùng": 1.
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
 poker_states = {}
 
+def log_action(user_id, action, details):
+    logging.info(f"[User {user_id}] {action}: {details}")
+
 def danh_gia_bo_bai(cards):
     values = [card[1:] for card in cards]
     suits = [card[0] for card in cards]
@@ -1399,10 +1402,10 @@ def danh_gia_bo_bai(cards):
 async def start_minipoker(message: types.Message):
     poker_states[str(message.from_user.id)] = {"awaiting_bet": True}
     guide_text = (
-        "🎲 **Cách chơi Mini Poker:**\n"
+        " **Cách chơi Mini Poker🃏:**\n"
         "- Đặt cược, nhận 5 lá bài.\n"
         "- Nếu có bộ bài đặc biệt, bạn thắng!\n\n"
-        "📊 **Hệ số thưởng:**\n"
+        " **Hệ số thưởng💰:**\n"
         "🔹 Thùng Phá Sảnh: x20 | Tứ Quý: x5 | Cù Lũ: x2.5\n"
         "🔹 Thùng: x1.8 | Sảnh: x1.5 | Đôi: x1.3 | Mậu Thầu: x0\n\n"
         "💰 Nhập số tiền cược:"
@@ -1426,13 +1429,16 @@ async def play_minipoker(message: types.Message):
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
 
+    # Log chi tiết cược và kết quả
+    log_action(user_id, "Đặt cược", f"{bet} VNĐ - Rút bài: {' '.join(cards)} - Kết quả: {hand_type} - {'Thắng' if win_amount > 0 else 'Thua'} - Thưởng: {win_amount:,} VNĐ")
+
     # Hiệu ứng lật bài
     reveal_msg = await message.answer("🃏 **Lật bài:** `? ? ? ? ?`")
     revealed_cards = []
     for i in range(5):
         revealed_cards.append(cards[i])
         await reveal_msg.edit_text(f"🃏 **Lật bài:** `{' '.join(revealed_cards)}{' ?' * (5 - len(revealed_cards))}`")
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.8)
 
     # Kết quả & Nút điều khiển
     result_text = f"\n🎯 **Kết quả:** {hand_type}\n" + (f"💰 **Thắng:** {win_amount:,} VNĐ (x{multiplier})" if win_amount > 0 else "😢 **Chúc may mắn lần sau!**")
@@ -1441,11 +1447,13 @@ async def play_minipoker(message: types.Message):
         [InlineKeyboardButton(text="🔙 Quay lại", callback_data="poker_back")]
     ])
     await reveal_msg.edit_text(f"🃏 **Lật bài:** `{' '.join(cards)}`" + result_text, reply_markup=keyboard)
+    record_bet_history(user_id, "Mini Poker", bet, f"{hand_type} - {'win' if win_amount > 0 else 'lose'}", win_amount)
     poker_states.pop(user_id, None)
 
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
+    log_action(user_id, "Chơi lại", "Người chơi bấm 'Chơi lại'")
     await callback.message.delete()
     poker_states[user_id] = {"awaiting_bet": True}
     await bot.send_message(user_id, "💰 Nhập số tiền cược Mini Poker:", reply_markup=ReplyKeyboardRemove())
@@ -1455,7 +1463,7 @@ async def poker_back(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
     log_action(user_id, "Quay lại", "Người chơi bấm 'Quay lại'")
     await callback.message.delete()
-    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.",reply_markup=main_menu)
+    await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
 # ===================== Nạp tiền =====================
 import time
