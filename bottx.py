@@ -234,12 +234,12 @@ async def start_cmd(message: types.Message):
         formatted_locked_withdrawals = format_money(locked_withdrawals)
 
         # Ghi log khi người chơi bị ban
-        logging.warning(f"[BAN] Người dùng {user_id} đã bị khóa. Số dư: {formatted_balance}, Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}.")
+        logging.warning(f"[BAN] Người dùng {user_id} đã bị khóa. Số dư: {formatted_balance}, Số tiền rút đang tạm khóa : {formatted_locked_withdrawals}.")
 
         await message.answer(
             f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
-            f"💰 Số dư tài khoản của bạn: {formatted_balance}\n"
-            f"💸 Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}\n"
+            f"💰 Số dư hiện tại của bạn: {formatted_balance}\n"
+            f"Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}\n"
             f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
             reply_markup=types.ReplyKeyboardRemove()
         )
