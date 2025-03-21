@@ -238,8 +238,8 @@ async def start_cmd(message: types.Message):
 
         await message.answer(
             f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
-            f"💰 Số dư hiện tại của bạn: {formatted_balance}\n"
-            f"Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}\n"
+            f"💰 Số dư hiện tại của bạn:*\n {formatted_balance}\n\n"
+            f"💸 Số tiền rút đang tạm khóa:*\n {formatted_locked_withdrawals}\n\n"
             f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
             reply_markup=types.ReplyKeyboardRemove()
         )
