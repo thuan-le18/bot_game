@@ -232,9 +232,9 @@ async def start_cmd(message: types.Message):
 
         # Gửi thông báo
         await message.answer(
-            "⚠️ *Tài khoản của bạn đã bị khóa vì vi phạm quy !* \n"
+            "⚠️ *Tài khoản của bạn đã bị khóa vì vi phạm quy định!* \n"
             "Bạn không thể chơi game hoặc rút tiền. \n\n"
-            f"💰 *Số dư tài khoản:* \n ➤ **{formatted_balance}** \n\n"
+            f"💰 *Số dư tài khoản của bạn:* \n ➤ **{formatted_balance}** \n\n"
             f"💸 *Số tiền rút đang tạm khóa:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
             "Liên hệ hỗ trợ để mở khóa tài khoản\n"
             "💬 [Liên hệ hỗ trợ](https://t.me/hoanganh11829)",
