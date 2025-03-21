@@ -212,16 +212,27 @@ async def set_bot_commands(user_id: str):
 async def start_cmd(message: types.Message):
     user_id = str(message.from_user.id)
 
+    # Hàm chuyển đổi số tiền thành định dạng dễ đọc
+    def format_money(amount):
+        if amount >= 1_000_000_000:
+            return f"{amount / 1_000_000_000:.2f} Tỷ VNĐ"
+        elif amount >= 1_000_000:
+            return f"{amount / 1_000_000:.2f} Triệu VNĐ"
+        elif amount >= 1_000:
+            return f"{amount / 1_000:.0f}K VNĐ"
+        else:
+            return f"{amount} VNĐ"
+
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
         balance = user_balance.get(user_id, 0)  # Lấy số dư của user
-        formatted_balance = f"{balance:,}"  # Định dạng số dư
+        formatted_balance = format_money(balance)  # Định dạng số dư
 
-        logging.warning(f"[BAN] Người dùng {user_id} bị khóa tài khoản. Số dư: {formatted_balance} VNĐ")
+        logging.warning(f"[BAN] Người dùng {user_id} bị khóa tài khoản. Số dư: {formatted_balance}")
 
         await message.answer(
             f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
-            f"💰 Số dư hiện tại của bạn: {formatted_balance} VNĐ.\n"
+            f"💰 Số dư hiện tại: {formatted_balance}.\n"
             f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
             reply_markup=types.ReplyKeyboardRemove()  # Xóa toàn bộ nút
         )
@@ -365,8 +376,18 @@ async def check_balance(message: types.Message):
     user_id = str(message.from_user.id)
     balance = user_balance.get(user_id, 0)
 
-    # Định dạng số dư với dấu phẩy
-    formatted_balance = f"{balance:,}"
+    # Chuyển đổi số dư sang định dạng dễ đọc
+    def format_money(amount):
+        if amount >= 1_000_000_000:
+            return f"{amount / 1_000_000_000:.2f} Tỷ VNĐ"
+        elif amount >= 1_000_000:
+            return f"{amount / 1_000_000:.2f} Triệu VNĐ"
+        elif amount >= 1_000:
+            return f"{amount / 1_000:.0f}K VNĐ"
+        else:
+            return f"{amount} VNĐ"
+
+    formatted_balance = format_money(balance)
 
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
@@ -375,7 +396,7 @@ async def check_balance(message: types.Message):
     kb.button(text="👥 Chuyển tiền", callback_data="transfer_money")
     kb.adjust(1)
 
-    await message.answer(f"💰 Số dư hiện tại của bạn: {formatted_balance} VNĐ", reply_markup=kb.as_markup())
+    await message.answer(f"💰 Số dư hiện tại của bạn: {formatted_balance}", reply_markup=kb.as_markup())
 
 import time
 import pytz
@@ -824,13 +845,23 @@ async def start_crash(message: types.Message):
     
     # Nếu không đang chơi, tiếp tục logic bắt đầu game
     crash_states[user_id] = True
-    logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay.")
+    logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay✈️.")
     
     # Lấy số người chơi hiện tại cho game "✈️ Máy Bay"
     players_count = game_players.get("✈️ Máy Bay", "không xác định")
     
+    # Phần giải thích cách chơi ngắn gọn
+    game_explanation = (
+        " ✈️ *Cách chơi Máy Bay:*\n"
+        "1. Nhập số tiền cược (tối thiểu 1.000 VNĐ).\n"
+        "2. Máy bay sẽ cất cánh và hệ số nhân sẽ tăng dần.\n"
+        "3. Nhấn '💸 Rút tiền máy bay' trước khi máy bay rơi để nhận tiền thắng.\n"
+        "4. Nếu không rút kịp, bạn sẽ mất hết số tiền cược.\n"
+    )
+    
     await message.answer(
-        f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
+        f"{game_explanation}\n\n"
+        f"💰 Nhập số tiền cược, bot sẽ khởi động máy bay!\n"
         f"👥 Hiện có {players_count} người đang chơi game này.",
         reply_markup=ReplyKeyboardRemove()
     )
