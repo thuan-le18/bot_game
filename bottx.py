@@ -214,8 +214,15 @@ async def start_cmd(message: types.Message):
 
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
+       balance = user_balance.get(user_id, 0)  # Lấy số dư của user
+        formatted_balance = f"{balance:,}"  # Định dạng số dư
+        
+        logging.warning(f"[BAN] Người dùng {user_id} bị khóa tài khoản. Số dư: {formatted_balance} VNĐ")
+
         await message.answer(
-            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.💰 Số dư tài khoản của bạn: {formatted_balance} VNĐ.Để mở khóa,vui lòng liên hệ hỗ trợ.",
+            f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
+            f"💰 Số dư tài khoản của bạn: {formatted_balance} VNĐ.\n"
+            f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
             reply_markup=types.ReplyKeyboardRemove()  # Xóa toàn bộ nút
         )
         return
@@ -271,6 +278,7 @@ async def start_cmd(message: types.Message):
 async def vip_info(message: types.Message):
     user_id = str(message.from_user.id)
     full_name = message.from_user.full_name 
+    username = message.from_user.username
     
     total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
     current_vip = "Chưa đạt VIP nào"
@@ -282,7 +290,7 @@ async def vip_info(message: types.Message):
     # Định dạng số tiền với dấu phẩy
     formatted_total_deposit = f"{total_deposit:,}"
     
-    user_display = full_name
+    user_display = f"{username}" if username else full_name
     
     await message.answer(
         f"🏆 VIP của bạn: {current_vip}\n"
