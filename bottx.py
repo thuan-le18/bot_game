@@ -214,23 +214,32 @@ async def start_cmd(message: types.Message):
 
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
-        # Lấy số dư hiện tại của người chơi
         balance = user_balance.get(user_id, 0)
 
         # Tính tổng số tiền rút đang chờ xử lý
         locked_withdrawals = sum(req.get("amount", 0) for req in withdrawals.get(user_id, []) if req.get("status") == "pending")
 
-        # Định dạng số tiền có dấu phẩy
-        formatted_balance = f"{balance:,}"
-        formatted_locked_withdrawals = f"{locked_withdrawals:,}"
+        # Chuyển đổi số tiền sang định dạng dễ đọc
+        def format_money(amount):
+            if amount >= 1_000_000_000:
+                return f"{amount / 1_000_000_000:.2f} Tỷ VNĐ"
+            elif amount >= 1_000_000:
+                return f"{amount / 1_000_000:.2f} Triệu VNĐ"
+            elif amount >= 1_000:
+                return f"{amount / 1_000:.0f}K VNĐ"
+            else:
+                return f"{amount} VNĐ"
+
+        formatted_balance = format_money(balance)
+        formatted_locked_withdrawals = format_money(locked_withdrawals)
 
         # Ghi log khi người chơi bị ban
-        logging.warning(f"[BAN] Người dùng {user_id} đã bị khóa. Số dư: {formatted_balance} VNĐ, Số tiền rút đang tạm khóa: {formatted_locked_withdrawals} VNĐ.")
+        logging.warning(f"[BAN] Người dùng {user_id} đã bị khóa. Số dư: {formatted_balance}, Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}.")
 
         await message.answer(
             f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
-            f"💰 Số dư tài khoản của bạn: {formatted_balance} VNĐ\n"
-            f"💸 Số tiền rút đang tạm khóa: {formatted_locked_withdrawals} VNĐ\n"
+            f"💰 Số dư tài khoản của bạn: {formatted_balance}\n"
+            f"💸 Số tiền rút đang tạm khóa: {formatted_locked_withdrawals}\n"
             f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
             reply_markup=types.ReplyKeyboardRemove()
         )
