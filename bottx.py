@@ -1988,8 +1988,8 @@ game_players_default_range = {
     "🎲 Tài Xỉu": (42, 63),
     "🎰 Jackpot": (35, 49),
     "✈️ Máy Bay": (55, 87),
-    "🐉 Rồng Hổ": (42, 58),
-    "⛏️ Đào Vàng": (30, 37),
+    "🐉 Rồng Hổ": (42, 61),
+    "⛏️ Đào Vàng": (30, 42),
     "🃏 Mini Poker": (28, 38)
 }
 
@@ -2007,7 +2007,7 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    delta = random.randint(-4, 4)
+                    delta = random.randint(-3, 3)
                     new_value = game_players[game] + delta
                     min_limit, max_limit = game_limits[game]  # Lấy min/max đã đặt
                     
