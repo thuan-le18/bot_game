@@ -859,7 +859,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 1.0), 2)
+    crash_point = round(random.uniform(1.1, 22.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
@@ -935,7 +935,7 @@ async def run_crash_game(message: types.Message, user_id: str):
                 user_balance[user_id] += win_amount
                 save_data(user_balance)
                 logging.info(f"[{user_id}] Rút tiền thành công! Hệ số: x{crash_games[user_id]['current_multiplier']} - Nhận: {win_amount:,} VNĐ.")
-
+               
                 try:
                     await message.bot.edit_message_text(
                         chat_id=message.chat.id,
@@ -945,6 +945,7 @@ async def run_crash_game(message: types.Message, user_id: str):
                     )
                 except Exception as e:
                     logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn rút tiền: {e}")
+                    record_bet_history(user_id, "Máy Bay", bet, "win", win_amount)
                 break
         except asyncio.TimeoutError:
             pass  # Không có ai rút, tiếp tục tăng hệ số
@@ -963,6 +964,7 @@ async def run_crash_game(message: types.Message, user_id: str):
                 )
             except Exception as e:
                 logging.error(f"[{user_id}] Lỗi khi cập nhật tin nhắn thua: {e}")
+            record_bet_history(user_id, "Máy Bay", bet, "lose", 0)
             break
 
         # **Chỉ cập nhật tin nhắn nếu hệ số thay đổi thực sự**
