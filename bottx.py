@@ -214,33 +214,31 @@ async def start_cmd(message: types.Message):
 
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
+        # Số dư hiện tại
         balance = user_balance.get(user_id, 0)
-
-        # Tính tổng số tiền rút đang chờ xử lý
+        
+        # Tổng số tiền rút đang tạm khóa
         locked_withdrawals = sum(req.get("amount", 0) for req in withdrawals.get(user_id, []) if req.get("status") == "pending")
 
-        # Chuyển đổi số tiền sang định dạng dễ đọc
+        # Định dạng số tiền dễ đọc
         def format_money(amount):
-            if amount >= 1_000_000_000:
-                return f"{amount / 1_000_000_000:.2f} Tỷ VNĐ"
-            elif amount >= 1_000_000:
-                return f"{amount / 1_000_000:.2f} Triệu VNĐ"
-            elif amount >= 1_000:
-                return f"{amount / 1_000:.0f}K VNĐ"
-            else:
-                return f"{amount} VNĐ"
+            return f"{amount:,} VNĐ"
 
         formatted_balance = format_money(balance)
         formatted_locked_withdrawals = format_money(locked_withdrawals)
 
         # Ghi log khi người chơi bị ban
-        logging.warning(f"[BAN] Người dùng {user_id} đã bị khóa. Số dư: {formatted_balance}, Số tiền rút đang tạm khóa : {formatted_locked_withdrawals}.")
+        logging.warning(f"[BAN] Người dùng {user_id} bị khóa. Số dư: {formatted_balance}, Số tiền rút tạm khóa: {formatted_locked_withdrawals}.")
 
+        # Gửi thông báo
         await message.answer(
-            f"⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.\n"
-            f"💰 Số dư hiện tại của bạn:*\n {formatted_balance}\n\n"
-            f"💸 Số tiền rút đang tạm khóa:*\n {formatted_locked_withdrawals}\n\n"
-            f"Để mở khóa, vui lòng liên hệ hỗ trợ.",
+            "⚠️ *Tài khoản của bạn đã bị khóa vì vi phạm quy !* \n"
+            "Bạn không thể chơi game hoặc rút tiền. \n\n"
+            f"💰 *Số dư tài khoản:* \n ➤ **{formatted_balance}** \n\n"
+            f"💸 *Số tiền rút đang tạm khóa:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
+            "Liên hệ hỗ trợ để mở khóa tài khoản\n"
+            "💬 [Liên hệ hỗ trợ](https://t.me/hoanganh11829)",
+            parse_mode="Markdown",
             reply_markup=types.ReplyKeyboardRemove()
         )
         return
