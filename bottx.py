@@ -292,20 +292,19 @@ async def vip_info(message: types.Message):
 
     # Hiển thị số tiền cần để lên VIP tiếp theo
     if next_vip:
-        next_vip_text = f"🔼 Còn {next_vip_amount - total_deposit:,} VNĐ để đạt {next_vip}!"
+        next_vip_text = f"🔼 Bạn Còn {next_vip_amount - total_deposit:,} VNĐ để đạt {next_vip}!"
     else:
         next_vip_text = "🎉 Bạn đã đạt VIP cao nhất!"
 
     # Hiển thị tên tài khoản (nếu có)
-    user_display = f"@{username}" if username else full_name
+    user_display = f"{username}" if username else full_name
 
     await message.answer(
-        f"🏆 <b>VIP của bạn:</b> {current_vip}\n"
-        f"👤 <b>Tài khoản:</b> {user_display}\n"
-        f"🆔 <b>ID:</b> {user_id}\n"
-        f"💰 <b>Tổng nạp:</b> {formatted_total_deposit} VNĐ\n"
+        f"👤 Tài khoản bạn: {user_display}\n"
+        f"👥 ID tài khoản: {user_id}\n"
+        f"🏆 VIP của bạn: {current_vip}\n"
+        f"💰 Tổng nạp: {formatted_total_deposit} VNĐ\n"
         f"{next_vip_text}",
-        parse_mode="HTML",
         reply_markup=main_menu
     )
 
