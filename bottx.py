@@ -1985,12 +1985,12 @@ from aiogram import Router, types
 
 # ===================== Quản lý số người chơi ảo =====================
 game_players_default_range = {
-    "🎲 Tài Xỉu": (35, 57),
-    "🎰 Jackpot": (30, 37),
-    "✈️ Máy Bay": (55, 82),
-    "🐉 Rồng Hổ": (38, 58),
-    "⛏️ Đào Vàng": (28, 45),
-    "🃏 Mini Poker": (28, 40)
+    "🎲 Tài Xỉu": (42, 63),
+    "🎰 Jackpot": (35, 49),
+    "✈️ Máy Bay": (55, 87),
+    "🐉 Rồng Hổ": (42, 58),
+    "⛏️ Đào Vàng": (30, 37),
+    "🃏 Mini Poker": (28, 38)
 }
 
 game_players = {game: random.randint(*game_players_default_range[game]) for game in game_players_default_range}
@@ -2007,7 +2007,7 @@ async def update_players():
         try:
             if not player_lock:
                 for game in game_players:
-                    delta = random.randint(-3, 3)
+                    delta = random.randint(-4, 4)
                     new_value = game_players[game] + delta
                     min_limit, max_limit = game_limits[game]  # Lấy min/max đã đặt
                     
