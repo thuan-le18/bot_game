@@ -853,15 +853,15 @@ async def start_crash(message: types.Message):
     # Phần giải thích cách chơi ngắn gọn
     game_explanation = (
         " ✈️ *Cách chơi Máy Bay:*\n"
-        "1. Nhập số tiền cược (tối thiểu 1.000 VNĐ).\n"
+        "1. Bạn Đặt cược và chờ máy bay cất cánh.\n"
         "2. Máy bay sẽ cất cánh và hệ số nhân sẽ tăng dần.\n"
-        "3. Nhấn '💸 Rút tiền máy bay' trước khi máy bay rơi để nhận tiền thắng.\n"
-        "4. Nếu không rút kịp, bạn sẽ mất hết số tiền cược.\n"
+        "3. Nhấn '💸 Rút tiền máy bay' trước khi máy bay rơi để nhận thưởng .\n"
+        "4. Nếu không rút kịp, bạn sẽ mất số tiền cược.\n"
     )
     
     await message.answer(
         f"{game_explanation}\n\n"
-        f"💰 Nhập số tiền cược, bot sẽ khởi động máy bay!\n"
+        f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
         f"👥 Hiện có {players_count} người đang chơi game này.",
         reply_markup=ReplyKeyboardRemove()
     )
