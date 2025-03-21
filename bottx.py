@@ -215,7 +215,7 @@ async def start_cmd(message: types.Message):
     # Kiểm tra nếu người chơi bị ban
     if user_id in banned_users:
         await message.answer(
-            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa. Liên hệ hỗ trợ nếu có nhầm lẫn.",
+            "⚠️ Tài khoản Mega6casino của bạn đã bị khóa vì vi phạm quy định.💰 Số dư tài khoản của bạn: {formatted_balance} VNĐ.Để mở khóa,vui lòng liên hệ hỗ trợ.",
             parse_mode="Markdown", 
             reply_markup=types.ReplyKeyboardRemove()  # Xóa toàn bộ nút
         )
@@ -271,20 +271,41 @@ async def start_cmd(message: types.Message):
 @router.message(F.text == "🏆 VIP")
 async def vip_info(message: types.Message):
     user_id = str(message.from_user.id)
+    username = message.from_user.username  # Lấy username Telegram (nếu có)
+    full_name = message.from_user.full_name  # Lấy tên đầy đủ của người dùng
+
     total_deposit = sum(deposit.get("amount", 0) for deposit in deposits.get(user_id, []))
     current_vip = "Chưa đạt VIP nào"
+    next_vip = None
+    next_vip_amount = None
 
+    # Xác định VIP hiện tại và VIP tiếp theo
     for vip, req_amount in sorted(vip_levels.items(), key=lambda x: x[1]):
         if total_deposit >= req_amount:
             current_vip = vip
+        elif next_vip is None:
+            next_vip = vip
+            next_vip_amount = req_amount
 
-    # Định dạng số tiền với dấu phẩy
+    # Định dạng số tiền
     formatted_total_deposit = f"{total_deposit:,}"
 
+    # Hiển thị số tiền cần để lên VIP tiếp theo
+    if next_vip:
+        next_vip_text = f"🔼 Còn {next_vip_amount - total_deposit:,} VNĐ để đạt {next_vip}!"
+    else:
+        next_vip_text = "🎉 Bạn đã đạt VIP cao nhất!"
+
+    # Hiển thị tên tài khoản (nếu có)
+    user_display = f"@{username}" if username else full_name
+
     await message.answer(
-        f"🏆 VIP của bạn: {current_vip}\n"
-        f"👥 ID tài khoản: {user_id}\n"
-        f"💰 Tổng nạp: {formatted_total_deposit} VNĐ",
+        f"🏆 <b>VIP của bạn:</b> {current_vip}\n"
+        f"👤 <b>Tài khoản:</b> {user_display}\n"
+        f"🆔 <b>ID:</b> {user_id}\n"
+        f"💰 <b>Tổng nạp:</b> {formatted_total_deposit} VNĐ\n"
+        f"{next_vip_text}",
+        parse_mode="HTML",
         reply_markup=main_menu
     )
 
@@ -794,18 +815,6 @@ from aiogram import types, Router
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 
-crash_states = {}
-crash_games = {}
-user_balance = {}  # Lưu số dư người dùng
-
-# Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
-# --- GAME: Máy Bay (Crash Game) ---
-crash_states = {}
-crash_games = {}
-user_balance = {}  # Lưu số dư người dùng
-
-# Hàm save_data, record_bet_history, add_commission, main_menu ... được định nghĩa bên ngoài
-
 # --- GAME: Máy Bay (Crash Game) ---
 crash_states = {}
 crash_games = {}
@@ -859,7 +868,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 22.0), 2)
+    crash_point = round(random.uniform(1.1, 25.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
