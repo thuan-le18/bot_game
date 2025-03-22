@@ -230,16 +230,20 @@ async def start_cmd(message: types.Message):
         # Ghi log khi người chơi bị ban
         logging.warning(f"[BAN] Người dùng {user_id} bị khóa. Số dư: {formatted_balance}, Số tiền rút tạm khóa: {formatted_locked_withdrawals}.")
 
-        # Gửi thông báo
+        # Tạo Inline Button để liên hệ hỗ trợ
+        support_button = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💬 Liên hệ hỗ trợ", url="https://t.me/hoanganh11829")]
+        ])
+
+        # Gửi thông báo với nút bấm
         await message.answer(
             "⚠️ *Tài khoản của bạn đang tạm khóa để xác minh!* \n"
-            "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại. Bạn <b>tạm thời không thể rút tiền hoặc chơi game</b>. \n\n"
+            "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại. Bạn tạm thời không thể rút tiền hoặc chơi game. \n\n"
             f"💰 *Số dư tài khoản của bạn:* \n ➤ **{formatted_balance}** \n\n"
-            f"*Số tiền rút đang tạm khóa của bạn :* \n ➤ **{formatted_locked_withdrawals}** \n\n"
-            "Vui lòng liên hệ hỗ trợ ngay để xác minh và mở khóa\n"
-            "💬 [Liên hệ hỗ trợ](https://t.me/hoanganh11829)",
+            f"*Số tiền rút đang tạm khóa:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
+            "Vui lòng liên hệ hỗ trợ ngay để xác minh và mở khóa.",
             parse_mode="Markdown",
-            reply_markup=types.ReplyKeyboardRemove()
+            reply_markup=support_button
         )
         return
 
