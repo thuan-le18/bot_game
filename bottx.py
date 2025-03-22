@@ -236,7 +236,7 @@ async def start_cmd(message: types.Message):
         ])
 
         # Xóa bàn phím trước
-        status_message = await message.answer("🔄 Đang cập nhật trạng thái tài khoản...")
+        status_message = await message.answer("🔄 Đang cập nhật trạng thái tài khoản...",reply_markup=types.ReplyKeyboardRemove())
         await bot.delete_message(chat_id=message.chat.id, message_id=status_message.message_id)
 
         # Gửi tin nhắn chính
