@@ -387,14 +387,23 @@ async def check_balance(message: types.Message):
 
     # Chuyển đổi số dư sang định dạng dễ đọc
     def format_money(amount):
-        if amount >= 1_000_000_000:
-            return f"{amount / 1_000_000_000:.1f} tỷ VNĐ".replace(".", ",")
-        elif amount >= 1_000_000:
-            return f"{amount / 1_000_000:.1f} triệu VNĐ".replace(".", ",")
-        elif amount >= 1_000:
-            return f"{amount / 1_000:.1f} ngàn VNĐ".replace(".", ",")
-        else:
-            return f"{amount} VNĐ"
+    if amount >= 1_000_000_000:
+        s = f"{amount / 1_000_000_000:.1f}"
+        s = s.rstrip('0').rstrip('.')  # Loại bỏ trailing .0
+        s = s.replace('.', ',')         # Thay dấu chấm bằng dấu phẩy
+        return s + " tỷ VNĐ"
+    elif amount >= 1_000_000:
+        s = f"{amount / 1_000_000:.1f}"
+        s = s.rstrip('0').rstrip('.')
+        s = s.replace('.', ',')
+        return s + " triệu VNĐ"
+    elif amount >= 1_000:
+        s = f"{amount / 1_000:.1f}"
+        s = s.rstrip('0').rstrip('.')
+        s = s.replace('.', ',')
+        return s + " ngàn VNĐ"
+    else:
+        return f"{amount:,} VNĐ"
 
     formatted_balance = format_money(balance)
 
