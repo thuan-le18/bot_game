@@ -240,7 +240,7 @@ async def start_cmd(message: types.Message):
             "⚠️ *Tài khoản của bạn đang tạm khóa để xác minh!* \n"
             "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại. Bạn tạm thời không thể rút tiền hoặc chơi game. \n\n"
             f"💰 *Số dư tài khoản của bạn:* \n ➤ **{formatted_balance}** \n\n"
-            f"*Số tiền rút đang tạm khóa:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
+            f"*Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
             "Vui lòng liên hệ hỗ trợ ngay để xác minh và mở khóa.",
             parse_mode="Markdown",
             reply_markup=support_button
@@ -388,11 +388,11 @@ async def check_balance(message: types.Message):
     # Chuyển đổi số dư sang định dạng dễ đọc
     def format_money(amount):
         if amount >= 1_000_000_000:
-            return f"{amount / 1_000_000_000:.2f} Tỷ VNĐ"
+            return f"{amount / 1_000_000_000:,2f} Tỷ VNĐ"
         elif amount >= 1_000_000:
-            return f"{amount / 1_000_000:.2f} Triệu VNĐ"
+            return f"{amount / 1_000_000:,2f} Triệu VNĐ"
         elif amount >= 1_000:
-            return f"{amount / 1_000:.0f}K VNĐ"
+            return f"{amount / 1_000:.0f} Ngàn VNĐ"
         else:
             return f"{amount} VNĐ"
 
