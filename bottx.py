@@ -235,15 +235,17 @@ async def start_cmd(message: types.Message):
             [InlineKeyboardButton(text="💬 Liên hệ hỗ trợ", url="https://t.me/hoanganh11829")]
         ])
 
-        # Gửi thông báo với nút bấm
+        # Xóa bàn phím trước
+        await message.answer("🔄 Đang cập nhật trạng thái tài khoản...", reply_markup=types.ReplyKeyboardRemove())
+
+        # Gửi tin nhắn chính
         await message.answer(
             "⚠️ *Tài khoản của bạn đang tạm khóa để xác minh!* \n"
-            "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại. Bạn tạm thời không thể rút tiền hoặc chơi game. \n\n"
+            "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại.Bạn tạm thời không thể rút tiền hoặc chơi game\n\n"
             f"💰 *Số dư tài khoản của bạn:* \n ➤ **{formatted_balance}** \n\n"
-            f"*Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
-            "Vui lòng liên hệ hỗ trợ ngay để xác minh và mở khóa.",
+            f"💸 *Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
+            "Vui lòng liên hệ hỗ trợ để xác minh và mở khóa.",
             parse_mode="Markdown",
-            reply_markup=types.ReplyKeyboardRemove(),
             reply_markup=support_button
         )
         return
