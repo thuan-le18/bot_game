@@ -243,6 +243,7 @@ async def start_cmd(message: types.Message):
             f"*Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
             "Vui lòng liên hệ hỗ trợ ngay để xác minh và mở khóa.",
             parse_mode="Markdown",
+            reply_markup=types.ReplyKeyboardRemove(),
             reply_markup=support_button
         )
         return
