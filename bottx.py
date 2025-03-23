@@ -858,12 +858,22 @@ async def start_crash(message: types.Message):
     
     # Nếu không đang chơi, tiếp tục logic bắt đầu game
     crash_states[user_id] = True
-    logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay.")
+    logging.info(f"Người dùng {user_id} bắt đầu chơi Máy Bay✈️.")
     
     # Lấy số người chơi hiện tại cho game "✈️ Máy Bay"
     players_count = game_players.get("✈️ Máy Bay", "không xác định")
     
+    # Phần giải thích cách chơi ngắn gọn
+    game_explanation = (
+        " ✈️ *Cách chơi Máy Bay:*\n"
+        "1. Bạn Đặt cược và chờ máy bay cất cánh.\n"
+        "2. Máy bay sẽ cất cánh và hệ số nhân sẽ tăng dần.\n"
+        "3. Nhấn '💸 Rút tiền máy bay' trước khi máy bay rơi để nhận thưởng .\n"
+        "4. Nếu không rút kịp, bạn sẽ mất số tiền cược.\n"
+    )
+    
     await message.answer(
+        f"{game_explanation}\n\n"
         f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
         f"👥 Hiện có {players_count} người đang chơi game này.",
         reply_markup=ReplyKeyboardRemove()
@@ -893,7 +903,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 1.0), 2)
+    crash_point = round(random.uniform(1.1, 25.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
