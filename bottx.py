@@ -983,7 +983,7 @@ async def run_crash_game(message: types.Message, user_id: str):
             current_multiplier = crash_games[user_id]["current_multiplier"]
 
             if current_multiplier < 2.0:
-                increment = round(random.uniform(0.1, 0.12), 2)
+                increment = round(random.uniform(0.06, 0.12), 2)
             elif current_multiplier < 5.0:
                 increment = round(random.uniform(0.2, 0.32), 2)
             else:
