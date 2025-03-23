@@ -241,10 +241,10 @@ async def start_cmd(message: types.Message):
 
         # Gửi tin nhắn chính
         await message.answer(
-            "⚠️ *Tài khoản của bạn đang tạm khóa để xác minh!* \n"
+            "👤 *Tài khoản của bạn đang tạm khóa để xác minh!* \n"
             "🔍 Hệ thống phát hiện hoạt động bất thường và cần kiểm tra lại.Bạn tạm thời không thể rút tiền hoặc chơi game\n\n"
             f"💰 *Số dư trong tài khoản của bạn:* \n ➤ **{formatted_balance}** \n\n"
-            f"*Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
+            f"⚠️*Số tiền rút đang tạm khóa của bạn:* \n ➤ **{formatted_locked_withdrawals}** \n\n"
             "Vui lòng liên hệ hỗ trợ để xác minh và mở khóa tài khoản.",
             parse_mode="Markdown",
             reply_markup=support_button
@@ -903,7 +903,7 @@ async def initiate_crash_game(message: types.Message):
     logging.info(f"Người dùng {user_id} cược {bet:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xác định crash_point ngẫu nhiên (1.1 - 15.0)
-    crash_point = round(random.uniform(1.1, 25.0), 2)
+    crash_point = round(random.uniform(1.1, 15.0), 2)
     logging.info(f"Máy bay của {user_id} sẽ rơi tại x{crash_point}.")
     withdraw_event = asyncio.Event()
 
@@ -983,11 +983,11 @@ async def run_crash_game(message: types.Message, user_id: str):
             current_multiplier = crash_games[user_id]["current_multiplier"]
 
             if current_multiplier < 2.0:
-                increment = round(random.uniform(0.1, 0.15), 2)
+                increment = round(random.uniform(0.1, 0.12), 2)
             elif current_multiplier < 5.0:
-                increment = round(random.uniform(0.2, 0.35), 2)
+                increment = round(random.uniform(0.2, 0.32), 2)
             else:
-                increment = round(random.uniform(0.4, 0.5), 2)
+                increment = round(random.uniform(0.36, 0.4), 2)
 
             new_multiplier = round(current_multiplier + increment, 2)
             if new_multiplier > 15.0:
