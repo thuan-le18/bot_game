@@ -873,9 +873,9 @@ async def start_crash(message: types.Message):
     )
     
     await message.answer(
-        f"{game_explanation}\n\n"
-        f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n"
-        f"👥 Hiện có {players_count} người đang chơi game này.",
+        f"{game_explanation}\n"
+        f"👥 Hiện có {players_count} người đang chơi game này."
+        f"💰 Nhập số tiền cược (tối thiểu 1.000 VNĐ), bot sẽ khởi động máy bay!\n",
         reply_markup=ReplyKeyboardRemove()
     )
 
