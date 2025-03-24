@@ -1417,7 +1417,7 @@ async def play_minipoker(message: types.Message):
     bet = int(message.text)
     
     # Kiểm tra số dư
-    if bet > get_balance(user_id):
+    if bet > user_balance(user_id):
         await message.answer("❌ Bạn không đủ tiền để cược!")
         return
     # Trừ tiền cược
