@@ -97,7 +97,7 @@ def record_bet_history(user_id, game_name, bet_amount, result, winnings):
     - winnings: Số tiền thắng (0 nếu thua)
     """
     record = {
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": time.time(),  # Lưu timestamp dưới dạng epoch
         "game": game_name,
         "bet_amount": bet_amount,
         "result": result,
@@ -446,7 +446,7 @@ async def bet_history(message: types.Message):
     history_list = user_history[user_id][-10:]
     
     text = "\n".join([
-        f"⏰ {datetime.fromtimestamp(parse_timestamp(r.get('timestamp')), vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
+        f"⏰ {datetime.fromtimestamp(parse_timestamp(r.get('timestamp'))).astimezone(vietnam_tz).strftime('%Y-%m-%d %H:%M:%S')}: "
         f"{r.get('game', 'Unknown')} - Cược {r.get('bet_amount', 0):,} VNĐ\n"
         f"🔹 Kết quả: {r.get('result', '?')} | "
         f"🏆 Thắng/Thua: {r.get('winnings', 0):,} VNĐ"
