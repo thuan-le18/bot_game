@@ -1425,19 +1425,32 @@ async def start_minipoker(message: types.Message):
     )
     await message.answer(guide_text, reply_markup=ReplyKeyboardRemove())
 
-@router.message(lambda msg: poker_states.get(str(msg.from_user.id), {}).get("awaiting_bet") and msg.text.isdigit())
+@router.message(lambda msg: poker_states.get(str(msg.from_user.id), {}).get("awaiting_bet") == True and msg.text.isdigit())
 async def play_minipoker(message: types.Message):
     user_id = str(message.from_user.id)
     bet = int(message.text)
+
+    # Kiểm tra số dư
+    if user_balance.get(user_id, 0) < bet:
+        await message.answer("❌ Số dư không đủ!")
+        poker_states.pop(user_id, None)
+        return
+    
+    # Lưu số tiền cược vào trạng thái của game
     poker_states[user_id]["bet"] = bet
 
-    # Rút bài & đánh giá kết quả
+    # Trừ tiền cược và lưu dữ liệu
+    user_balance[user_id] -= bet
+    save_data(data)
+    await add_commission(user_id, bet)
+    
+    # Rút bài
     cards = random.sample(CARD_DECK, 5)
     hand_type = danh_gia_bo_bai(cards)
-
-    # Áp dụng house edge (30% ép về "Mậu Thầu")
-    if hand_type != "Mậu Thầu" and random.random() < 0.3:
-        hand_type = "Mậu Thầu"
+    
+    # Áp dụng house edge: 10% trường hợp nếu bài thắng sẽ ép về "Mậu Thầu"
+    if hand_type != "Mậu Thầu" and random.random() < 0.1:
+         hand_type = "Mậu Thầu"
 
     multiplier = PRIZES.get(hand_type, 0)
     win_amount = int(bet * multiplier)
@@ -1445,7 +1458,7 @@ async def play_minipoker(message: types.Message):
     log_action(user_id, "Đặt cược", f"{bet} VNĐ - Rút bài: {' '.join(cards)} - Kết quả: {hand_type} - {'Thắng' if win_amount > 0 else 'Thua'} - Thưởng: {win_amount:,} VNĐ")
 
     # Cơ chế lật bài mới: gửi thông báo "Đang lật bài...", chờ delay, rồi gửi kết quả cuối cùng
-    await message.answer("🃏 **Đang lật bài...**")
+    await message.answer("🃏 Đang lật bài...")
     await asyncio.sleep(2)  # Tạo hiệu ứng delay
 
     result_text = f"\n🎯 **Kết quả:** {hand_type}\n" + \
