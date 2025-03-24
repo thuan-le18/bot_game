@@ -549,15 +549,6 @@ MIN_BET = 1_000  # Cược tối thiểu 1,000 VNĐ
 MAX_BET = 10_000_000  # Cược tối đa 10 triệu VNĐ
 COMBO_MULTIPLIERS = {"triple": 30, "specific": 3}  # Tỷ lệ thưởng
 
-# Hàm ghi log chi tiết
-def log_action(user_id, action, details=""):
-    log_data = {
-        "user_id": user_id,
-        "action": action,
-        "details": details
-    }
-    logging.info(json.dumps(log_data, ensure_ascii=False))
-
 @router.message(F.text == "/huy")
 async def cancel_bet(message: types.Message):
     """Cho phép người chơi hủy ván cược nếu bị kẹt"""
@@ -620,7 +611,6 @@ async def choose_combo_number(message: types.Message):
     taixiu_states[user_id]["state"] = "awaiting_bet"
     bet_type = taixiu_states[user_id]["choice"]
     multiplier = 30 if bet_type == "Bộ Ba 🎲" else 3
-    log_action(user_id, "Chọn số cược", f"{bet_type} - Số {chosen_number}")
     await message.answer(
         f"✅ Bạn đã chọn số {message.text} cho {bet_type}.\n"
         f"💰 Nếu {message.text} xuất hiện **{'3 lần' if bet_type == 'Bộ Ba 🎲' else 'ít nhất 1 lần'}, bạn sẽ thắng {multiplier}x tiền cược**.\n"
@@ -632,7 +622,6 @@ async def choose_combo_number(message: types.Message):
 async def play_taixiu(message: types.Message):
     user_id = str(message.from_user.id)
     bet_amount = int(message.text)
-    log_action(user_id, "Đặt cược", f"{taixiu_states[user_id]['choice']} - Số {taixiu_states[user_id].get('number', 'N/A')} - {bet_amount:,} VNĐ")
     
     # Kiểm tra số tiền cược hợp lệ
     if bet_amount < MIN_BET or bet_amount > MAX_BET:
@@ -647,7 +636,6 @@ async def play_taixiu(message: types.Message):
     user_balance[user_id] -= bet_amount
     save_data(data)
     await add_commission(user_id, bet_amount)
-    logging.info(f"Người dùng {user_id} cược {bet_amount:,} VNĐ. Số dư còn lại: {user_balance[user_id]:,} VNĐ.")
     
     # Xúc xắc quay
     dice_values = []
@@ -683,7 +671,6 @@ async def play_taixiu(message: types.Message):
         user_balance[user_id] += win_amount
         save_data(data)
         outcome_text = f"🔥 Bạn thắng {win_amount:,} VNĐ!"
-        logging.info(f"[INFO] Tiền thưởng {win_amount:,} VNĐ đã được cộng. Số dư mới: {user_balance[user_id]:,} VNĐ.")
     else:
         outcome_text = f"😢 Bạn thua {bet_amount:,} VNĐ!"
     
@@ -770,7 +757,6 @@ async def jackpot_bet(message: types.Message):
     # Kiểm tra số tiền cược tối thiểu là 1,000 VNĐ
     if bet_amount < 1000:
         await message.answer("❌ Số tiền cược tối thiểu là 1,000 VNĐ!")
-        log_action(user_id, "Lỗi cược", "Số tiền cược dưới mức tối thiểu")
         return
 
     # Kiểm tra số dư
@@ -824,7 +810,6 @@ async def jackpot_bet(message: types.Message):
 async def play_again_jackpot(callback: types.CallbackQuery):
     """ Xử lý khi người chơi chọn 'Chơi tiếp' """
     user_id = str(callback.from_user.id)
-    log_action(user_id, "Chơi lại", "Người chơi bấm 'Chơi tiếp'")
 
     # Gửi tin nhắn hướng dẫn lại một lần nữa, thay đổi nội dung để tránh bị trùng
     await callback.message.edit_text(
@@ -930,7 +915,6 @@ async def run_crash_game(message: types.Message, user_id: str):
     countdown_message = await message.answer(
         f"⏳ Máy bay sẽ cất cánh trong {countdown_time} giây..."
     )
-    logging.debug(f"Máy bay của {user_id} sẽ cất cánh sau {countdown_time} giây.")
     
     for i in range(countdown_time, 0, -1):
         try:
@@ -1228,7 +1212,6 @@ async def daovang_set_bet(message: types.Message):
         return
     if user_balance.get(user_id, 0) < bet:
         await message.answer("❌ Số dư không đủ!")
-        log_action(user_id, "Lỗi cược", "Số dư không đủ")
         daovang_states.pop(user_id, None)
         return
 
@@ -1388,9 +1371,6 @@ PRIZES = {"Thùng Phá Sảnh": 20, "Tứ Quý": 5, "Cù Lũ": 2.5, "Thùng": 1.
 CARD_DECK = ["♠A", "♥K", "♦Q", "♣J", "♠10", "♥9", "♦8", "♣7", "♠6", "♥5", "♦4", "♣3", "♠2"]
 poker_states = {}
 
-def log_action(user_id, action, details):
-    logging.info(f"[User {user_id}] {action}: {details}")
-
 def danh_gia_bo_bai(cards):
     values = [card[1:] for card in cards]
     suits = [card[0] for card in cards]
@@ -1409,7 +1389,7 @@ async def start_minipoker(message: types.Message):
     poker_states[str(message.from_user.id)] = {"awaiting_bet": True}
     guide_text = (
         " **Cách chơi Mini Poker🃏:**\n"
-        "- Đặt cược, nhận 5 lá bài.\n"
+        "- Đặt cược, bạn sẽ nhận 5 lá bài.\n"
         "- Nếu có bộ bài đặc biệt, bạn thắng!\n\n"
         " **Hệ số thưởng💰:**\n"
         "🔹 Thùng Phá Sảnh: x20 | Tứ Quý: x5 | Cù Lũ: x2.5\n"
@@ -1459,7 +1439,6 @@ async def play_minipoker(message: types.Message):
 @router.callback_query(lambda c: c.data == "poker_replay")
 async def poker_replay(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
-    log_action(user_id, "Chơi lại", "Người chơi bấm 'Chơi lại'")
     await callback.message.delete()
     poker_states[user_id] = {"awaiting_bet": True}
     await bot.send_message(user_id, "💰 Nhập số tiền cược Mini Poker:", reply_markup=ReplyKeyboardRemove())
@@ -1467,7 +1446,6 @@ async def poker_replay(callback: types.CallbackQuery):
 @router.callback_query(lambda c: c.data == "poker_back")
 async def poker_back(callback: types.CallbackQuery):
     user_id = str(callback.from_user.id)
-    log_action(user_id, "Quay lại", "Người chơi bấm 'Quay lại'")
     await callback.message.delete()
     await bot.send_message(callback.from_user.id, "🔙 Quay lại menu chính.", reply_markup=main_menu)
     
